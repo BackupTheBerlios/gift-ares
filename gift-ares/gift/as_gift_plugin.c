@@ -30,7 +30,7 @@ static void asp_giftcb_destroy (Protocol *proto)
 	as_cleanup ();
 }
 
-static as_bool add_meta (ASMetaTag *tag, Share *share)
+static as_bool meta_to_gift (ASMetaTag *tag, Share *share)
 {
 	if (!STRCASECMP (tag->name, "bitrate") && tag->value)
 		share_set_meta (share, tag->name, stringf ("%s000", tag->value));
@@ -57,7 +57,7 @@ static void search_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 
 	share_set_hash (share, "SHA1", r->hash->data, AS_HASH_SIZE, FALSE);
 
-	as_meta_foreach_tag (r->meta, (ASMetaForeachFunc)add_meta, share);
+	as_meta_foreach_tag (r->meta, (ASMetaForeachFunc)meta_to_gift, share);
 
 #if 0
 	{
@@ -318,6 +318,104 @@ void asp_giftcb_download_stop (Protocol *p, Transfer *transfer, Chunk *chunk,
 #endif
 }
 
+void meta_from_gift (ds_data_t *key, ds_data_t *value,
+                                  ASMeta *meta)
+{
+	as_bool ret;
+
+	if (!STRCASECMP (key->data, "bitrate") && value->data)
+	{
+		char *val = strdup (value->data);
+		int len = strlen (val);
+		
+		if (len > 3)
+			val[len - 3] = '\0';
+		
+		ret = as_meta_add_tag (meta, key->data, val);
+		
+		free (val);
+	}
+	else
+		ret = as_meta_add_tag (meta, key->data, value->data);
+
+	assert (ret);
+}
+
+static List *sharelist = NULL;
+static timer_id share_timer = 0;
+
+static BOOL submit_shares (List **list)
+{
+	as_bool ret;
+
+	ret = as_shareman_add_and_submit (AS->shareman, *list);
+
+	assert (ret);
+
+	list_free (*list);
+
+	*list = NULL;
+
+	share_timer = 0;
+
+	return FALSE; /* remove */
+}
+
+BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
+{
+	ASShare *ashare;
+	ASMeta *meta;
+	Hash *hash;
+	ASRealm realm;
+
+	if (!(hash = share_get_hash (share, "SHA1")))
+		return FALSE;
+
+	realm = as_meta_realm_from_filename (share->path);
+	
+	/* FIXME! */
+	if (realm == REALM_UNKNOWN || realm == REALM_SOFTWARE)
+		return FALSE;
+
+	if (!(meta = as_meta_create ()))
+		return FALSE;
+
+	share_foreach_meta (share, (DatasetForeachFn)meta_from_gift, meta);
+
+	ashare = as_share_create (share->path, as_hash_create (hash->data, 20), meta,
+                          share->size, realm);
+
+	assert (ashare);
+
+	sharelist = list_prepend (sharelist, ashare);
+
+	if (share_timer)
+		timer_reset (share_timer);
+	else
+		share_timer = timer_add (15 * SECONDS, (TimerCallback) submit_shares, &sharelist);
+
+	return TRUE;
+}
+
+BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
+{
+	Hash *hash;
+	as_bool ret;
+	
+	assert (!share_timer);
+
+	hash = share_get_hash (share, "SHA1");
+
+	if (!hash)
+		return FALSE;
+
+	ret = as_shareman_remove (AS->shareman, (ASHash *)(hash->data));
+
+	assert (ret);
+
+	return TRUE;
+}
+
 int Ares_init (Protocol *p)
 {
 	p->version_str = strdup ("foo");
@@ -336,6 +434,8 @@ int Ares_init (Protocol *p)
 	p->stats          = asp_giftcb_stats;
         p->download_start = asp_giftcb_download_start;
         p->download_stop  = asp_giftcb_download_stop;
+        p->share_add      = asp_giftcb_share_add;
+        p->share_remove   = asp_giftcb_share_remove;
 
 	proto = p;
 
