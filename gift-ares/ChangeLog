@@ -1,0 +1,5 @@
+ $Id: ChangeLog,v 1.1 2004/11/28 21:10:02 mkern Exp $
+
+2004-11-28  Markus Kern <mkern@users.berlios.de>
+
+	* Automagic build system

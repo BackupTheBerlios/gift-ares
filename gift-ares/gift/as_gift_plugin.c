@@ -1,6 +1,9 @@
-#define GIFT_PLUGIN
 
 #include "as_ares.h"
+
+#ifndef GIFT_PLUGIN
+# error "GIFT_PLUGIN not defined. Your build environment seems broken."
+#endif
 
 Protocol *gift_proto;
 

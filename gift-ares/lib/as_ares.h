@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.53 2004/11/27 22:30:37 hex Exp $
+ * $Id: as_ares.h,v 1.54 2004/11/28 21:10:03 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,6 +11,10 @@
 #define __AS_ARES_H
 
 /*****************************************************************************/
+
+#if HAVE_CONFIG_H
+#  include <config.h>
+#endif /* HAVE_CONFIG_H */
 
 #include <ctype.h>
 #include <string.h>
