@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.6 2004/10/19 23:41:48 HEx Exp $
+ * $Id: as_netinfo.c,v 1.7 2004/10/29 16:27:51 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,9 +31,6 @@ ASNetInfo *as_netinfo_create ()
 
 	info->nick       = NULL;
 
-	/* FIXME: what do these do? */
-	info->unk1       = 0x400;
-	info->unk2       = 0x22;
 	return info;
 }
 
