@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.33 2004/12/19 18:54:59 mkern Exp $
+ * $Id: as_session_man.c,v 1.34 2004/12/24 11:27:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -10,6 +10,8 @@
 #include "as_ares.h"
 
 /*****************************************************************************/
+
+static as_bool maintenance_timer_func (ASSessMan *man);
 
 static as_bool sessman_maintain (ASSessMan *man);
 
@@ -32,6 +34,10 @@ ASSessMan *as_sessman_create ()
 	man->connecting = NULL;
 	man->connected = NULL;
 
+	man->maintenance_timer = timer_add (2*MINUTES,
+	                                    (TimerCallback)maintenance_timer_func,
+	                                    man);
+
 	return man;
 }
 
@@ -40,6 +46,8 @@ void as_sessman_free (ASSessMan *man)
 {
 	if (!man)
 		return;
+
+	timer_remove (man->maintenance_timer);
 
 	/* disconnect everything */
 	as_sessman_connect (man, 0);
@@ -92,6 +100,19 @@ int as_sessman_foreach (ASSessMan *man, ASSessionForeachFunc func,
 }
 
 /*****************************************************************************/
+
+/* This timer is called periodically to make sure the number of active
+ * sessions is at the requested level. It can happen for example that the
+ * node cache temporarily returns no nodes because they have been tried too
+ * recently. Without this timer it can happen that sessman_maintain is never
+ * called again in this case.
+ */
+static as_bool maintenance_timer_func (ASSessMan *man)
+{
+	sessman_maintain (man);
+		
+	return TRUE; /* Reset timer. */
+}
 
 static int sessman_disconnect_itr (ASSession *session, ASSessMan *man)
 {

@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.14 2004/10/30 23:51:14 mkern Exp $
+ * $Id: as_node_man.c,v 1.15 2004/12/24 11:27:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -153,7 +153,7 @@ ASNode *as_nodeman_next (ASNodeMan *man)
 	{
 		node = (ASNode *)link->data;
 
-		if (!node->in_use && (now - node->last_attempt) > 15*EMINUTES)
+		if (!node->in_use && (now - node->last_attempt) > 10*EMINUTES)
 			break;
 	}
 

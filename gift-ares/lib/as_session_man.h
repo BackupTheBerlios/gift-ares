@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.h,v 1.4 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_session_man.h,v 1.5 2004/12/24 11:27:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,6 +21,9 @@ typedef struct
 
 	List *connecting;         /* connecting sessions */
 	List *connected;          /* established sessions */
+
+	timer_id maintenance_timer; /* Timer which makes sure we keep number of
+	                             * sessions at requested level */
 
 } ASSessMan;
 
