@@ -1,8 +1,8 @@
-# $Id: Make.msvc,v 1.11 2004/12/24 16:45:22 mkern Exp $
+# $Id: Make.msvc,v 1.12 2004/12/24 18:22:20 mkern Exp $
 
 
 VERSION = 0.1.1
-HEAVY_DEBUG = 0
+#HEAVY_DEBUG = 1
 
 ASLIB_ROOT   = $(ARES_ROOT)\lib
 TEST_ROOT    = $(ARES_ROOT)\test
@@ -43,12 +43,11 @@ CFLAGS  = $(CFLAGS)  -Od -Gm -GZ -W3 -Zi
 DEFS    = $(DEFS)    -D_DEBUG -DDEBUG -UNDEBUG -D_WALL
 LDFLAGS = $(LDFLAGS) -debug
 
+!endif # defined(release) || defined(RELEASE)
+
 !if defined(HEAVY_DEBUG)
 DEFS = $(DEFS) -DHEAVY_DEBUG
 !endif
-
-
-!endif # defined(release) || defined(RELEASE)
 
 
 ##########################
@@ -88,7 +87,8 @@ PLUGIN_LIB      	= Ares$(DEXT).lib
 PLUGIN_DLL          = Ares$(DEXT).dll
 
 # threaded clib
-CFLAGS   = $(CFLAGS) -MT$(D)
+#CFLAGS   = $(CFLAGS) -MT$(D)
+CFLAGS   = $(CFLAGS) -MD$(D)
 CFLAGS   = $(CFLAGS) -nologo
 
 DEFS     = $(DEFS) -DHAVE_CONFIG_H -DWIN32 -DNO_STRICT -DVERSION=\"$(VERSION)\"
@@ -97,7 +97,7 @@ INCLUDES = -I$(BUILD_ROOT) -I$(BUILD_ROOT)\libgift\win32 $(INCLUDES)
 
 
 #LDFLAGS  = $(LDFLAGS)  /NODEFAULTLIB:"msvcrtd"
-LDFLAGS  = $(LDFLAGS) /NODEFAULTLIB:"LIBC"
+#LDFLAGS  = $(LDFLAGS) /NODEFAULTLIB:"LIBC"
 LDFLAGS  = $(LDFLAGS) -nologo -version:$(VERSION) 
 LDFLAGS  = $(LDFLAGS) -libpath:"$(ASLIB_ROOT)"
 LDFLAGS  = $(LDFLAGS) -libpath:"$(BUILD_ROOT)\libgift" -libpath:"$(BUILD_ROOT)\libgift\proto"

@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.8 2004/12/19 22:09:27 hex Exp $
+ * $Id: asp_share.c,v 1.9 2004/12/24 18:22:20 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -169,6 +169,7 @@ BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
 
 	/* FIXME: There is no need for this to hold. */
 	assert (share_timer == INVALID_TIMER);
+	assert (sharelist == NULL);
 
 	/* Get hash from giFT's share object */
 	if (!(hash = share_get_hash (share, "SHA1")) ||

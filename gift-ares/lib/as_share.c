@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.22 2004/12/24 11:36:08 mkern Exp $
+ * $Id: as_share.c,v 1.23 2004/12/24 18:22:21 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -177,6 +177,7 @@ static as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 	}
 	case REALM_ARCHIVE:
 	case REALM_DOCUMENT:
+	case REALM_SOFTWARE:
 		/* nothing */
 		break;
 	default:
@@ -231,7 +232,7 @@ ASPacket *as_share_packet (ASShare *share)
 		return NULL;
 	}
 	
-	if (!tokens->used)
+	if (tokens->used == 0)
 	{
 		if (!share->fake)
 		{
@@ -242,7 +243,7 @@ ASPacket *as_share_packet (ASShare *share)
 			AS_HEAVY_DBG_1 ("faked metadata for '%s'", share->path);
 		}
 
-		if (!tokens->used)
+		if (tokens->used == 0)
 		{
 			as_packet_free (p);
 			as_packet_free (tokens);

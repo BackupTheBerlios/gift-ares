@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.15 2004/12/04 15:30:46 mkern Exp $
+ * $Id: as_meta.c,v 1.16 2004/12/24 18:22:21 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -443,3 +443,5 @@ as_bool as_meta_set_fake (ASMeta *meta)
 
 	return TRUE;
 }
+
+/*****************************************************************************/
