@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.13 2004/11/20 16:56:12 HEx Exp $
+ * $Id: as_source.c,v 1.14 2004/11/23 22:51:15 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -145,7 +145,8 @@ char *as_source_serialize (ASSource *source)
 
 	return stringf_dup ("Ares:?host=%s&port=%d&shost=%s&sport=%d&username=%s",
 			    host_str, (int)source->port,
-			    shost_str, (int)source->sport);
+			    shost_str, (int)source->sport,
+			    STRING_NOTNULL (source->username));
 }
 
 #endif
