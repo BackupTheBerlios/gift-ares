@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.17 2005/01/08 17:25:41 mkern Exp $
+ * $Id: as_meta.c,v 1.18 2005/02/28 14:19:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,7 +17,7 @@
 static const ASTagMapping1 tag_types_1[] = {
 	{ "title",     TAG_TITLE,      TRUE  },
 	{ "artist",    TAG_ARTIST,     TRUE  },
-	{ "unknown_1", TAG_UNKNOWN_1,  FALSE }
+	{ "album",     TAG_ALBUM_1,    FALSE }
 };
 
 static const ASTagMapping2 tag_types_2[] = {
@@ -330,9 +330,9 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 		meta_type = as_packet_get_8 (p);
 	}
 
-	if (meta_type == TAG_UNKNOWN_1)
+	if (meta_type == TAG_ALBUM_1)
 	{
-		meta_add_string (meta, p, as_meta_mapping1_from_type (TAG_UNKNOWN_1)->name);
+		meta_add_string (meta, p, as_meta_mapping1_from_type (TAG_ALBUM_1)->name);
 		meta_type = as_packet_get_8 (p);
 	}
 

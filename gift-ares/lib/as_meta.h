@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.10 2005/01/08 17:25:41 mkern Exp $
+ * $Id: as_meta.h,v 1.11 2005/02/28 14:19:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -55,7 +55,7 @@ typedef enum
 {
 	TAG_TITLE     = 1,
 	TAG_ARTIST    = 2,
-	TAG_UNKNOWN_1 = 3,
+	TAG_ALBUM_1   = 3,  /* Sometimes this is album */
 	TAG_XXX       = 4   /* Realm specific data */
 } ASTagType1;
 
