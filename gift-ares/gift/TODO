@@ -5,8 +5,6 @@
 
 - A lot of successfuly pushes hit the 'first packet needs 4 byte' limit in http server
 
-- Why do we get so many push requests for unknown shares? A bug somwhere?
-
 - Source searching
 
 - Search timeouts (in ares lib). Don't start the timeout before we have sent the search
