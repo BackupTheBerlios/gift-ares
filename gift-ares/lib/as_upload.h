@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.8 2004/12/04 11:37:40 mkern Exp $
+ * $Id: as_upload.h,v 1.9 2004/12/04 17:26:48 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
