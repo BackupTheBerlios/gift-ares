@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.13 2004/09/02 16:31:48 mkern Exp $
+ * $Id: as_session.c,v 1.14 2004/09/02 19:39:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -317,7 +317,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 	}
 	else
 	{
-		AS_HEAVY_DBG_2 ("Received packet type 0x02x, length %d", (int)type,
+		AS_HEAVY_DBG_2 ("Received packet type 0x%02x, length %d", (int)type,
 		                as_packet_remaining (packet));
 
 		if (type == PACKET_SHARE)

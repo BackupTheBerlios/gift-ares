@@ -1,5 +1,5 @@
 /*
- * $Id: as_sha1.h,v 1.1 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_sha1.h,v 1.2 2004/09/02 19:39:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,6 +26,10 @@ typedef struct sha1_state_t
 	unsigned long  count_lo, count_hi;  /* 64-bit bit count */
 	as_uint8       data[SHA_BLOCKSIZE]; /* SHA data buffer */
 	int            local;               /* unprocessed amount in data */
+
+	/* tranform function specified by initalization */
+	void (*transform_fn)(struct sha1_state_t *sha_info);
+
 } ASSHA1State;
 
 /*****************************************************************************/
@@ -33,6 +37,9 @@ typedef struct sha1_state_t
 void as_sha1_init   (ASSHA1State *state);
 void as_sha1_update (ASSHA1State *state, const void *data, unsigned int len);
 void as_sha1_final  (ASSHA1State *state, unsigned char *hash);
+
+/* special Ares version with different constants and init vectors. */
+void as_sha1_ares_init (ASSHA1State *state);
 
 /*****************************************************************************/
 
