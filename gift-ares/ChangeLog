@@ -1,5 +1,6 @@
- $Id: ChangeLog,v 1.4 2005/01/20 16:06:03 mkern Exp $
+ $Id: ChangeLog,v 1.5 2005/02/10 17:23:35 mkern Exp $
 
+	* Fixed crash on duplicate hash search.
 
 	* Fixed assertion failure when download chunk was of size 1.
 
