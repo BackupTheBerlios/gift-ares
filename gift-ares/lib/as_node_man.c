@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.11 2004/09/06 08:37:40 mkern Exp $
+ * $Id: as_node_man.c,v 1.12 2004/09/15 13:00:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -24,9 +24,9 @@ static float node_weight (ASNodeMan *man, ASNode *node)
 	double weight;
 
 	/* I am just making this up... */
-	weight = + node->connects * 5.0
-	         + node->reports * 3.0
-			 + ((node->connects + 1) / (node->attempts + 1)) * 1.0
+	weight = + node->connects * 50.0
+	         + node->reports * 10.0
+			 + ((node->connects + 1) / (node->attempts + 1)) * 200.0
 			 + ((node->last_seen - node->first_seen) / (24*EHOURS)) * 10.0
 			 + ((node->last_seen - man->oldest_last_seen) / (10*EMINUTES)) * 1.0;
 
