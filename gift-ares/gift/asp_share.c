@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.3 2004/12/04 15:30:46 mkern Exp $
+ * $Id: asp_share.c,v 1.4 2004/12/04 21:23:28 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -131,7 +131,7 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 	if (share_timer != INVALID_TIMER)
 		timer_reset (share_timer);
 	else
-		share_timer = timer_add (15 * SECONDS, (TimerCallback) submit_shares,
+		share_timer = timer_add (5 * SECONDS, (TimerCallback) submit_shares,
 		                         &sharelist);
 
 	return TRUE;
