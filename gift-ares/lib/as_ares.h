@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.59 2004/12/24 13:40:59 mkern Exp $
+ * $Id: as_ares.h,v 1.60 2004/12/24 16:09:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -37,7 +37,7 @@
 # include <arpa/inet.h>
 # include <unistd.h>
 #else /* WIN32 */
-# include <winsock.h>
+# include <winsock2.h>
 #endif /* WIN32 */
 
 /* assume we have this on non-win32 systems (it's POSIX after all), in

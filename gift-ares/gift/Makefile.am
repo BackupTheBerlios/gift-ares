@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.3 2004/12/10 02:00:09 hex Exp $
+# $Id: Makefile.am,v 1.4 2004/12/24 16:10:26 mkern Exp $
 AM_CFLAGS = -Wall
 
 plugin_LTLIBRARIES = libAres.la
@@ -22,4 +22,4 @@ INCLUDES = \
 libAres_la_LDFLAGS = @GIFT_LIBS@ -lm -module -avoid-version
 # -Wl,-z,defs
 
-#EXTRA_DIST = Makefile.msvc
+EXTRA_DIST = Makefile.msvc

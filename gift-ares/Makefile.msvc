@@ -1,16 +1,20 @@
-# $Id: Makefile.msvc,v 1.3 2004/10/20 17:42:23 mkern Exp $
+# $Id: Makefile.msvc,v 1.4 2004/12/24 16:09:26 mkern Exp $
 # Microsoft Visual C++ 6.0 makefile
 # see README.msvc for usage
 
 !if !defined(BUILD_ROOT)
-BUILD_ROOT=$(MAKEDIR)
+BUILD_ROOT=$(MAKEDIR)\..
+!endif
+
+!if !defined(ARES_ROOT)
+ARES_ROOT=$(MAKEDIR)
 !endif
 
 !include Make.msvc
 
-MAKEOPTS=-nologo -C BUILD_ROOT=$(BUILD_ROOT)
+MAKEOPTS=-nologo -C BUILD_ROOT=$(BUILD_ROOT) ARES_ROOT=$(ARES_ROOT)
 
-all: test aresdll delphi
+all: plugin
 
 test: aslib
 	cd test
@@ -22,9 +26,19 @@ aresdll: aslib
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
 	cd ..
 
+plugin: aslibgift
+	cd gift
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	cd ..
+
 aslib:
 	cd lib
-	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc aslib
+	cd ..
+
+aslibgift:
+	cd lib
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc aslibgift
 	cd ..
 
 clean: 
@@ -34,9 +48,12 @@ clean:
 	cd ..\test
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
 
-	cd ..\aresdll
+	-cd ..\aresdll
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
 
+	cd ..\gift
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
+	
 	cd ..
 
 
@@ -49,8 +66,18 @@ install:
 	cd ..\test
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
 
-	cd ..\aresdll
+	-cd ..\aresdll
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
 
 	cd ..
 	
+win32-dist: plugin
+	@-md $(BUILD_ROOT)\win32-dist\data\Ares
+	@copy data\Ares.conf.template      $(BUILD_ROOT)\win32-dist\data\Ares\Ares.conf
+	@copy data\nodes                   $(BUILD_ROOT)\win32-dist\data\Ares\nodes
+#	@copy win32\gift-ares.nsi          $(BUILD_ROOT)\win32-dist\gift-ares.nsi
+# remove traling 'd' for debug builds in distro
+	@copy gift\$(PLUGIN_DLL) $(BUILD_ROOT)\win32-dist\Ares.dll
+
+clean-dist:
+	@-rmdir /S $(BUILD_ROOT)\win32-dist\data\Ares

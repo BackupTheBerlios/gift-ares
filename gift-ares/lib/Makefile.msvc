@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.25 2004/11/06 18:08:17 mkern Exp $
+# $Id: Makefile.msvc,v 1.26 2004/12/24 16:09:26 mkern Exp $
 
 
 !include ../Make.msvc
@@ -7,16 +7,23 @@ MAKEOPTS=-nologo -C BUILD_ROOT=$(BUILD_ROOT)
 
 INCLUDES = -I. -Ilibevent $(INCLUDES)
 
-OBJECTS = \
+LIBS = $(LIBS) $(LIBGIFT_LIB) $(LIBGIFTPROTO_LIB) $(GIFT_LIB)
+
+
+LIBIGIFT_OBJECTS = \
+	as_log$(O) \
 	as_event$(O) \
 	as_list$(O) \
-	as_hashtable$(O) \
 	as_parse$(O) \
 	as_strobj$(O) \
-	as_file$(O) \
-	as_log$(O) \
-	as_tcp$(O) \
+	as_tcp$(O)
+
+
+OBJECTS = \
+	as_hashtable$(O) \
 	as_ares$(O) \
+	as_file$(O) \
+	as_util$(O) \
 	as_config$(O) \
 	as_crypt$(O) \
 	as_packet$(O) \
@@ -47,17 +54,25 @@ OBJECTS = \
 	as_share_man$(O) \
 	as_push$(O) \
 	as_push_man$(O) \
+	as_push_reply$(O) \
 	as_upload$(O) \
 	as_upload_man$(O)
-	
 
-all: $(OBJECTS)
+
+# this breaks the non-plugin build
+DEFS = $(DEFS) -DGIFT_PLUGIN
+
+
+aslib: $(OBJECTS) $(LIBGIFT_OBJECTS)
 	cd libevent
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
 	cd ..
 
-	$(LT) -nologo -out:$(ASLIB_LIB) $(OBJECTS) libevent\libevent$(DEXT).lib
+	$(LT) -nologo -out:$(ASLIB_LIB) $(OBJECTS) $(LIBGIFT_OBJECTS) libevent\libevent$(DEXT).lib
 
+
+aslibgift: $(OBJECTS)
+	$(LT) -nologo -out:$(ASLIBGIFT_LIB) $(OBJECTS)
 
 
 install: # all
@@ -70,6 +85,7 @@ clean :
 
 	@-del /Q /F *$(O)
 	@-del /Q /F $(ASLIB_LIB)
+	@-del /Q /F $(ASLIBGIFT_LIB)
 	@-del /Q /F *.exp
 	@-del /Q /F *.idb
 	@-del /Q /F *.ilk
