@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.10 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_download_conn.h,v 1.11 2004/10/23 16:06:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -65,8 +65,13 @@ struct as_down_conn_t
 	time_t queue_next_try;         /* time we were told to try next */
 
 	/* some stats about this connection */
-	unsigned int total_downloaded; /* total downloaded bytes */
-	unsigned int average_speed;    /* average download speed in bytes/sec */
+	unsigned int hist_downloaded; /* downloaded bytes during past requests */
+	time_t       hist_time;       /* past time spent in state
+	                               * DOWNCONN_TRANSFERRING */
+	unsigned int curr_downloaded; /* bytes downloaded since last request */
+	time_t       request_time;    /* time last request was made */
+	time_t       data_time;       /* time last data was received */
+
 	unsigned int fail_count;       /* number of times a request has failed
 	                                * for this connection */
 
@@ -99,6 +104,11 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
  * DOWNCONN_UNUSED. 
  */
 void as_downconn_cancel (ASDownConn *conn);
+
+/*****************************************************************************/
+
+/* Returns total average speed of this source in bytes/sec */
+unsigned int as_downconn_speed (ASDownConn *conn);
 
 /*****************************************************************************/
 

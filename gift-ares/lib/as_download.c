@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.22 2004/10/19 19:21:36 mkern Exp $
+ * $Id: as_download.c,v 1.23 2004/10/23 16:06:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -1205,8 +1205,6 @@ static as_bool start_chunks (ASDownload *dl)
 	                    chunk->start, chunk->size);
 
 		/* Insert new chunk after old one */
-
-
 		tmp_l = list_prepend (NULL, new_chunk);
 		list_insert_link (chunk_l, tmp_l);
 
@@ -1221,8 +1219,7 @@ static as_bool start_chunks (ASDownload *dl)
  * The heart of the download system. It is called whenever there are new
  * sources, finished chunks, etc.
  * Merges complete chunks and tries to assign sources to inactive ones. If 
- * there are more sources than chunks the chunks are split up. If the minimum
- * chunk size is reached faster sources are prefered.
+ * there are more sources than chunks the chunks are split up.
  */
 static void download_maintain (ASDownload *dl)
 {
@@ -1293,7 +1290,7 @@ static void download_maintain (ASDownload *dl)
 /* Called by a regular timer while download is active */
 static as_bool maintenance_timer_func (ASDownload *dl)
 {
-	AS_HEAVY_DBG ("Download maintenace timer invoked");
+	AS_HEAVY_DBG ("Download maintenance timer invoked");
 
 	/* Save state data. */
 	if (!as_downstate_save (dl))
@@ -1544,7 +1541,7 @@ static void dump_connections (ASDownload *dl)
 
 		AS_HEAVY_DBG_5 ("Connection: %15s, %4u KB, (%7u, %7u), %s",
 		                net_ip_str (conn->source->host),
-		                conn->total_downloaded / 1024,
+		                (conn->hist_downloaded + conn->curr_downloaded) / 1024,
 		                conn->chunk_start, conn->chunk_size,
 		                as_downconn_state_str (conn));
 	}

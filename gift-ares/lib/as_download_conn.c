@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.12 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_download_conn.c,v 1.13 2004/10/23 16:06:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,8 +50,12 @@ static ASDownConn *downconn_new ()
 	conn->queue_last_try = 0;
 	conn->queue_next_try = 0;
 
-	conn->total_downloaded = 0;
-	conn->average_speed    = 0;
+	conn->hist_downloaded = 0;
+	conn->hist_time       = 0;
+	conn->curr_downloaded = 0;
+	conn->request_time    = 0;
+	conn->data_time       = 0;
+
 	conn->fail_count       = 0;
 
 	conn->state    = DOWNCONN_UNUSED;
@@ -72,6 +76,21 @@ static void downconn_reset (ASDownConn *conn)
 	conn->push = NULL;
 	as_hash_free (conn->hash);
 	conn->hash = NULL;
+}
+
+/* Update stats after a request is complete or cancelled */
+static void downconn_update_stats (ASDownConn *conn)
+{
+	if (conn->request_time == 0)
+		return;
+
+	conn->hist_downloaded += conn->curr_downloaded;
+	conn->hist_time += time (NULL) - conn->request_time;
+
+	AS_DBG_3 ("Updated stats for %s. last speed: %.3f kb/s, total speed: %.3f kb/s",
+	          net_ip_str (conn->source->host),
+	          (float)conn->curr_downloaded / (time (NULL) - conn->request_time) / 1024,
+	          (float)conn->hist_downloaded / conn->hist_time / 1024);
 }
 
 /*****************************************************************************/
@@ -127,11 +146,14 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
 	assert (start >= 0);
 	assert (size > 0);
 	assert (conn->hash == NULL);
-
+	
 	/* assign new chunk and hash */
 	conn->chunk_start = start;
 	conn->chunk_size  = size;
 	conn->hash        = as_hash_copy (hash);
+	conn->curr_downloaded = 0;
+	conn->request_time = 0;
+	conn->data_time = 0;
 
 	if (!conn->client)
 	{
@@ -183,8 +205,23 @@ void as_downconn_cancel (ASDownConn *conn)
 	if (conn->client)
 		as_http_client_cancel (conn->client);
 
+	/* Still update stats since this might be request cancelled because the
+	 * chunk was shrunk */
+	downconn_update_stats (conn);
+
 	downconn_reset (conn);
 	downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+}
+
+/*****************************************************************************/
+
+/* Returns total average speed of this source in bytes/sec */
+unsigned int as_downconn_speed (ASDownConn *conn)
+{
+	if (conn->hist_time == 0)
+		return 0;
+
+	return (conn->hist_downloaded / conn->hist_time);
 }
 
 /*****************************************************************************/
@@ -201,6 +238,7 @@ const char *as_downconn_state_str (ASDownConn *conn)
 	case DOWNCONN_COMPLETE:     return "Complete";
 	case DOWNCONN_QUEUED:       return "Queued";
 	}
+
 	return "UNKNOWN";
 }
 
@@ -355,6 +393,8 @@ static as_bool handle_reply (ASHttpClient *client)
 			/* Reset fail count */
 			conn->fail_count = 0;
 
+			conn->request_time = conn->data_time = time (NULL);
+
 			/* we are in business */
 			downconn_set_state (conn, DOWNCONN_TRANSFERRING, TRUE);
 
@@ -486,7 +526,8 @@ static int downconn_http_callback (ASHttpClient *client,
 
 		assert (conn->state == DOWNCONN_TRANSFERRING);
 
-		conn->total_downloaded += client->data_len;
+		conn->data_time = time (NULL);
+		conn->curr_downloaded += client->data_len;
 
 		if (conn->data_cb)
 			conn->data_cb (conn, client->data, client->data_len);
@@ -505,13 +546,17 @@ static int downconn_http_callback (ASHttpClient *client,
 		                conn->client->content_length,
 		                net_ip_str (conn->source->host), conn->source->port);
 
-		conn->total_downloaded += client->data_len;
+		conn->data_time = time (NULL);
+		conn->curr_downloaded += client->data_len;
 
 		if (client->data_len > 0 && conn->data_cb)
 		{
 			if (!conn->data_cb (conn, client->data, client->data_len))
 				return FALSE; /* connection was freed / reused  by callback */
 		}
+
+		/* update stats */
+		downconn_update_stats (conn);
 
 		downconn_reset (conn);
 		/* this may free or reuse us */
