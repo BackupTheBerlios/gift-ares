@@ -56,8 +56,22 @@ static void search_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 
 	as_meta_foreach_tag (r->meta, (ASMetaForeachFunc)add_meta, share);
 
+#if 0
+	{
+		char *url;
+		ASSource *s;
+		url = as_source_serialize (r->source);
+
+		assert (url);
+
+		s = as_source_unserialize (url);
+		assert (s);
+		as_source_free (s);
+		free (url);
+	}
+#endif
 	proto->search_result (proto, search->udata, r->source->username,
-			      NULL, "FIXME", 1, share);
+			      NULL, as_source_serialize (r->source), 1, share);
 
 	share_free (share);
 }
@@ -136,6 +150,115 @@ unsigned char *asp_giftcb_hash_encode (unsigned char *data)
 	return encoded;
 }
 
+static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
+{
+	SourceStatus s;
+	const char *t;
+	Source *source = conn->udata1;
+	BOOL remove = FALSE;
+	
+	switch (state)
+	{
+	case DOWNCONN_CONNECTING:
+		s = SOURCE_WAITING, t = "Connecting";
+		break;
+	case DOWNCONN_TRANSFERRING:
+		s = SOURCE_ACTIVE, t = "Active";
+		break;
+	case DOWNCONN_FAILED:
+		s = SOURCE_CANCELLED, t = "Failed";/*, remove = TRUE;*/
+		break;
+	case DOWNCONN_COMPLETE:
+		s = SOURCE_COMPLETE, t = "Complete";
+		break;
+	case DOWNCONN_QUEUED:
+		s = SOURCE_QUEUED_REMOTE, t = "Queued";
+		break;
+	default:
+		abort ();
+	}
+
+	AS_DBG_3 ("state callback: %p (%s) '%s'", conn, source->url, t);
+
+	if (remove)
+		proto->source_abort (proto, source->chunk->transfer, source);
+
+	proto->source_status (proto, conn->udata1, s, t);
+
+	return TRUE;
+}
+
+static as_bool dl_data_callback (ASDownConn *conn, as_uint8 *data,
+				 unsigned int len)
+{
+	Source *source = conn->udata1;
+
+        proto->chunk_write (proto, source->chunk->transfer, source->chunk,
+			    source, data, len);
+
+	return TRUE;
+}
+
+int asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
+                                                           Source *source)
+{
+	ASSource *s;
+	ASDownConn *dc;
+	ASHash *hash;
+
+	assert (source->url);
+
+	if (!(s = as_source_unserialize (source->url)))
+	{	
+		AS_DBG_1 ("malformed url '%s'", source->url);
+		proto->source_abort (proto, source->chunk->transfer, source);
+
+		return FALSE;
+	}
+	
+	if (strncmp (source->hash, "SHA1:", 5) ||
+	    !(hash = as_hash_decode (source->hash + 4)))
+	{
+		AS_DBG_1 ("malformed hash '%s'", source->hash);
+		proto->source_abort (proto, source->chunk->transfer, source);
+
+		return FALSE;
+	}
+
+	dc = as_downconn_create (s, (ASDownConnStateCb)dl_state_callback,
+				 (ASDownConnDataCb)dl_data_callback);
+	
+	if (!dc)
+	{	
+		AS_DBG_1 ("dc failed '%s'", source->url);
+		as_source_free (s);
+		return FALSE;
+	}
+
+	source->udata = dc;
+	dc->udata1 = source;
+	
+	AS_DBG_2 ("started dl %p from %s", dc, source->url);
+	
+	as_downconn_start (dc, hash, chunk->start + chunk->transmit,
+			   chunk->stop - chunk->start - chunk->transmit);
+
+	proto->source_status (proto, source, SOURCE_WAITING, "Connecting");
+
+	return TRUE;
+}
+
+void asp_giftcb_download_stop (Protocol *p, Transfer *transfer, Chunk *chunk,
+			       Source *source, int complete)
+{
+	ASDownConn *dc = source->udata;
+
+	as_downconn_cancel (dc);
+
+	/* FIXME */
+	as_downconn_free (dc);
+}
+
 int Ares_init (Protocol *p)
 {
 	p->version_str = strdup ("foo");
@@ -152,6 +275,8 @@ int Ares_init (Protocol *p)
 	p->search         = asp_giftcb_search;
 	p->search_cancel  = asp_giftcb_search_cancel;
 	p->stats          = asp_giftcb_stats;
+        p->download_start = asp_giftcb_download_start;
+        p->download_stop  = asp_giftcb_download_stop;
 
 	proto = p;
 

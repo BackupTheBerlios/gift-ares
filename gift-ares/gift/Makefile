@@ -1,4 +1,4 @@
-CFLAGS= -g3 -Wall -DDEBUG -I../lib #-DHEAVY_DEBUG
+CFLAGS= -g3 -O0 -Wall -DDEBUG -I../lib #-DHEAVY_DEBUG
 LDFLAGS=-L../lib -lgift -lgiftproto -laresgift -lz -lm
 
 OBJECTS = \
