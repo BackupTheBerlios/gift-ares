@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.9 2004/12/24 12:06:25 mkern Exp $
+ * $Id: asp_search.c,v 1.10 2004/12/24 12:14:33 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -134,7 +134,7 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 	}
 
 	/* Assemble username@ip string. */
-	if (!STRING_NULL(r->source->username))
+	if (STRING_NULL (r->source->username))
 		user = stringf_dup ("%s@%s", r->source->username, 
 		                    net_ip_str (r->source->host));
 	else

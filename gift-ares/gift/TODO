@@ -6,6 +6,8 @@
 
 - Disabled sharing makes other nodes ask us for pushes
 
+- Don't send shares if shares are hidden
+
 - A lot of successfuly pushes hit the 'first packet needs 4 byte' limit in http server
 
 - Why do we get so many push requests for unknown shares? A bug somwhere?
