@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.5 2004/08/31 17:44:18 mkern Exp $
+# $Id: Makefile.msvc,v 1.6 2004/09/02 11:30:57 mkern Exp $
 
 
 !include ../Make.msvc
@@ -21,7 +21,8 @@ OBJECTS = \
 	as_session$(O) \
 	as_session_man$(O) \
 	as_node$(O) \
-	as_node_man$(O)
+	as_node_man$(O) \
+	as_sha1$(O)
 	
 
 all: $(OBJECTS)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.11 2004/09/01 16:55:38 mkern Exp $
+ * $Id: as_packet.c,v 1.12 2004/09/02 11:30:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -147,6 +147,18 @@ as_bool as_packet_put_be32 (ASPacket *packet, as_uint32 data)
 	return TRUE;
 }
 
+as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip)
+{
+	if (!packet_resize (packet, packet->used + sizeof (in_addr_t)))
+		return FALSE;
+
+	/* in_addr_t is always big endian */
+	memcpy (packet->data + packet->used, &ip, sizeof (in_addr_t));
+	packet->used += sizeof (in_addr_t);
+
+	return TRUE;
+}
+
 as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len)
 {
 	return packet_write(packet, str, len);
@@ -213,6 +225,20 @@ as_uint32 as_packet_get_be32 (ASPacket *packet)
 	ret |= ((as_uint32) *packet->read_ptr++) << 8;
 	ret |= *packet->read_ptr++;
 	return ret;
+}
+
+/* return big endian in_addr_t and move read_ptr */
+in_addr_t as_packet_get_ip (ASPacket *packet)
+{
+	in_addr_t ip;
+
+	if(as_packet_remaining(packet) < sizeof (in_addr_t))
+		return 0;
+
+	memcpy (&ip, packet->read_ptr, sizeof (in_addr_t));
+	packet->read_ptr += sizeof (in_addr_t);
+
+	return ip;
 }
 
 as_uint8 *as_packet_get_ustr (ASPacket *packet, size_t len)

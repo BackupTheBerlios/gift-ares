@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.7 2004/09/01 16:55:38 mkern Exp $
+ * $Id: as_packet.h,v 1.8 2004/09/02 11:30:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,17 +25,17 @@ typedef struct
 
 typedef enum
 {
-	PACKET_SYN      = 0x5A,  /* first packet sent by connecting party */
-	PACKET_ACK      = 0x33,  /* first packet sent back by supernode */
-	PACKET_NODEINFO = 0x00,  /* info about our node */
-	PACKET_STATS    = 0x07,  /* network stats */
-	PACKET_LOCALIP  = 0x25,  /* local (external) IP */
-	PACKET_NICKNAME = 0x05,  /* your nickname */
-	PACKET_SHARE    = 0x32,  /* used to send shares to supernode, compressed! */
-	PACKET_SEARCH   = 0x09,  /* token search */
-	PACKET_LOCATE   = 0x50,  /* hash search */
-	PACKET_RESULT   = 0x12,  /* search result */
-	PACKET_NODELIST = 0x36,  /* list of index nodes? */
+	PACKET_SYN       = 0x5A,  /* first packet sent by connecting party */
+	PACKET_ACK       = 0x33,  /* first packet sent back by supernode */
+	PACKET_HANDSHAKE = 0x00,  /* info about our node */
+	PACKET_STATS     = 0x07,  /* network stats */
+	PACKET_LOCALIP   = 0x25,  /* local (external) IP */
+	PACKET_NICKNAME  = 0x05,  /* your nickname */
+	PACKET_SHARE     = 0x32,  /* used to send shares to supernode, compressed! */
+	PACKET_SEARCH    = 0x09,  /* token search */
+	PACKET_LOCATE    = 0x50,  /* hash search */
+	PACKET_RESULT    = 0x12,  /* search result */
+	PACKET_NODELIST  = 0x36,  /* list of index nodes? */
 } ASPacketType;
 
 typedef enum
@@ -86,6 +86,9 @@ as_bool as_packet_put_be16 (ASPacket *packet, as_uint16 data);
 as_bool as_packet_put_le32 (ASPacket *packet, as_uint32 data);
 as_bool as_packet_put_be32 (ASPacket *packet, as_uint32 data);
 
+/* append big endian in_addr_t */
+as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip);
+
 /* append string of length len to packet */
 as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len);
 
@@ -101,6 +104,9 @@ as_uint16 as_packet_get_be16 (ASPacket *packet);
 /* return little/big endian uint32 and move read_ptr */
 as_uint32 as_packet_get_le32 (ASPacket *packet);
 as_uint32 as_packet_get_be32 (ASPacket *packet);
+
+/* return big endian in_addr_t and move read_ptr */
+in_addr_t as_packet_get_ip (ASPacket *packet);
 
 /* return string of size len and move read_ptr, caller frees returned string */
 as_uint8 *as_packet_get_ustr (ASPacket *packet, size_t len);

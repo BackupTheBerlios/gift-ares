@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.5 2004/08/31 20:05:25 mkern Exp $
+ * $Id: as_crypt.c,v 1.6 2004/09/02 11:30:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -131,6 +131,26 @@ static as_uint16 calc_packet_key (as_uint8 packet_seed, as_uint16 seed_16,
 	return (table_state & 0xFFFF);
 }
 
+/* A slightly modified version of the algo used for search token hashing.
+ * Used in several places.
+ */
+static as_uint16 hash_lowered_token (as_uint8 *str, int len)
+{
+	as_uint32 acc = 0;
+	as_uint8 c;
+	int b = 0;
+
+	/* this is a very poor hash function :( */
+	for (; len > 0; len--, str++)
+	{
+		c = tolower (*str);
+		acc ^= c << (b * 8);
+		b = (b + 1) & 3;
+	}
+
+	return (acc * 0x4f1bbcdc) >> 16;
+}
+
 /*****************************************************************************/
 
 /* allocate and init cipher */
@@ -232,26 +252,48 @@ void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
 	}
 }
 
-/*****************************************************************************/
-
-/* A slightly modified version of the algo used for search token hashing */
-static as_uint16 hash_lowered_token (as_uint8 *str, int len)
+/* Calculate 20 byte nonce used in handshake from supernode GUID and session
+ * seeds. Caller free returned memory.
+ */
+as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16])
 {
-	as_uint32 acc = 0;
-	as_uint8 c;
-	int b = 0;
+	as_uint16 key, token;
+	as_uint8 *nonce;
+	ASSHA1State sha1_state;
+	int i;
 
-	/* this is a very poor hash function :( */
-	for (; len > 0; len--, str++)
-	{
-		c = tolower (*str);
-		acc ^= c << (b * 8);
-		b = (b + 1) & 3;
-	}
+	if (!(nonce = malloc (sizeof (as_uint8) * 22)))
+		return NULL;
 
-	return (acc * 0x4f1bbcdc) >> 16;
+	key = calc_packet_key (cipher->session_seed_8, cipher->session_seed_16,
+	                       cipher->session_seed_8);
+
+	token = hash_lowered_token (guid, 16);
+
+	/* assemble binary string */
+	nonce[0] = (key >> 8)   & 0xFF;
+	nonce[1] = (key)        & 0xFF;
+	nonce[2] = (token >> 8) & 0xFF;
+	nonce[3] = (token)      & 0xFF;
+	memcpy (nonce + 4, guid, 16);
+
+	/* sha1 it six times */
+	as_sha1_init (&sha1_state);
+	for (i = 0; i < 6; i++)
+		as_sha1_update (&sha1_state, nonce, 20);
+	as_sha1_final (&sha1_state, nonce);
+
+	/* append token of sha1 hash */
+	token = hash_lowered_token (nonce, 20);
+	nonce[20] = (token >> 8) & 0xFF;
+	nonce[21] = (token)      & 0xFF;
+	
+	return nonce;
 }
 
+/*****************************************************************************/
+
+/* Index nodes have their port derived from ip. Use this to calculate it. */
 in_port_t as_ip2port (in_addr_t ip)
 {
 	as_uint8 ip_str[4];

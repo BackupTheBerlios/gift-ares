@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.11 2004/09/01 17:49:26 HEx Exp $
+ * $Id: as_session.c,v 1.12 2004/09/02 11:30:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -184,7 +184,7 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	input_remove (input);
 	session->input = INVALID_INPUT;
 
-	if (net_sock_error (session->c->fd))
+	if (net_sock_error (fd))
 	{
 		AS_HEAVY_DBG_2 ("Connect to %s:%d failed",
 		                net_ip_str (session->host), session->port);
@@ -243,7 +243,7 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 	ASPacketType packet_type;
 	as_uint16 packet_len;
 
-	if (net_sock_error (session->c->fd))
+	if (net_sock_error (fd))
 	{
 		AS_HEAVY_DBG_2 ("Connection with %s:%d closed remotely",
 		                net_ip_str (session->host), session->port);
@@ -348,12 +348,81 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
   
 /*****************************************************************************/
 
+static as_bool session_send_handshake (ASSession *session,
+                                       as_uint8 supernode_guid[16])
+{
+	ASPacket *packet;
+	as_uint8 *nonce;
+
+	/* Create our part of the handshake */
+	if (!(packet = as_packet_create ()))
+	{
+		AS_ERR ("Insufficient memory");
+		return FALSE;
+	}
+
+	/* hardcoded zero byte */
+	as_packet_put_8 (packet, 0x00);
+
+	/* 22 byte nonce created from supernode guid */
+	if (!(nonce = as_cipher_nonce (session->cipher, supernode_guid)))
+	{
+		AS_ERR ("Handshake nonce creation failed");
+		return FALSE;
+	}
+	as_packet_put_ustr (packet, nonce, 22);
+	free (nonce);
+
+	/* unknown, 2 bytes, (always?) zero */
+	as_packet_put_le16 (packet, 0x0000);
+	/* unknown, 1 byte, (always?) zero */
+	as_packet_put_8 (packet, 0x00);
+	/* unknown, 1 byte, (always?) 0x04 */
+	as_packet_put_8 (packet, 0x04);
+	/* unknown, 1 byte, (always?) zero */
+	as_packet_put_8 (packet, 0x00);
+	/* unknown, 1 byte, (always?) zero */
+	as_packet_put_8 (packet, 0x00);
+	/* unknown, 2 bytes, (always?) 0x84D6 */
+	as_packet_put_le16 (packet, 0x84D6);
+
+	/* unknown string, (always?) zero string */
+	as_packet_put_ustr (packet, "", 1);
+
+	/* client GUID, 16 bytes */
+	as_packet_put_ustr (packet, "0123456789abcdef", 16);
+
+	/* hardcoded zero byte */
+	as_packet_put_8 (packet, 0x00);
+	/* hardcoded zero byte */
+	as_packet_put_8 (packet, 0x00);
+
+	/* client name, zero terminated */
+	as_packet_put_ustr (packet, AS_CLIENT_NAME, sizeof (AS_CLIENT_NAME));
+	
+	/* local ip */
+	as_packet_put_ip (packet, net_local_ip (session->c->fd, NULL));
+
+	if (!as_session_send (session, PACKET_HANDSHAKE, packet,
+	                      PACKET_ENCRYPTED))
+	{
+		AS_ERR ("Send failed");
+		as_packet_free (packet);
+		return FALSE;
+	}
+
+	as_packet_free (packet);
+
+	return TRUE;
+}
+
 static as_bool session_handshake (ASSession *session,  ASPacketType type,
                                   ASPacket *packet)
 {
 	as_uint16 children;
 	as_uint16 seed_16;
 	as_uint8 seed_8;
+	as_uint8 *supernode_guid;
 
 	assert (type == PACKET_ACK);
 
@@ -384,11 +453,8 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	/* we think this is the child count of the supernode */
 	children = as_packet_get_le16 (packet);
 
-	/* Skip unknown stuff. Supernode GUID? */
-	as_packet_get_le32 (packet);
-	as_packet_get_le32 (packet);
-	as_packet_get_le32 (packet);
-	as_packet_get_le32 (packet);
+	/* Get supernode GUID used in our reply below. */
+	supernode_guid = as_packet_get_ustr (packet, 16);
 
 	/* get cipher seeds */
 	seed_16 = as_packet_get_le16 (packet);
@@ -397,7 +463,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	/* Add supplied nodes to our cache. */
 	while (as_packet_remaining (packet) >= 6)
 	{
-		in_addr_t host = (in_addr_t) as_packet_get_le32 (packet);
+		in_addr_t host = as_packet_get_ip (packet);
 		in_port_t port = (in_port_t) as_packet_get_le16 (packet);
 
 		/* FIXME: The session manager should really do this. Accessing the
@@ -414,11 +480,24 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 		AS_DBG_3 ("Handshake with %s:%d aborted. Supernode has %d (>350) children.",
 		          net_ip_str (session->host), session->port, (int)children);
 		session_error (session);
+		free (supernode_guid);
 		return FALSE;
 	}
 
 	/* Set up cipher. */
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
+
+	/* Send our part of the handshake. */
+	if (!session_send_handshake (session, supernode_guid))
+	{
+		AS_ERR_2 ("Handshake send failed to %s:%d",
+		          net_ip_str (session->host), session->port);
+		session_error (session);
+		free (supernode_guid);
+		return FALSE;
+	}
+
+	free (supernode_guid);
 
 	/* Handshake is complete now. */
 	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x%04X and 0x%02X",
@@ -448,14 +527,13 @@ static as_bool session_error (ASSession *session)
 {
 	as_bool ret;
 
+	session_cleanup (session);
+
 	if (session->state == SESSION_HANDSHAKING ||
 	    session->state == SESSION_CONNECTING)
 		ret = session_set_state (session, SESSION_FAILED, TRUE);
 	else
 		ret = session_set_state (session, SESSION_DISCONNECTED, TRUE);
-
-	if (ret)
-		session_cleanup (session);
 
 	return ret;
 }

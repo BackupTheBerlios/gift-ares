@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.4 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_crypt.h,v 1.5 2004/09/02 11:30:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,8 +49,14 @@ void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
 void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
 void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
 
+/* Calculate 22 byte nonce used in handshake from supernode GUID and session
+ * seeds. Caller free returned memory.
+ */
+as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16]);
+
 /*****************************************************************************/
 
+/* Index nodes have their port derived from ip. Use this to calculate it. */
 in_port_t as_ip2port (in_addr_t ip);
 
 /*****************************************************************************/
