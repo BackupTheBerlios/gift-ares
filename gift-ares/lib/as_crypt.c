@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.11 2004/09/22 03:05:23 HEx Exp $
+ * $Id: as_crypt.c,v 1.12 2004/09/24 22:24:39 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -436,11 +436,13 @@ in_port_t as_ip2port (in_addr_t ip)
 	as_uint16 ip_token;
 	as_uint32 port;
 
-	/* FIXME: How will this behave on big-endian? */
-	ip_str[0] = (as_uint8) ((ip >> 0)  & 0xFF);
-	ip_str[1] = (as_uint8) ((ip >> 8)  & 0xFF);
-	ip_str[2] = (as_uint8) ((ip >> 16) & 0xFF);
-	ip_str[3] = (as_uint8) ((ip >> 24) & 0xFF);
+	/* Be portable */
+	ip = ntohl (ip);
+
+	ip_str[0] = (as_uint8) ((ip >> 24) & 0xFF);
+	ip_str[1] = (as_uint8) ((ip >> 16) & 0xFF);
+	ip_str[2] = (as_uint8) ((ip >> 8)  & 0xFF);
+	ip_str[3] = (as_uint8) ((ip >> 0)  & 0xFF);
 
 	ip_token = hash_lowered_token (ip_str, 4);
 
@@ -495,6 +497,19 @@ void as_encrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
 {
 	assert (len >= 6);
 
+	/* Be portable */
+	host = ntohl (host);
+
+	munge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	munge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	munge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
+	munge (data, len, 0x4F54, 0xCE6D, 0x58BF);
+
+/*
 	munge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
 	munge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
 	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
@@ -503,12 +518,26 @@ void as_encrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
 	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
 	munge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
 	munge (data, len, 0x4F54, 0xCE6D, 0x58BF);
+*/
 }	
 
 void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
 {
 	assert (len >= 6);
 
+	/* Be portable */
+	host = ntohl (host);
+
+	unmunge (data, len, 0x4F54, 0xCE6D, 0x58BF);
+	unmunge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
+
+/*
 	unmunge (data, len, 0x4F54, 0xCE6D, 0x58BF);
 	unmunge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
 	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
@@ -517,6 +546,7 @@ void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
 	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
 	unmunge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
 	unmunge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
+*/
 }
   
 /*****************************************************************************/
