@@ -1,5 +1,5 @@
 /*
- * $Id: as_encoding.c,v 1.2 2004/09/06 15:06:44 HEx Exp $
+ * $Id: as_encoding.c,v 1.3 2004/09/13 22:21:07 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,10 +9,13 @@
 
 #include "as_ares.h"
 
+/*****************************************************************************/
+
+static const char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
 /* caller frees returned string */
 char *as_base64_encode (const unsigned char *data, int src_len)
 {
-	static const char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	unsigned char *dst, *out;
 
 	if(!data)
@@ -55,7 +58,6 @@ char *as_base64_encode (const unsigned char *data, int src_len)
 /* caller frees returned string */
 unsigned char *as_base64_decode (const char *data, int *dst_len)
 {
-	static const char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	unsigned char *dst, *out;
 	char *p;
 	int i;
@@ -100,3 +102,68 @@ unsigned char *as_base64_decode (const char *data, int *dst_len)
 	return out;
 }
 
+/*****************************************************************************/
+
+static const char hex_string[] = "0123456789ABCDEFabcdef";
+
+/* caller frees returned string */
+char *as_hex_encode (const unsigned char *data, int src_len)
+{
+	char *out, *dst;
+	int i;
+
+	if (!data)
+		return NULL;
+
+	if (! (out = dst = malloc (src_len * 2 + 1)))
+		return NULL;
+
+	for(i=0; i<src_len; i++, dst += 2)
+	{
+		dst[0] = hex_string[data[i] >> 4];
+		dst[1] = hex_string[data[i] & 0x0F];
+	}
+
+	dst[0] = 0;
+
+	return out;
+}
+
+/* caller frees returned string */
+unsigned char *as_hex_decode (const char *data, int *dst_len)
+{
+	char *dst, *h;
+	int i, j;
+	unsigned char hi, lo;
+
+	if (!data)
+		return NULL;
+
+	if (! (dst = malloc (strlen (data) / 2 + 1)))
+		return NULL;
+
+	for(i=0; *data && data[1]; i++, data += 2)
+	{
+		unsigned char byte = 0;
+
+		for (j=0; j<2; j++)
+		{
+			if ((h = strchr (hex_string, data[0])) == NULL)
+			{
+				free (dst);
+				return NULL;
+			}
+
+			h -= hex_string;
+			byte <<= 4;
+			byte |= (h > 0x0F) ? h - 6 : h;
+		}
+
+		dst[i] = byte;
+	}
+
+	if (dst_len)
+		*dst_len = i;
+
+	return dst;
+}
