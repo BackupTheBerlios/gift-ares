@@ -1,5 +1,5 @@
 /*
- * $Id: as_push_reply.c,v 1.4 2004/12/19 19:19:01 mkern Exp $
+ * $Id: as_push_reply.c,v 1.5 2004/12/21 03:51:28 hex Exp $
  *
  * Copyright (C) 2004 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -24,8 +24,8 @@ typedef struct
 	/* TCP connection and for this reply. */
 	TCPC *c;
 
-	/* Copy of share we want to push. */
-	ASShare *share;
+	/* Copy of hash we want to push. */
+	ASHash *hash;
 
 	/* Id we forward to pushee so it can match the reply to its request. */
 	char *id_str;
@@ -46,7 +46,7 @@ static ASPushReply *as_pushreply_create ()
 	
 	reply->c = NULL;
 
-	reply->share = NULL;
+	reply->hash = NULL;
 	reply->id_str = NULL;
 	reply->man = NULL;
 
@@ -62,7 +62,7 @@ static void as_pushreply_free (ASPushReply *reply, as_bool close_conn)
 	if (close_conn && reply->c)
 		tcp_close (reply->c);
 
-	as_share_free (reply->share);
+	as_hash_free (reply->hash);
 	free (reply->id_str);
 	free (reply);
 }
@@ -124,7 +124,7 @@ static void pushreply_connected (int fd, input_id input, ASPushReply *reply)
 	}
 
 	/* Assemble push message. */
-	hexhash = as_hex_encode (reply->share->hash->data, AS_HASH_SIZE);
+	hexhash = as_hex_encode (reply->hash->data, AS_HASH_SIZE);
 	req = stringf ("PUSH SHA1:%s%s\n\n", hexhash, reply->id_str);
 	free (hexhash);
 
@@ -205,7 +205,7 @@ void as_pushreplyman_handle (ASPushReplyMan *man, ASPacket *packet)
 	}
 
 	/* Check that we are actually sharing the requested file. */
-	if (!(reply->share = as_shareman_lookup (AS->shareman, hash)))
+	if (!as_shareman_lookup (AS->shareman, hash))
 	{
 		AS_DBG_3 ("Unknown share '%s' for push request to %s:%d.",
 		          as_hash_str (hash), net_ip_str (ip), port);
@@ -214,7 +214,7 @@ void as_pushreplyman_handle (ASPushReplyMan *man, ASPacket *packet)
 		return;
 	}
 
-	as_hash_free (hash);
+	reply->hash = hash;
 
 	/* We don't know what this is but don't process rest if it doesn't
 	 * match.
@@ -251,7 +251,7 @@ void as_pushreplyman_handle (ASPushReplyMan *man, ASPacket *packet)
 	reply->man = man;
 	man->replies = list_prepend (man->replies, reply);
 
-	AS_DBG_3 ("Pushing '%s' to %s:%d.", as_hash_str (reply->share->hash),
+	AS_DBG_3 ("Pushing '%s' to %s:%d.", as_hash_str (reply->hash),
 	          net_ip_str (ip), port);
 
 	/* Wait for connection. */
