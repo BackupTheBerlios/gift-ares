@@ -49,10 +49,10 @@ static as_uint16 ip2port (as_uint32 ip)
 
 	fprintf (stderr, "ebx: 0x%08X\n", ebx);
 
-	tmp_str[0] = (ebx >> 8) & 0xFF;
-	tmp_str[1] = ebx & 0xFF;
-	tmp_str[2] = 0x04;
-	tmp_str[3] = 0xBE;
+	tmp_str[0] = ebx & 0xFF;;
+	tmp_str[1] = (ebx >> 8) & 0xFF;
+	tmp_str[2] = 0xBE;
+	tmp_str[3] = 0x04;
 
 	fprintf (stderr, "tmp_token: 0x%04X\n", (int)hash_lowered_token (tmp_str, 4));
 
