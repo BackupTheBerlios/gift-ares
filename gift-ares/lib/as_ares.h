@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.25 2004/09/10 17:24:51 HEx Exp $
+ * $Id: as_ares.h,v 1.26 2004/09/10 18:01:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -121,6 +121,9 @@ typedef int            as_bool;
 
 /* Nubmer of supernodes each search is sent to */
 #define AS_SEARCH_SEND_COUNT (4)
+
+/* Limit for the number of max active downloads at any given time */
+#define AS_DOWNLOAD_MAX_ACTIVE (6)
 
 /*****************************************************************************/
 
