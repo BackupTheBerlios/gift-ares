@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.8 2004/08/26 22:50:23 mkern Exp $
+ * $Id: as_ares.h,v 1.9 2004/08/27 17:56:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -62,15 +62,21 @@ typedef int            as_bool;
 
 /*****************************************************************************/
 
-#include "as_log.h"
 #include "as_list.h"
 #include "as_hashtable.h"
+#include "as_log.h"
 #include "as_event.h"
 #include "as_crypt.h"
 #include "as_tcp.h"
 #include "as_packet.h"
-#include "as_session.h"
 #include "as_tokenize.h"
+#include "as_session.h"
+#include "as_session_man.h"
+
+/*****************************************************************************/
+
+#define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
+#define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.4 2004/08/26 22:50:23 mkern Exp $
+ * $Id: as_packet.h,v 1.5 2004/08/27 17:56:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -103,11 +103,15 @@ ASPacket *as_packet_slurp (void);
 
 /*****************************************************************************/
 
-/* encrypt entire packet using cipher */
-void as_packet_encrypt(ASPacket *packet, ASCipher *cipher);
+/* Encrypt entire packet using cipher. This will add the two bytes of seed
+ * to the beginning of the packet.
+ */
+as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher);
 
-/* decrypt entire packet using cipher */
-void as_packet_decrypt(ASPacket *packet, ASCipher *cipher);
+/* Decrypt entire packet using cipher. This will remove the two bytes of seed
+ * at the beginning of the packet.
+ */
+as_bool as_packet_decrypt(ASPacket *packet, ASCipher *cipher);
 
 /*****************************************************************************/
 

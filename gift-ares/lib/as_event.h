@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.h,v 1.6 2004/08/27 10:23:24 mkern Exp $
+ * $Id: as_event.h,v 1.7 2004/08/27 17:56:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -28,6 +28,9 @@
 /* our ids are pointers */
 typedef struct as_event_t * input_id;
 typedef struct as_event_t * timer_id;
+
+#define INVALID_INPUT NULL
+#define INVALID_TIMER NULL
 
 /*****************************************************************************/
 

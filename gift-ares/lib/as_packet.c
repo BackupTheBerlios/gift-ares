@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.7 2004/08/26 22:50:23 mkern Exp $
+ * $Id: as_packet.c,v 1.8 2004/08/27 17:56:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -266,19 +266,53 @@ char *as_packet_get_strnul (ASPacket *packet)
 
 /*****************************************************************************/
 
-#if 0
-// encrypt entire packet using cipher
-void as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
+/* Encrypt entire packet using cipher. This will add the two bytes of seed
+ * to the beginning of the packet.
+ */
+as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
 {
-	as_cipher_crypt(cipher, packet->data, packet->used);
+	as_uint8 seed_a = 0x00; /* always use zero for out packet seeds */
+	as_uint8 seed_b = 0x00;
+
+	/* encrypt packet with choosen seeds */
+	as_cipher_encrypt (cipher, packer->data, as_packet_size (packet));
+
+	/* make enough room for seeds */
+	if (!packet_resize (packet, as_packet_size (packet) + 2))
+		return FALSE;
+
+	/* move data towards end by two bytes */
+	memmove (packet->data + 2, packet->data, as_packet_size (packet));
+	packet->used += 2;
+
+	/* add seeds at front */
+	packet->data[0] = seed_a;
+	packet->data[1] = seed_b;
+
+	return TRUE;
 }
 
-// decrypt entire packet using cipher
-void as_packet_decrypt(ASPacket *packet, ASCipher *cipher)
+/* Decrypt entire packet using cipher. This will remove the two bytes of seed
+ * at the beginning of the packet.
+ */
+as_bool as_packet_decrypt(ASPacket *packet, ASCipher *cipher)
 {
-	as_cipher_crypt(cipher, packet->data, packet->used);
+	as_uint8 seed_a, seed_b;
+
+	if (as_packet_remaining (packet) < 3)
+		return FALSE;
+
+	/* read packet seeds an remove them from packet */
+	seed_a = as_packet_get_8 (packet);
+	seed_b = as_packet_get_8 (packet);
+	as_packet_truncate (packet);
+
+	/* decrypt packet using first seed */
+	as_cipher_decrypt (cipher, seed_a, packet->read_ptr,
+	                   as_packet_remaining (packet));
+
+	return TRUE;
 }
-#endif
 
 /*****************************************************************************/
 

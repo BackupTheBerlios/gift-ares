@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.8 2004/08/27 10:23:24 mkern Exp $
+ * $Id: as_event.c,v 1.9 2004/08/27 17:56:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -195,7 +195,7 @@ static void libevent_cb (int fd, short event, void *arg)
 			InputCallback cb;
 			void *udata;
 
-			/* libgift closes fd and removes all inputs */
+			/* libgift closes fd and removes all inputs. WTF? */
 			net_close (ev->input.fd);
 #if 0
 			input_remove_all (ev->input.fd);
