@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.10 2004/09/08 17:15:34 mkern Exp $
+ * $Id: as_crypt.c,v 1.11 2004/09/22 03:05:23 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -490,4 +490,54 @@ void as_decrypt_b6mi (as_uint8 *data, int len)
 	unmunge (data, len, 0x0E21, 0xCB6F, 0x41BA);
 }
 
+/* encrypt/decrypt push request */
+void as_encrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
+{
+	assert (len >= 6);
+
+	munge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	munge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
+	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	munge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
+	munge (data, len, 0x4F54, 0xCE6D, 0x58BF);
+}	
+
+void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
+{
+	assert (len >= 6);
+
+	unmunge (data, len, 0x4F54, 0xCE6D, 0x58BF);
+	unmunge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
+	unmunge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
+}
+  
 /*****************************************************************************/
+
+#if 0
+int main(int argc, char *argv[])
+{
+	ASPacket *p = as_packet_slurp();
+	in_addr_t host = net_ip (argv[1]);
+	in_port_t port = atoi (argv[2]);
+
+	printf ("%s (%x):%d\n", net_ip_str(host), host, port);
+	printf ("%x %x\n", 
+		((host & 0xff) << 8) + ((host & 0xff00) >> 8),
+		((host & 0xff0000) >> 8) + (host >> 24)
+		);
+
+	as_decrypt_push (p->data, p->used, host, port);
+	as_packet_dump (p);
+	as_packet_free (p);
+
+	return 0;
+}
+#endif
