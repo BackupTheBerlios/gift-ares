@@ -5,8 +5,6 @@ lib
 
 Essential stuff:
 
-- timeout searches (use periodic timer and start date for each search)
-
 - Make file hashing non-blocking. Don't remove state data until file is
   moved to final destination so we can resume verification if it is aborted
   on shutdown.

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.9 2004/10/21 17:11:26 mkern Exp $
+ * $Id: as_search.h,v 1.10 2004/12/24 13:40:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -52,6 +52,10 @@ struct as_search_t
 
 	as_bool      finished; /* TRUE if search is finished, timed out or was
 	                        * cancelled. Now new results will be accepted.
+	                        */
+
+	timer_id finish_timer; /* Timer started when query is sent to first
+	                        * supernode. Finishes search when invoked.
 	                        */
 
 	/* Contains a key for each ip we sent the search to */

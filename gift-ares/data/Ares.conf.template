@@ -21,3 +21,11 @@ username =
 #
 sessions = 4
 
+
+[search]
+
+#
+# Timeout in seconds from the time the search was sent to the first supernode.
+# After the search has timed out all further results will be ignored.
+#
+timeout = 180

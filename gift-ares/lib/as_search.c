@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.15 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_search.c,v 1.16 2004/12/24 13:40:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -10,6 +10,8 @@
 #include "as_ares.h"
 
 /*****************************************************************************/
+
+static as_bool finish_timer_func (ASSearch *search);
 
 static ASPacket *search_query_packet (ASSearch *search);
 static ASPacket *search_locate_packet (ASSearch *search);
@@ -40,14 +42,15 @@ ASSearch *as_search_create (as_uint16 id, ASSearchResultCb result_cb,
 		return NULL;
 	}
 
-	search->type      = SEARCH_QUERY;
-	search->id        = id;
-	search->intern    = FALSE;
-	search->finished  = FALSE;
-	search->result_cb = result_cb;
-	search->udata     = NULL;
-	search->query     = gift_strdup (query);
-	search->realm     = realm;
+	search->type         = SEARCH_QUERY;
+	search->id           = id;
+	search->intern       = FALSE;
+	search->finished     = FALSE;
+	search->finish_timer = INVALID_TIMER;
+	search->result_cb    = result_cb;
+	search->udata        = NULL;
+	search->query        = gift_strdup (query);
+	search->realm        = realm;
 
 	return search;
 }
@@ -76,13 +79,14 @@ ASSearch *as_search_create_locate (as_uint16 id, ASSearchResultCb result_cb,
 		return NULL;
 	}
 
-	search->type      = SEARCH_LOCATE;
-	search->id        = id;
-	search->intern    = FALSE;
-	search->finished  = FALSE;
-	search->result_cb = result_cb;
-	search->udata     = NULL;
-	search->hash      = as_hash_copy (hash);
+	search->type         = SEARCH_LOCATE;
+	search->id           = id;
+	search->intern       = FALSE;
+	search->finished     = FALSE;
+	search->finish_timer = INVALID_TIMER;
+	search->result_cb    = result_cb;
+	search->udata        = NULL;
+	search->hash         = as_hash_copy (hash);
 
 	return search;
 }
@@ -113,6 +117,7 @@ void as_search_free (ASSearch *search)
 	as_hashtable_free (search->results, FALSE);
 
 	as_hashtable_free (search->sent_supernodes, FALSE);
+	timer_remove (search->finish_timer);
 	
 	switch (search->type)
 	{
@@ -136,6 +141,10 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 {
 	ASPacket *packet;
 	ASPacketType type;
+
+	/* Don't send finished searches anywhere. */
+	if (search->finished)
+		return FALSE;
 
 	if (as_session_state (session) != SESSION_CONNECTED)
 	{
@@ -184,6 +193,14 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 	 */
 	as_hashtable_insert_int (search->sent_supernodes,
 	                         (as_uint32)session->host, (void*)0xCCCC);
+
+	/* Start search timeout if not already done. */
+	if (search->finish_timer == INVALID_TIMER)
+	{
+		search->finish_timer = timer_add (AS_CONF_INT (AS_SEARCH_TIMEOUT) * SECONDS,
+		                                  (TimerCallback)finish_timer_func,
+		                                  timer);
+	}
 	
 	return TRUE;
 }
@@ -203,6 +220,17 @@ as_bool as_search_sent_to (ASSearch *search, ASSession *session)
 
 /*****************************************************************************/
 
+/* Called by timer set up on first send query. */
+static as_bool finish_timer_func (ASSearch *search)
+{
+	search->finish_timer = INVALID_TIMER;
+
+	/* End search. */
+	as_search_add_result (search, NULL);
+
+	return FALSE; /* Remove timer. */
+}
+
 /* Add result to search and raise result callback. If result is NULL the
  * search is labeled as finished and the callback is raised a final time to
  * reflect that 
@@ -212,10 +240,17 @@ void as_search_add_result (ASSearch *search, ASResult *result)
 	List *head, *l;
 	as_bool duplicate = FALSE;
 
+	/* Don't add results to finished searches. */
+	if (search->finished)
+		return TRUE;
+
 	if (!result)
 	{
 		/* stop search */
 		search->finished = TRUE;
+
+		/* Remove timeout timer if there is one. */
+		timer_remove_zero (&search->finish_timer);
 	}
 	else
 	{

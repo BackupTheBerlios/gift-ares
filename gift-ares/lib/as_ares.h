@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.58 2004/12/19 18:54:59 mkern Exp $
+ * $Id: as_ares.h,v 1.59 2004/12/24 13:40:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -164,8 +164,10 @@ typedef enum
 	                                     * downloads at any given time. */
 	AS_DOWNLOAD_MAX_ACTIVE_SOURCES = 3, /* Maximum number of active
 	                                     * connections per download. */
-	AS_UPLOAD_MAX_ACTIVE           = 4  /* Maximum number of simultaneous
+	AS_UPLOAD_MAX_ACTIVE           = 4, /* Maximum number of simultaneous
 	                                     * uploads. */
+	AS_SEARCH_TIMEOUT              = 5  /* Time from first sent query packet
+	                                     * to timeout of search in seconds. */
 } ASAresConfigValues;
 
 /*****************************************************************************/
