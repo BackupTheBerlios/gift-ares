@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.9 2004/12/04 17:26:48 hex Exp $
+ * $Id: as_upload.h,v 1.10 2004/12/24 12:56:29 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -43,6 +43,12 @@ typedef int (*ASUploadAuthCb) (ASUpload *up, int *queue_length);
  */
 typedef as_bool (*ASUploadDataCb) (ASUpload *up, as_uint32 sent);
 
+/* Callback raised whenever a block of data is to be uploaded to the other
+ * node. It can modify the size of the block uploaded between 0 and max_size
+ * by returning the new value.
+ */
+typedef as_uint32 (*ASUploadThrottleCb) (ASUpload *up, as_uint32 max_size);
+
 struct as_upload_t
 {
 	TCPC         *c;
@@ -58,9 +64,10 @@ struct as_upload_t
 
 	ASUploadState state;
 
-	ASUploadStateCb state_cb;
-	ASUploadAuthCb auth_cb;
-	ASUploadDataCb data_cb;
+	ASUploadStateCb    state_cb;
+	ASUploadAuthCb     auth_cb;
+	ASUploadDataCb     data_cb;
+	ASUploadThrottleCb throttle_cb;
 
 	/* pointer to upload manager controlling this upload */
 	struct as_upman_t *upman; 
@@ -82,6 +89,9 @@ void as_upload_free (ASUpload *up);
 
 /* Set data callback for upload. */
 void as_upload_set_data_cb (ASUpload *up, ASUploadDataCb data_cb);
+
+/* Set throttle callback for upload. */
+void as_upload_set_throttle_cb (ASUpload *up, ASUploadThrottleCb throttle_cb);
 
 /*****************************************************************************/
 

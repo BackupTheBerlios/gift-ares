@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.15 2004/12/04 19:17:11 mkern Exp $
+ * $Id: as_upload.c,v 1.16 2004/12/24 12:56:29 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -73,6 +73,7 @@ ASUpload *as_upload_create (TCPC *c, ASHttpHeader *request,
 	up->state_cb = state_cb;
 	up->auth_cb = auth_cb;
 	up->data_cb = NULL;
+	up->throttle_cb = NULL;
 
 	up->upman = NULL;
 	up->udata = NULL;
@@ -103,6 +104,12 @@ void as_upload_free (ASUpload *up)
 void as_upload_set_data_cb (ASUpload *up, ASUploadDataCb data_cb)
 {
 	up->data_cb = data_cb;
+}
+
+/* Set throttle callback for upload. */
+void as_upload_set_throttle_cb (ASUpload *up, ASUploadThrottleCb throttle_cb)
+{
+	up->throttle_cb = throttle_cb;
 }
 
 /*****************************************************************************/
@@ -573,8 +580,18 @@ static void send_file (int fd, input_id input, ASUpload *up)
 		send_error (up); /* may free us */
 		return;
 	}
-	
-	wanted = BLOCKSIZE;
+
+	/* Give callback a chance to slow us down. */
+	if (up->throttle_cb)
+	{
+		wanted = up->throttle_cb (up, BLOCKSIZE);
+		assert (wanted <= BLOCKSIZE);
+
+		if (wanted == 0)
+			return; /* Nothing to do. */
+	}
+	else
+		wanted = BLOCKSIZE;
 
 	left = (up->stop - up->start) - up->sent;
 

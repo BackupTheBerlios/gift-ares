@@ -1,5 +1,5 @@
 /*
- * $Id: asp_upload.c,v 1.9 2004/12/24 12:14:33 mkern Exp $
+ * $Id: asp_upload.c,v 1.10 2004/12/24 12:56:29 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -64,7 +64,7 @@ static as_bool send_progress (ASUpload *up)
 /*****************************************************************************/
 
 /* Called by ares library each time it sent something to the downloader. */
-as_bool up_data_cb (ASUpload *up, as_uint32 sent)
+static as_bool up_data_cb (ASUpload *up, as_uint32 sent)
 {
 	wrote (up, sent);
 	
@@ -74,6 +74,15 @@ as_bool up_data_cb (ASUpload *up, as_uint32 sent)
 	 * is never triggered by the ares library. 
 	 */
 	return FALSE;
+}
+
+/* Called by ares lib whenever we upload a block of data to remote host.
+ * Allows us to limit the block size.
+ */
+static as_uint32 up_throttle_cb (ASUpload *up, as_uint32 max_size)
+{
+	/* Ask giFT how much to upload. */
+	return upload_throttle (up->udata, max_size);
 }
 
 /* Called by ares library for upload state changes. */
@@ -109,8 +118,9 @@ static as_bool up_state_cb (ASUpMan *man, ASUpload *up,
 		up->udata = chunk;
 		chunk->udata = up;
 
-		/* Register send progress callback. */
-		as_upload_set_data_cb (up, (ASUploadDataCb)up_data_cb);
+		/* Register send progress and throttle callbacks. */
+		as_upload_set_data_cb (up, up_data_cb);
+		as_upload_set_throttle_cb (up, up_throttle_cb);
 
 		break;
 	case UPLOAD_COMPLETE:
