@@ -1,5 +1,5 @@
 /*
- * $Id: as_config.c,v 1.2 2004/11/07 11:32:30 mkern Exp $
+ * $Id: as_config.c,v 1.3 2004/11/19 21:11:40 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -192,7 +192,7 @@ as_bool as_config_set_int (ASConfig *config, ASConfValId id, int integer)
 	}
 
 	/* If value didn't change there is nothing to do. */
-	if (val->data.i == interger)
+	if (val->data.i == integer)
 		return TRUE;
 
 	/* Create new val. */
