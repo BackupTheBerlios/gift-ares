@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.9 2004/09/18 02:13:03 HEx Exp $
+ * $Id: as_meta.c,v 1.10 2004/10/17 17:43:03 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -43,6 +43,36 @@ ASMeta *as_meta_create ()
 	meta->tags = NULL;
 
 	return meta;
+}
+
+static int tag_copy_itr (ASMetaTag *tag, ASMeta *new_meta)
+{
+	ASMetaTag *tag;
+
+	if ((tag = malloc (sizeof (ASMetaTag))))
+	{
+		tag->name = gift_strdup (name);
+		tag->value = gift_strdup (value);
+
+		/* insert into list */
+		new_meta->tags = list_prepend (new_meta->tags, tag);
+	}	
+
+	return TRUE;
+}
+
+/* create copy of meta data object */
+ASMeta *as_meta_copy (ASMeta *meta)
+{
+	ASMeta *new_meta;
+
+	if (!(new_meta = as_meta_create ()))
+		return NULL;
+
+	/* copy tags */
+	list_foreach (meta->tags, (ListForeachFunc)tag_copy_itr, new_meta);
+
+	return new_meta;
 }
 
 /* create meta data object from search result packet */

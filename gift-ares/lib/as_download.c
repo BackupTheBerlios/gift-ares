@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.19 2004/10/13 13:32:37 mkern Exp $
+ * $Id: as_download.c,v 1.20 2004/10/17 17:43:03 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -106,6 +106,7 @@ ASDownload *as_download_create (ASDownloadStateCb state_cb)
 	dl->state_cb = state_cb;
 	
 	dl->downman = NULL;
+	dl->meta = NULL;
 	dl->udata = NULL;
 
 	return dl;
@@ -141,6 +142,7 @@ void as_download_free (ASDownload *dl)
 
 	timer_remove (dl->maintenance_timer);
 
+	as_meta_free (dl->meta);
 	free (dl);
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.3 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_download_man.c,v 1.4 2004/10/17 17:43:03 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -174,6 +174,9 @@ ASDownload *as_downman_start_result (ASDownMan *man, ASResult *result,
 			res_l = res_l->next;
 		}
 	}
+
+	/* copy meta data from result to download */
+	search->meta = as_meta_copy (result->meta);
 
 	AS_DBG_2 ("Created new download \"%s\" with %d sources",
 	          save_path, sources);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.6 2004/09/18 02:13:03 HEx Exp $
+ * $Id: as_meta.h,v 1.7 2004/10/17 17:43:03 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -63,6 +63,9 @@ typedef as_bool (*ASMetaForeachFunc) (ASMetaTag *tag, void *udata);
 
 /* create meta data object */
 ASMeta *as_meta_create ();
+
+/* create copy of meta data object */
+ASMeta *as_meta_copy (ASMeta *meta);
 
 /* create meta data object from search result packet */
 ASMeta *as_meta_parse_result (ASPacket *packet, ASRealm realm);

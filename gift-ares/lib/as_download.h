@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.11 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_download.h,v 1.12 2004/10/17 17:43:03 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -61,6 +61,8 @@ struct as_download_t
 
 	/* pointer to download manager controlling this download */
 	struct as_downman_t *downman; 
+	/* meta data copied from search result by download manager */
+	ASMeta *meta;
 
 	void *udata; /* arbitrary user data */
 };
