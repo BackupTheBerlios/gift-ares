@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.11 2004/09/13 13:40:04 mkern Exp $
+ * $Id: main.c,v 1.12 2004/09/16 22:19:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,7 +56,7 @@ unsigned int __stdcall console_input_func (void *data)
 
 #endif
 
-void stdin_cb (int fd, input_id id, void *udata)
+as_bool read_command (int fd)
 {
 	static char buf[1024*16];
 	static int buf_pos = 0;
@@ -69,7 +69,7 @@ void stdin_cb (int fd, input_id id, void *udata)
 #else
 	if ((read_buf = read (fd, buf + buf_pos, sizeof (buf) - buf_pos)) < 0)
 #endif
-		return;
+		return FALSE;
 
 	buf_pos += read_buf;
 
@@ -82,7 +82,7 @@ void stdin_cb (int fd, input_id id, void *udata)
 	{
 		/* panic if buffer is too small */
 		assert (buf_pos < sizeof (buf));
-		return;
+		return FALSE;
 	}
 
 	buf[len++] = 0;
@@ -90,7 +90,7 @@ void stdin_cb (int fd, input_id id, void *udata)
 	/* handle cmd line, argv[] points into buf */
 	parse_argv (buf, &argc, &argv);
 
-	/* dispatch	command */
+	/* dispatch command */
 	if (argc >  0)
 		dispatch_cmd (argc, argv);
 
@@ -99,6 +99,13 @@ void stdin_cb (int fd, input_id id, void *udata)
 	/* remove used data */
 	memmove (buf, buf + len, buf_pos - len);
 	buf_pos -= len;
+
+	return TRUE;
+}
+
+void stdin_cb (int fd, input_id id, void *udata)
+{
+	int ret = read_command (fd);
 
 #if 0
 	/* print prompt */

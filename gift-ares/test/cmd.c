@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.23 2004/09/16 18:28:13 HEx Exp $
+ * $Id: cmd.c,v 1.24 2004/09/16 22:19:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,6 +35,7 @@ COMMAND_FUNC (resume);
 COMMAND_FUNC (share);
 COMMAND_FUNC (share_stats);
 COMMAND_FUNC (network_stats);
+COMMAND_FUNC (exec);
 
 COMMAND_FUNC (quit);
 
@@ -113,6 +114,10 @@ commands[] =
 	COMMAND (network_stats,
 	         "",
 	         "Show stats about the network.")
+
+	COMMAND (exec,
+		 "<file>",
+		 "Read commands from file.")
 
 	COMMAND (quit,
              "",
@@ -599,6 +604,25 @@ COMMAND_FUNC (network_stats)
 		list_length (AS->sessman->connected), AS->netinfo->users);
 	printf ("%u total files, %u Gb\n",
 		AS->netinfo->files, AS->netinfo->size);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (exec)
+{
+	FILE *f;
+	int count = 0;
+
+	if (argc < 2)
+		return FALSE;
+
+	if (!(f = fopen (argv[1], "r")))
+		return FALSE;
+
+	while (read_command (fileno (f)))
+		count++;
+
+	printf ("%d commands processed.\n", count);
 
 	return TRUE;
 }
