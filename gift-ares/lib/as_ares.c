@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.21 2005/01/05 01:20:28 hex Exp $
+ * $Id: as_ares.c,v 1.22 2005/01/06 16:07:31 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -222,7 +222,9 @@ as_bool as_cleanup ()
 	AS_DBG ("Cleaning up Ares library...");
 
 	as_upman_free (AS->upman);
+#ifndef GIFT_PLUGIN
 	as_downman_free (AS->downman);
+#endif
 	as_pushman_free (AS->pushman); /* Don't free before downman */
 	as_pushreplyman_free (AS->pushreplyman);
 	as_searchman_free (AS->searchman);
