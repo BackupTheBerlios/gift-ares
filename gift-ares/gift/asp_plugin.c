@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.7 2004/12/18 23:55:59 mkern Exp $
+ * $Id: asp_plugin.c,v 1.8 2004/12/19 01:26:38 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -309,9 +309,9 @@ static void asp_giftcb_destroy (Protocol *proto)
 int Ares_init (Protocol *p)
 {
 	/* Make sure we're loaded with the correct plugin interface version. */
-	if (protocol_compat (p, LIBGIFTPROTO_MKVERSION (0, 11, 6)) != 0)
+	if (protocol_compat (p, LIBGIFTPROTO_MKVERSION (0, 11, 8)) != 0)
 	{
-		AS_ERR ("libgift version mismatch. Need at least version 0.11.6.");
+		AS_ERR ("libgift version mismatch. Need at least version 0.11.8.");
 		return FALSE;
 	}
 	

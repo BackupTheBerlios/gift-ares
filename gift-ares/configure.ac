@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-# $Id: configure.ac,v 1.4 2004/12/19 00:14:58 mkern Exp $
+# $Id: configure.ac,v 1.5 2004/12/19 01:26:36 mkern Exp $
 
 dnl ###########################################################################
 dnl Process this file with autoconf to produce a configure script.
@@ -9,7 +9,7 @@ dnl ###########################################################################
 AC_PREREQ(2.52)
 
 AC_INIT(gift-ares, 0.1.1)
-AC_REVISION($Revision: 1.4 $)
+AC_REVISION($Revision: 1.5 $)
 AC_CONFIG_SRCDIR([lib/as_ares.h])
 
 AM_INIT_AUTOMAKE
@@ -40,7 +40,7 @@ dnl Checks for libraries.
 dnl ###########################################################################
 
 GIFT_PLUGIN_PREFIX
-GIFT_PLUGIN_PKGCONFIG(GIFT, 0.11.6, 0.12.0)
+GIFT_PLUGIN_PKGCONFIG(GIFT, 0.11.8, 0.12.0)
 
 dnl ###########################################################################
 dnl Checks for header files.
