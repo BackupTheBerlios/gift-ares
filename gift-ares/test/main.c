@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.7 2004/08/31 17:44:19 mkern Exp $
+ * $Id: main.c,v 1.8 2004/09/01 12:31:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -100,8 +100,10 @@ void stdin_cb (int fd, input_id id, void *udata)
 	memmove (buf, buf + len, buf_pos - len);
 	buf_pos -= len;
 
+#if 0
 	/* print prompt */
 	printf ("> ");
+#endif
 }
 
 /*****************************************************************************/
@@ -154,8 +156,10 @@ int main (int argc, char *argv[])
 	/* add callback for command handling */
 	input_add (stdin_handle, NULL, INPUT_READ, stdin_cb, 0);
 
+#if 0
 	/* print prompt */
 	printf ("> ");
+#endif
 
 	/* run event loop */
 	AS_DBG ("Entering event loop");
