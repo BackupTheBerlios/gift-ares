@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.c,v 1.2 2004/09/06 12:31:24 mkern Exp $
+ * $Id: as_hash.c,v 1.3 2004/09/06 12:38:27 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,7 +56,7 @@ ASHash *as_hash_decode (const char *encoded)
 	unsigned char *bin;
 	int len;
 
-	if (!(bin = fst_utils_base64_decode (encoded, &len)))
+	if (!(bin = as_base64_decode (encoded, &len)))
 		return NULL;
 
 	if (len != AS_HASH_SIZE)
@@ -77,7 +77,7 @@ char *as_hash_encode (ASHash *hash)
 {
 	char *str;
 
-	if (!(str = fst_utils_base64_encode (hash->data, AS_HASH_SIZE)))
+	if (!(str = as_base64_encode (hash->data, AS_HASH_SIZE)))
 		return NULL;
 
 	return str;
