@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.18 2004/11/05 01:40:24 HEx Exp $
+ * $Id: as_share.c,v 1.19 2004/11/26 20:45:06 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -226,6 +226,7 @@ ASPacket *as_share_packet (ASShare *share)
 		{
 			as_meta_set_fake (share->meta);
 			share->fake = TRUE;
+			as_packet_free (tokens);
 			tokens = share_add_tokens (share->meta);
 			AS_HEAVY_DBG_1 ("faked metadata for '%s'", share->path);
 		}
