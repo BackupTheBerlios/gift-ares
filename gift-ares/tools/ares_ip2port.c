@@ -10,17 +10,17 @@ typedef unsigned char as_uint8;
 /* ips may contain null bytes so we cannot rely on them for string
  * termination
  */
-static unsigned short hash_lowered_token (unsigned char *str, int len)
+static as_uint16 hash_lowered_token (as_uint8 *str, int len)
 {
 	as_uint32 acc = 0;
-	unsigned char c;
+	as_uint8 c;
 	int b = 0;
 
 	/* this is a very poor hash function :( */
 	for (; len > 0; len--, str++)
 	{
 		c = tolower (*str);
-		acc ^= c << (b*8);
+		acc ^= c << (b * 8);
 		b = (b + 1) & 3;
 	}
 
@@ -32,7 +32,7 @@ static as_uint16 ip2port (as_uint32 ip)
 	as_uint8 ip_str[4];
 	as_uint8 tmp_str[4];
 	as_uint16 ip_token;
-	as_uint32 ebx;
+	as_uint32 port;
 
 	ip_str[0] = (ip >> 24) & 0xFF;
 	ip_str[1] = (ip >> 16) & 0xFF;
@@ -41,40 +41,26 @@ static as_uint16 ip2port (as_uint32 ip)
 
 	ip_token = hash_lowered_token (ip_str, 4);
 
-	fprintf (stderr, "ip_token: 0x%04X\n", (int)ip_token);
-	
-	ebx = ((ip_str[0] * ip_str[0]) + ip_token) & 0xFFFF;
-	ebx += ((ip_str[0] * ip_str[0]) + ip_token) & 0xFFFF;
-	ebx += ((ip_str[0] * ip_str[0]) + ip_token) & 0xFFFF;
+	port = (((((as_uint16) ip_str[0]) * ip_str[0]) + ip_token) * 3);
 
-	fprintf (stderr, "ebx: 0x%08X\n", ebx);
-
-	tmp_str[0] = ebx & 0xFF;;
-	tmp_str[1] = (ebx >> 8) & 0xFF;
+	tmp_str[0] = port & 0xFF;
+	tmp_str[1] = (port >> 8) & 0xFF;
 	tmp_str[2] = 0xBE;
 	tmp_str[3] = 0x04;
 
-	fprintf (stderr, "tmp_token: 0x%04X\n", (int)hash_lowered_token (tmp_str, 4));
+	port += hash_lowered_token (tmp_str, 4);
+	port += ip_token + 0x12;
+	port += 0x5907; /* token of "strano" */
+	port -= (((as_uint16) ip_str[0] - 5) << 2) * 3;
+	port += 0xCDF8; /* token of "robboso" */
 
-	ebx += hash_lowered_token (tmp_str, 4);
-	ebx += ip_token;
-	ebx += 0x12;
-	ebx += hash_lowered_token ("strano", 6);
-	ebx -= ((ip_str[0] - 5) << 2) * 3;
-	ebx += hash_lowered_token ("robboso", 7);
+	if (port < 1024)
+		port += 1024;
 
-	fprintf (stderr, "strano_token: 0x%04X\n", (int)hash_lowered_token ("strano", 6));
-	fprintf (stderr, "robboso_token: 0x%04X\n", (int)hash_lowered_token ("robboso", 7));
+	if (port == 36278)
+		port++;
 
-	fprintf (stderr, "ebx: 0x%08X\n", ebx);
-
-	if (ebx < 1024)
-		ebx += 1024;
-
-	if (ebx == 36278)
-		ebx++;
-
-	return ebx & 0xFFFF;
+	return (port & 0xFFFF);
 }
 
 
