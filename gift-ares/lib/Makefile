@@ -39,7 +39,8 @@ OBJECTS = \
 	as_share.o \
 	as_share_man.o \
 	as_push.o \
-	as_push_man.o
+	as_push_man.o \
+	as_upload.o
 
 all: libares.a($(OBJECTS))
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.3 2004/09/14 00:57:43 HEx Exp $
+ * $Id: as_http_server.c,v 1.4 2004/10/03 17:37:49 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,9 +9,9 @@
 
 #include "as_ares.h"
 
-/*
+
 #define LOG_HTTP_HEADERS
-*/
+
 
 /*****************************************************************************/
 
@@ -295,7 +295,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 
 #ifdef LOG_HTTP_HEADERS
 	servcon->buf->str[len] = 0; /* chops off last '\n', we just use it for debugging */
-	AS_HEAVY_DBG_2 ("http request received from %s:\r\n%s",
+	AS_DBG_2 ("http request received from %s:\r\n%s",
 					 net_ip_str(servcon->remote_ip), servcon->buf->str);
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.42 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_ares.h,v 1.43 2004/10/03 17:37:49 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -116,6 +116,7 @@ typedef int            as_bool;
 #include "as_incoming.h"
 #include "as_share.h"
 #include "as_share_man.h"
+#include "as_upload.h"
 
 /*****************************************************************************/
 

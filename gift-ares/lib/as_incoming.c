@@ -1,5 +1,5 @@
 /*
- * $Id: as_incoming.c,v 1.5 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_incoming.c,v 1.6 2004/10/03 17:37:49 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,7 +17,8 @@ int as_incoming_http (ASHttpServer *server, TCPC *tcpcon,
 	ASHash *hash;
 	ASShare *share;
 
-	if (strncmp (request->uri, "sha1:", 5) ||
+	if ((strncmp (request->uri, "sha1:", 5) &&
+	     strncmp (request->uri, "/hack", 5)) || /* for debugging */
 	    !(hash = as_hash_decode (request->uri + 5)))
 	{
 		AS_DBG_2 ("Malformed uri '%s' from %s",
@@ -40,7 +41,7 @@ int as_incoming_http (ASHttpServer *server, TCPC *tcpcon,
 
 	as_hash_free (hash);
 
-	return FALSE;
+	return !!as_upload_new (tcpcon, share, request);
 }
 
 /*****************************************************************************/
