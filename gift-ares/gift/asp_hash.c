@@ -1,5 +1,5 @@
 /*
- * $Id: asp_hash.c,v 1.3 2004/12/12 16:19:32 hex Exp $
+ * $Id: asp_hash.c,v 1.4 2004/12/16 23:23:26 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -198,6 +198,8 @@ ASHash *asp_hash_decode (const char *encoded)
 		
 		return (ASHash *)bin;
 	}
+
+	return NULL;
 }
 
 /*****************************************************************************/
