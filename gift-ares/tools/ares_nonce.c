@@ -1,13 +1,491 @@
 /*
- * $Id: as_crypt.c,v 1.15 2005/02/15 14:07:42 mkern Exp $
+ * $Id: ares_nonce.c,v 1.1 2005/02/15 14:07:42 mkern Exp $
  *
- * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
- * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
+ * Copyright (C) 2003 giFT-Ares project
+ * http://developer.berlios.de/projects/gift-ares
  *
- * All rights reserved.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2, or (at your option) any
+ * later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
  */
 
-#include "as_ares.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef unsigned int as_uint32;
+typedef unsigned short as_uint16;
+typedef unsigned char as_uint8;
+
+#ifdef _MSC_VER
+# define strcasecmp(s1,s2) _stricmp(s1, s2)
+#endif
+
+#define FATAL_ERROR(x) { fprintf (stderr, "\nFATAL: %s\n", x); exit (1); }
+
+/*****************************************************************************/
+
+#define SHA_BLOCKSIZE		64
+#define SHA_DIGESTSIZE		20
+
+#define SHA1_BINSIZE        20
+#define SHA1_STRLEN         32
+
+/*****************************************************************************/
+
+typedef struct sha1_state_t
+{
+	unsigned long  digest[5];           /* message digest */
+	unsigned long  count_lo, count_hi;  /* 64-bit bit count */
+	as_uint8       data[SHA_BLOCKSIZE]; /* SHA data buffer */
+	int            local;               /* unprocessed amount in data */
+
+	/* tranform function specified by initalization */
+	void (*transform_fn)(struct sha1_state_t *sha_info);
+
+} ASSHA1State;
+
+/*****************************************************************************/
+
+typedef struct sha1_state_t SHA_INFO;
+
+/* special Ares version with different constants and init vectors. */
+void as_sha1_ares_init (SHA_INFO *);
+void as_sha1_init (SHA_INFO *);
+void as_sha1_update (SHA_INFO *, const void *, unsigned int);
+void as_sha1_final (SHA_INFO *, unsigned char [20]);
+
+/*****************************************************************************/
+
+#if 1
+#define GET_BE32(p,ind) \
+	((p)[ind] << 24 | (p)[(ind)+1] << 16 | (p)[(ind)+2] << 8 | (p)[(ind)+3])
+#else
+#define GET_BE32(p32,ind) \
+	ntohl((p32)[(ind)/4])
+#endif
+
+#define COPY_BE32x16(W,wind,p,ind)             \
+    (W)[(wind)]   = GET_BE32((p),(ind));       \
+    (W)[(wind)+1] = GET_BE32((p),(ind)+4);     \
+    (W)[(wind)+2] = GET_BE32((p),(ind)+8);     \
+    (W)[(wind)+3] = GET_BE32((p),(ind)+12);
+
+/* SHA f()-functions */
+
+#define f1(x,y,z)		((x & y) | (~x & z))
+#define f2(x,y,z)		(x ^ y ^ z)
+#define f3(x,y,z)		((x & y) | (x & z) | (y & z))
+#define f4(x,y,z)		(x ^ y ^ z)
+
+/* truncate to 32 bits -- should be a null op on 32-bit machines */
+
+#define T32(x)	((x) & 0xffffffffL)
+
+/* 32-bit rotate */
+
+#define R32(x,n)		T32(((x << n) | (x >> (32 - n))))
+
+/*****************************************************************************/
+
+/* SHA transformation with standard constants */
+
+#define CONST1			0x5a827999L
+#define CONST2			0x6ed9eba1L
+#define CONST3			0x8f1bbcdcL
+#define CONST4			0xca62c1d6L
+
+/* the generic case, for when the overall rotation is not unraveled */
+
+#define FG(n)	\
+	T = T32(R32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n);		\
+	E = D; D = C; C = R32(B,30); B = A; A = T
+
+/* specific cases, for when the overall rotation is unraveled */
+
+#define FA(n)	\
+	T = T32(R32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n); B = R32(B,30)
+
+#define FB(n)	\
+	E = T32(R32(T,5) + f##n(A,B,C) + D + *WP++ + CONST##n); A = R32(A,30)
+
+#define FC(n)	\
+	D = T32(R32(E,5) + f##n(T,A,B) + C + *WP++ + CONST##n); T = R32(T,30)
+
+#define FD(n)	\
+	C = T32(R32(D,5) + f##n(E,T,A) + B + *WP++ + CONST##n); E = R32(E,30)
+
+#define FE(n)	\
+	B = T32(R32(C,5) + f##n(D,E,T) + A + *WP++ + CONST##n); D = R32(D,30)
+
+#define FT(n)	\
+	A = T32(R32(B,5) + f##n(C,D,E) + T + *WP++ + CONST##n); C = R32(C,30)
+
+
+/* do SHA transformation */
+static void sha_transform(SHA_INFO *sha_info)
+{
+	int i;
+	as_uint8 *dp;
+	unsigned long T, A, B, C, D, E, W[80], *WP;
+
+	dp = sha_info->data;
+
+	COPY_BE32x16(W, 0,dp,0);
+	COPY_BE32x16(W, 4,dp,16);
+	COPY_BE32x16(W, 8,dp,32);
+	COPY_BE32x16(W,12,dp,48);
+
+	for (i = 16; i < 80; ++i) {
+		W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];
+		W[i] = R32(W[i], 1);
+	}
+
+	A = sha_info->digest[0];
+	B = sha_info->digest[1];
+	C = sha_info->digest[2];
+	D = sha_info->digest[3];
+	E = sha_info->digest[4];
+	WP = W;
+
+	FA(1); FB(1); FC(1); FD(1); FE(1); FT(1); FA(1); FB(1); FC(1); FD(1);
+	FE(1); FT(1); FA(1); FB(1); FC(1); FD(1); FE(1); FT(1); FA(1); FB(1);
+	FC(2); FD(2); FE(2); FT(2); FA(2); FB(2); FC(2); FD(2); FE(2); FT(2);
+	FA(2); FB(2); FC(2); FD(2); FE(2); FT(2); FA(2); FB(2); FC(2); FD(2);
+	FE(3); FT(3); FA(3); FB(3); FC(3); FD(3); FE(3); FT(3); FA(3); FB(3);
+	FC(3); FD(3); FE(3); FT(3); FA(3); FB(3); FC(3); FD(3); FE(3); FT(3);
+	FA(4); FB(4); FC(4); FD(4); FE(4); FT(4); FA(4); FB(4); FC(4); FD(4);
+	FE(4); FT(4); FA(4); FB(4); FC(4); FD(4); FE(4); FT(4); FA(4); FB(4);
+
+	sha_info->digest[0] = T32(sha_info->digest[0] + E);
+	sha_info->digest[1] = T32(sha_info->digest[1] + T);
+	sha_info->digest[2] = T32(sha_info->digest[2] + A);
+	sha_info->digest[3] = T32(sha_info->digest[3] + B);
+	sha_info->digest[4] = T32(sha_info->digest[4] + C);
+}
+
+#undef CONST1
+#undef CONST2
+#undef CONST3
+#undef CONST4
+#undef FG
+#undef FA
+#undef FB
+#undef FC
+#undef FD
+#undef FE
+#undef FT
+
+/*****************************************************************************/
+
+/* SHA transformation with special Ares constants */
+
+#define CONST1			0x5a827901L
+#define CONST2			0x6ed9eba1L
+#define CONST3			0x1f1cbcdcL
+#define CONST4			0xca62c1d6L
+
+/* the generic case, for when the overall rotation is not unraveled */
+
+#define FG(n)	\
+	T = T32(R32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n);		\
+	E = D; D = C; C = R32(B,30); B = A; A = T
+
+/* specific cases, for when the overall rotation is unraveled */
+
+#define FA(n)	\
+	T = T32(R32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n); B = R32(B,30)
+
+#define FB(n)	\
+	E = T32(R32(T,5) + f##n(A,B,C) + D + *WP++ + CONST##n); A = R32(A,30)
+
+#define FC(n)	\
+	D = T32(R32(E,5) + f##n(T,A,B) + C + *WP++ + CONST##n); T = R32(T,30)
+
+#define FD(n)	\
+	C = T32(R32(D,5) + f##n(E,T,A) + B + *WP++ + CONST##n); E = R32(E,30)
+
+#define FE(n)	\
+	B = T32(R32(C,5) + f##n(D,E,T) + A + *WP++ + CONST##n); D = R32(D,30)
+
+#define FT(n)	\
+	A = T32(R32(B,5) + f##n(C,D,E) + T + *WP++ + CONST##n); C = R32(C,30)
+
+
+/* do SHA transformation */
+static void sha_ares_transform(SHA_INFO *sha_info)
+{
+	int i;
+	as_uint8 *dp;
+	unsigned long T, A, B, C, D, E, W[80], *WP;
+
+	dp = sha_info->data;
+
+	COPY_BE32x16(W, 0,dp,0);
+	COPY_BE32x16(W, 4,dp,16);
+	COPY_BE32x16(W, 8,dp,32);
+	COPY_BE32x16(W,12,dp,48);
+
+	for (i = 16; i < 80; ++i) {
+		W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];
+		W[i] = R32(W[i], 1);
+	}
+
+	A = sha_info->digest[0];
+	B = sha_info->digest[1];
+	C = sha_info->digest[2];
+	D = sha_info->digest[3];
+	E = sha_info->digest[4];
+	WP = W;
+
+	FA(1); FB(1); FC(1); FD(1); FE(1); FT(1); FA(1); FB(1); FC(1); FD(1);
+	FE(1); FT(1); FA(1); FB(1); FC(1); FD(1); FE(1); FT(1); FA(1); FB(1);
+	FC(2); FD(2); FE(2); FT(2); FA(2); FB(2); FC(2); FD(2); FE(2); FT(2);
+	FA(2); FB(2); FC(2); FD(2); FE(2); FT(2); FA(2); FB(2); FC(2); FD(2);
+	FE(3); FT(3); FA(3); FB(3); FC(3); FD(3); FE(3); FT(3); FA(3); FB(3);
+	FC(3); FD(3); FE(3); FT(3); FA(3); FB(3); FC(3); FD(3); FE(3); FT(3);
+	FA(4); FB(4); FC(4); FD(4); FE(4); FT(4); FA(4); FB(4); FC(4); FD(4);
+	FE(4); FT(4); FA(4); FB(4); FC(4); FD(4); FE(4); FT(4); FA(4); FB(4);
+
+	sha_info->digest[0] = T32(sha_info->digest[0] + E);
+	sha_info->digest[1] = T32(sha_info->digest[1] + T);
+	sha_info->digest[2] = T32(sha_info->digest[2] + A);
+	sha_info->digest[3] = T32(sha_info->digest[3] + B);
+	sha_info->digest[4] = T32(sha_info->digest[4] + C);
+}
+
+#undef CONST1
+#undef CONST2
+#undef CONST3
+#undef CONST4
+#undef FG
+#undef FA
+#undef FB
+#undef FC
+#undef FD
+#undef FE
+#undef FT
+
+/*****************************************************************************/
+
+/* initialize the SHA digest */
+void as_sha1_init(SHA_INFO *sha_info)
+{
+	/* standard sha1 vectors */
+	sha_info->digest[0] = 0x67452301L;
+	sha_info->digest[1] = 0xefcdab89L;
+	sha_info->digest[2] = 0x98badcfeL;
+	sha_info->digest[3] = 0x10325476L;
+	sha_info->digest[4] = 0xc3d2e1f0L;
+
+	/* standard sha1 transform function */
+	sha_info->transform_fn = sha_transform;
+
+	sha_info->count_lo = 0L;
+	sha_info->count_hi = 0L;
+	sha_info->local = 0;
+}
+
+/* special Ares version with different constants and init vectors. */
+void as_sha1_ares_init (SHA_INFO *sha_info)
+{
+	/* ares vectors */
+	sha_info->digest[0] = 0x17452301L;
+	sha_info->digest[1] = 0xeacdaf89L;
+	sha_info->digest[2] = 0x98bfdcfeL;
+	sha_info->digest[3] = 0x14325476L;
+	sha_info->digest[4] = 0xc3d2c1f0L;
+
+	/* Ares transform function with different constants */
+	sha_info->transform_fn = sha_ares_transform;
+
+	sha_info->count_lo = 0L;
+	sha_info->count_hi = 0L;
+	sha_info->local = 0;
+}
+
+/* update the SHA digest */
+void as_sha1_update(SHA_INFO *sha_info, const void *data, unsigned int count)
+{
+	int i;
+	unsigned long clo;
+	const as_uint8 *buffer = data;
+
+	clo = T32(sha_info->count_lo + ((unsigned long) count << 3));
+	if (clo < sha_info->count_lo) {
+		++sha_info->count_hi;
+	}
+	sha_info->count_lo = clo;
+	sha_info->count_hi += (unsigned long) count >> 29;
+	if (sha_info->local) {
+		i = SHA_BLOCKSIZE - sha_info->local;
+		if (i > count) {
+			i = count;
+		}
+		memcpy(sha_info->data + sha_info->local, buffer, i);
+		count -= i;
+		buffer += i;
+		sha_info->local += i;
+		if (sha_info->local == SHA_BLOCKSIZE) {
+			sha_info->transform_fn (sha_info);
+		} else {
+			return;
+		}
+	}
+	while (count >= SHA_BLOCKSIZE) {
+		memcpy(sha_info->data, buffer, SHA_BLOCKSIZE);
+		buffer += SHA_BLOCKSIZE;
+		count -= SHA_BLOCKSIZE;
+		sha_info->transform_fn (sha_info);
+	}
+	memcpy(sha_info->data, buffer, count);
+	sha_info->local = count;
+}
+
+/* finish computing the SHA digest */
+void as_sha1_final(SHA_INFO *sha_info, unsigned char *digest)
+{
+	int count;
+	unsigned long lo_bit_count, hi_bit_count;
+
+	lo_bit_count = sha_info->count_lo;
+	hi_bit_count = sha_info->count_hi;
+	count = (int) ((lo_bit_count >> 3) & 0x3f);
+	sha_info->data[count++] = 0x80;
+	if (count > SHA_BLOCKSIZE - 8) {
+		memset(sha_info->data + count, 0, SHA_BLOCKSIZE - count);
+		sha_info->transform_fn (sha_info);
+		memset(sha_info->data, 0, SHA_BLOCKSIZE - 8);
+	} else {
+		memset(sha_info->data + count, 0,
+			SHA_BLOCKSIZE - 8 - count);
+	}
+	sha_info->data[56] = (unsigned char) ((hi_bit_count >> 24) & 0xff);
+	sha_info->data[57] = (unsigned char) ((hi_bit_count >> 16) & 0xff);
+	sha_info->data[58] = (unsigned char) ((hi_bit_count >>	8) & 0xff);
+	sha_info->data[59] = (unsigned char) ((hi_bit_count >>	0) & 0xff);
+	sha_info->data[60] = (unsigned char) ((lo_bit_count >> 24) & 0xff);
+	sha_info->data[61] = (unsigned char) ((lo_bit_count >> 16) & 0xff);
+	sha_info->data[62] = (unsigned char) ((lo_bit_count >>	8) & 0xff);
+	sha_info->data[63] = (unsigned char) ((lo_bit_count >>	0) & 0xff);
+	sha_info->transform_fn(sha_info);
+	digest[ 0] = (unsigned char) ((sha_info->digest[0] >> 24) & 0xff);
+	digest[ 1] = (unsigned char) ((sha_info->digest[0] >> 16) & 0xff);
+	digest[ 2] = (unsigned char) ((sha_info->digest[0] >>  8) & 0xff);
+	digest[ 3] = (unsigned char) ((sha_info->digest[0]		) & 0xff);
+	digest[ 4] = (unsigned char) ((sha_info->digest[1] >> 24) & 0xff);
+	digest[ 5] = (unsigned char) ((sha_info->digest[1] >> 16) & 0xff);
+	digest[ 6] = (unsigned char) ((sha_info->digest[1] >>  8) & 0xff);
+	digest[ 7] = (unsigned char) ((sha_info->digest[1]		) & 0xff);
+	digest[ 8] = (unsigned char) ((sha_info->digest[2] >> 24) & 0xff);
+	digest[ 9] = (unsigned char) ((sha_info->digest[2] >> 16) & 0xff);
+	digest[10] = (unsigned char) ((sha_info->digest[2] >>  8) & 0xff);
+	digest[11] = (unsigned char) ((sha_info->digest[2]		) & 0xff);
+	digest[12] = (unsigned char) ((sha_info->digest[3] >> 24) & 0xff);
+	digest[13] = (unsigned char) ((sha_info->digest[3] >> 16) & 0xff);
+	digest[14] = (unsigned char) ((sha_info->digest[3] >>  8) & 0xff);
+	digest[15] = (unsigned char) ((sha_info->digest[3]		) & 0xff);
+	digest[16] = (unsigned char) ((sha_info->digest[4] >> 24) & 0xff);
+	digest[17] = (unsigned char) ((sha_info->digest[4] >> 16) & 0xff);
+	digest[18] = (unsigned char) ((sha_info->digest[4] >>  8) & 0xff);
+	digest[19] = (unsigned char) ((sha_info->digest[4]		) & 0xff);
+}
+
+/*****************************************************************************/
+
+void print_bin_data(unsigned char * data, int len)
+{
+        int i;
+        int i2;
+        int i2_end;
+
+//      printf("data len %d\n", data_len);
+
+        for (i2 = 0; i2 < len; i2 = i2 + 16)
+        {
+                i2_end = (i2 + 16 > len) ? len: i2 + 16;
+                for (i = i2; i < i2_end; i++)
+                        if (isprint(data[i]))
+                                fprintf(stderr, "%c", data[i]);
+                        else
+                        fprintf(stderr, ".");
+                for ( i = i2_end ; i < i2 + 16; i++)
+                        fprintf(stderr, " ");
+                fprintf(stderr, " | ");
+                for (i = i2; i < i2_end; i++)
+                        fprintf(stderr, "%02x ", data[i]);
+                fprintf(stderr, "\n");
+        }
+}
+
+/*****************************************************************************/
+
+static const char hex_string[] = "0123456789ABCDEFabcdef";
+
+/* caller frees returned string */
+char *as_hex_encode (const unsigned char *data, int src_len)
+{
+	char *out, *dst;
+	int i;
+
+	if (!data)
+		return NULL;
+
+	if (! (out = dst = malloc (src_len * 2 + 1)))
+		return NULL;
+
+	for(i=0; i<src_len; i++, dst += 2)
+	{
+		dst[0] = hex_string[data[i] >> 4];
+		dst[1] = hex_string[data[i] & 0x0F];
+	}
+
+	dst[0] = 0;
+
+	return out;
+}
+
+/* caller frees returned string */
+unsigned char *as_hex_decode (const char *data, int *dst_len)
+{
+	char *dst, *h;
+	int i, j;
+
+	if (!data)
+		return NULL;
+
+	if (! (dst = malloc (strlen (data) / 2 + 1)))
+		return NULL;
+
+	for(i=0; *data && data[1]; i++, data += 2)
+	{
+		unsigned char byte = 0;
+
+		for (j=0; j<2; j++)
+		{
+			if ((h = strchr (hex_string, data[j])) == NULL)
+			{
+				free (dst);
+				return NULL;
+			}
+
+			byte <<= 4;
+			byte |= (h - hex_string > 0x0F) ? (h - hex_string - 6) : h - hex_string;
+		}
+
+		dst[i] = byte;
+	}
+
+	if (dst_len)
+		*dst_len = i;
+
+	return dst;
+}
 
 /*****************************************************************************/
 
@@ -216,34 +694,6 @@ unsigned char table_7[256] =
 
 /*****************************************************************************/
 
-static void munge (as_uint8 *data, int len, as_uint16 key,
-                   as_uint16 mul, as_uint16 add)
-{
-	int i;
-
-	for (i = 0; i < len; i++)
-	{
-		data[i] = data[i] ^ (key >> 8);
-		key = (key + data[i]) * mul + add;
-	}
-}
-
-static void unmunge (as_uint8 *data, int len, as_uint16 key,
-                     as_uint16 mul, as_uint16 add)
-{
-	as_uint8 c;
-	int i;
-
-	for (i = 0; i < len; i++)
-	{
-		c = data[i] ^ (key >> 8);
-		key = (key + data[i]) * mul + add;
-		data[i] = c;
-	}
-}
-
-/*****************************************************************************/
-
 static as_uint16 calc_packet_key (as_uint8 packet_seed, as_uint16 seed_16,
                                   as_uint8 seed_8)
 {
@@ -283,83 +733,11 @@ static as_uint16 hash_lowered_token (as_uint8 *str, int len)
 	return (acc * 0x4f1bbcdc) >> 16;
 }
 
-/*****************************************************************************/
-
-/* allocate and init cipher */
-ASCipher *as_cipher_create (as_uint16 handshake_key)
-{
-	ASCipher *cipher;
-
-	if (!(cipher = malloc (sizeof (ASCipher))))
-		return NULL;
-
-	cipher->handshake_key = handshake_key;
-	cipher->session_seed_16 = 0;
-	cipher->session_seed_8 = 0;
-
-	return cipher;
-}
-
-/* free cipher */
-void as_cipher_free (ASCipher *cipher)
-{
-	if (!cipher)
-		return;
-
-	free (cipher);
-}
-
-/* set seeds and calculate session key */
-void as_cipher_set_seeds (ASCipher *cipher, as_uint16 seed_16,
-                          as_uint8 seed_8)
-{
-	if (!cipher)
-		return;
-
-	cipher->session_seed_16 = seed_16;
-	cipher->session_seed_8 = seed_8;
-}
-
-/*****************************************************************************/
-
-/* encrypt/decrypt a block of data with session key */
-void as_cipher_encrypt (ASCipher *cipher, as_uint8 packet_seed,
-                        as_uint8 *data, int len)
-{
-	as_uint16 key;
-	
-	key = calc_packet_key (packet_seed, cipher->session_seed_16,
-	                       cipher->session_seed_8);
-
-	munge (data, len, key, 0xCE6D, 0x58BF);
-}
-
-void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
-                        as_uint8 *data, int len)
-{
-	as_uint16 key;
-	
-	key = calc_packet_key (packet_seed, cipher->session_seed_16,
-	                       cipher->session_seed_8);
-
-	unmunge (data, len, key, 0xCE6D, 0x58BF);
-}
-
-/* encrypt/decrypt a block of data with handshake key */
-void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
-{
-	munge (data, len, cipher->handshake_key, 0x5CA0, 0x15EC);
-}
-
-void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
-{
-	unmunge (data, len, cipher->handshake_key, 0x5CA0, 0x15EC);
-}
-
 /* Calculate 22 byte nonce used in handshake from supernode GUID and session
  * seeds. Caller free returned memory.
  */
-as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16])
+as_uint8 *as_cipher_nonce (as_uint16 seed_16, as_uint8 seed_8,
+                           as_uint8 guid[16])
 {
 	as_uint16 key, token;
 	as_uint8 *nonce;
@@ -399,8 +777,7 @@ as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16])
 	token = hash_lowered_token (buf, 20);
 
 	/* create key */
-	key = calc_packet_key (cipher->session_seed_8, cipher->session_seed_16,
-	                       cipher->session_seed_8);
+	key = calc_packet_key (seed_8, seed_16, seed_8);
 	key++;
 
 	/* prepend key and token */
@@ -428,172 +805,41 @@ as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16])
 
 /*****************************************************************************/
 
-/* Index nodes have their port derived from ip. Use this to calculate it. */
-in_port_t as_ip2port (in_addr_t ip)
+int main (int argc, char* argv[])
 {
-	as_uint8 ip_str[4];
-	as_uint8 tmp_str[4];
-	as_uint16 ip_token;
-	as_uint32 port;
+	unsigned char *guid, *nonce;
+	int len;
+	unsigned int seed_16 = 0, seed_8 = 0;
 
-	/* Be portable */
-	ip = ntohl (ip);
+	if (argc != 4)
+	{
+		fprintf (stderr, "Usage: %s <seed_16> <seed_8> <supernode_guid in hex>\n", argv[0]);
+		exit (1);
+	}
 
-	ip_str[0] = (as_uint8) ((ip >> 24) & 0xFF);
-	ip_str[1] = (as_uint8) ((ip >> 16) & 0xFF);
-	ip_str[2] = (as_uint8) ((ip >> 8)  & 0xFF);
-	ip_str[3] = (as_uint8) ((ip >> 0)  & 0xFF);
+	if (!(guid = as_hex_decode (argv[3], &len)))
+		FATAL_ERROR ("hex decode failed");
 
-	ip_token = hash_lowered_token (ip_str, 4);
+	if (len != 16)
+		FATAL_ERROR ("guid not 16 bytes in length");
 
-	port = (((((as_uint16) ip_str[0]) * ip_str[0]) + ip_token) * 3);
+	if (sscanf (argv[1], "0x%x", &seed_16) == 0)
+		sscanf (argv[1], "%u", &seed_16);
+	if (sscanf (argv[2], "0x%x", &seed_8) == 0)
+		sscanf (argv[3], "%u", &seed_8);
 
-	tmp_str[0] = port & 0xFF;
-	tmp_str[1] = (port >> 8) & 0xFF;
-	tmp_str[2] = 0xBE;
-	tmp_str[3] = 0x04;
+	fprintf (stderr, "seed_16: 0x%02x, seed_8: 0x%01x\n", seed_16, seed_8);
+	fprintf (stderr, "\nguid:\n");
+	print_bin_data (guid, len);
 
-	port += hash_lowered_token (tmp_str, 4);
-	port += ip_token + 0x12;
-	port += 0x5907;                                  /* hash of "strano" */
-	port -= (((as_uint16) ip_str[0] - 5) << 2) * 3;
-	port += 0xCDF8;                                  /* hash of "robboso" */
+	if (!(nonce = as_cipher_nonce (seed_16, seed_8, guid)))
+		FATAL_ERROR ("nonce creation failed");
 
-	if (port < 1024)
-		port += 1024;
-
-	if (port == 36278)
-		port++;
-
-	return (in_port_t) (port & 0xFFFF);
+	fprintf (stderr, "\nnonce:\n");
+	print_bin_data (nonce, 22);
+	
+	free (nonce);	
+	free (guid);
 }
 
 /*****************************************************************************/
-
-/* encrypt/decrypt http download header b6st */
-void as_encrypt_b6st (as_uint8 *data, int len)
-{
-	munge (data, len, 0xB334, 0xCE6D, 0x58BF);
-}
-
-void as_decrypt_b6st (as_uint8 *data, int len)
-{
-	unmunge (data, len, 0xB334, 0xCE6D, 0x58BF);
-}
-
-/* encrypt/decrypt http download header b6mi */
-void as_encrypt_b6mi (as_uint8 *data, int len)
-{
-	munge (data, len, 0x0E21, 0xCB6F, 0x41BA);
-}
-
-void as_decrypt_b6mi (as_uint8 *data, int len)
-{
-	unmunge (data, len, 0x0E21, 0xCB6F, 0x41BA);
-}
-
-/* encrypt/decrypt push request */
-void as_encrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
-{
-	assert (len >= 6);
-
-	/* Be portable */
-	host = ntohl (host);
-
-	munge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	munge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	munge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
-	munge (data, len, 0x4F54, 0xCE6D, 0x58BF);
-
-/*
-	munge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	munge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
-	munge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	munge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
-	munge (data, len, 0x4F54, 0xCE6D, 0x58BF);
-*/
-}	
-
-void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
-{
-	assert (len >= 6);
-
-	/* Be portable */
-	host = ntohl (host);
-
-	unmunge (data, len, 0x4F54, 0xCE6D, 0x58BF);
-	unmunge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, (as_uint16)(host >> 16), 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, (as_uint16)(host & 0xFFFF), 0xCE6D, 0x58BF);
-
-/*
-	unmunge (data, len, 0x4F54, 0xCE6D, 0x58BF);
-	unmunge (data, 6, 0x3E00, 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, port, 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, ((host & 0xff) << 8) + ((host & 0xff00) >> 8), 0xCE6D, 0x58BF);
-	unmunge (data+6, len-6, ((host & 0xff0000) >> 8) + (host >> 24), 0xCE6D, 0x58BF);
-*/
-}
-  
-/* encrypt/decrypt arlnk URLs */
-void as_encrypt_arlnk (as_uint8 *data, int len)
-{
-	munge (data, len, 0x6F13, 0x5AB3, 0x8D1E);
-}
-
-void as_decrypt_arlnk (as_uint8 *data, int len)
-{
-	unmunge (data, len, 0x6F13, 0x5AB3, 0x8D1E);
-}
-
-/* encrypt/decrypt login string */
-void as_encrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
-                              as_uint8 seed_8)
-{
-	munge (data, len, seed_16 + 0x0C, 0xCE6D, 0x58BF);
-	munge (data, len, (seed_16 - seed_8) + 0x0B, 0x310F, 0x3A4E);
-}
-
-void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
-                              as_uint8 seed_8)
-{
-	unmunge (data, len, (seed_16 - seed_8) + 0x0B, 0x310F, 0x3A4E);
-	unmunge (data, len, seed_16 + 0x0C, 0xCE6D, 0x58BF);
-}
-
-/*****************************************************************************/
-
-#if 0
-int main(int argc, char *argv[])
-{
-	ASPacket *p = as_packet_slurp();
-	in_addr_t host = net_ip (argv[1]);
-	in_port_t port = atoi (argv[2]);
-
-	printf ("%s (%x):%d\n", net_ip_str(host), host, port);
-	printf ("%x %x\n", 
-		((host & 0xff) << 8) + ((host & 0xff00) >> 8),
-		((host & 0xff0000) >> 8) + (host >> 24)
-		);
-
-	as_decrypt_push (p->data, p->used, host, port);
-	as_packet_dump (p);
-	as_packet_free (p);
-
-	return 0;
-}
-#endif
