@@ -14,6 +14,7 @@
 
 - Source searching
 
-- Search timeouts (in ares lib)
+- Search timeouts (in ares lib). Don't start the timeout before we have sent the search
+  to at least one supernode so searches are cached when we have no connection yet.
 
 - arlnk (Why do we need support for that in the plugin?)
