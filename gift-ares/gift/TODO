@@ -13,6 +13,4 @@
 
 - Config loading/saving (in ares lib)
 
-- base32 for gnutella compatibility
-
 - arlnk (Why do we need support for that in the plugin?)

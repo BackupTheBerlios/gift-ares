@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.3 2004/12/10 02:00:10 hex Exp $
+ * $Id: asp_search.c,v 1.4 2004/12/12 16:19:32 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -71,8 +71,6 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 {
 	Share *share;
 	char *url;
-
-	AS_DBG ("search result");
 
 	/* Create a share object for giFT. */
 	if (!(share = share_new (NULL)))
@@ -202,7 +200,7 @@ int asp_giftcb_locate (Protocol *p, IFEvent *event, char *htype, char *hstr)
 	if (gift_strcasecmp (htype, "SHA1"))
 		return FALSE;
 
-	if (!(hash = as_hash_decode (hstr)))
+	if (!(hash = asp_hash_decode (hstr)))
 	{
 		AS_DBG_1 ("malformed hash '%s'", hash);
 		return FALSE;

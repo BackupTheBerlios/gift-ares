@@ -1,5 +1,5 @@
 /*
- * $Id: asp_hash.h,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ * $Id: asp_hash.h,v 1.2 2004/12/12 16:19:32 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -25,6 +25,9 @@ unsigned char *asp_giftcb_hash (const char *path, size_t *len);
 
 /* Called by giFT to encode a hash in human readable form. */
 unsigned char *asp_giftcb_hash_encode (unsigned char *data);
+
+/* as_hash_decode()-alike that handles both base32 and base64. */
+ASHash *asp_hash_decode (const char *encoded);
 
 /*****************************************************************************/
 
