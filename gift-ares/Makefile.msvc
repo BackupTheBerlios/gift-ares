@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.4 2004/12/24 16:09:26 mkern Exp $
+# $Id: Makefile.msvc,v 1.5 2005/01/03 20:05:56 mkern Exp $
 # Microsoft Visual C++ 6.0 makefile
 # see README.msvc for usage
 
@@ -75,7 +75,7 @@ win32-dist: plugin
 	@-md $(BUILD_ROOT)\win32-dist\data\Ares
 	@copy data\Ares.conf.template      $(BUILD_ROOT)\win32-dist\data\Ares\Ares.conf
 	@copy data\nodes                   $(BUILD_ROOT)\win32-dist\data\Ares\nodes
-#	@copy win32\gift-ares.nsi          $(BUILD_ROOT)\win32-dist\gift-ares.nsi
+	@copy win32\gift-ares.nsi          $(BUILD_ROOT)\win32-dist\gift-ares.nsi
 # remove traling 'd' for debug builds in distro
 	@copy gift\$(PLUGIN_DLL) $(BUILD_ROOT)\win32-dist\Ares.dll
 
