@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.22 2005/01/06 16:07:31 hex Exp $
+ * $Id: as_ares.c,v 1.23 2005/02/09 19:46:07 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -59,17 +59,17 @@ static as_bool port_change_cb (const ASConfVal *old_val,
 static const ASConfVal default_conf[] =
 {
 	/* id, name, type, data, callback, udata */
-	{ AS_LISTEN_PORT,                 "main/port",      AS_CONF_INT, 59049,
+	{ AS_LISTEN_PORT,                 "main/port",      AS_CONF_INT, {59049},
 	                                  port_change_cb,   NULL },
-	{ AS_USER_NAME,                   "main/username",  AS_CONF_STR, "antares",
+	{ AS_USER_NAME,                   "main/username",  AS_CONF_STR, {"antares"},
 	                                  NULL,             NULL },
-	{ AS_DOWNLOAD_MAX_ACTIVE,         NULL,             AS_CONF_INT, 6,
+	{ AS_DOWNLOAD_MAX_ACTIVE,         NULL,             AS_CONF_INT, {6},
 	                                  NULL,             NULL },
-	{ AS_DOWNLOAD_MAX_ACTIVE_SOURCES, NULL,             AS_CONF_INT, 10,
+	{ AS_DOWNLOAD_MAX_ACTIVE_SOURCES, NULL,             AS_CONF_INT, {10},
 	                                  NULL,             NULL },
-	{ AS_UPLOAD_MAX_ACTIVE,           NULL,             AS_CONF_INT, 3,
+	{ AS_UPLOAD_MAX_ACTIVE,           NULL,             AS_CONF_INT, {3},
 	                                  NULL,             NULL },
-	{ AS_SEARCH_TIMEOUT,              "search/timeout", AS_CONF_INT, 3*60,
+	{ AS_SEARCH_TIMEOUT,              "search/timeout", AS_CONF_INT, {3*60},
 	                                  NULL,             NULL }
 };
 
