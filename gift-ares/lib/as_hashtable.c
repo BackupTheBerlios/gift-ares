@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.5 2004/09/07 15:57:57 mkern Exp $
+ * $Id: as_hashtable.c,v 1.6 2004/09/07 17:37:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -597,7 +597,7 @@ void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
     if (table->entrycount == 0)
 		return;
 
-	/* I have no idea what I am doing... */
+	/* Needs a cleanup, but should work now. */
 
     for (i = 0; i < table->tablelength; i++)
     {
@@ -645,13 +645,14 @@ void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
 			}
 			continue;
 		}
+
 		tablelength = table->tablelength;
 		parent = NULL;
 
 		if (tablelength <= (j = ++(index)))
 			return;
 
-		while ((next = table->table[j]))
+		while (!(next = table->table[j]))
 		{
 	        if (++j >= tablelength)
 				return;
@@ -712,7 +713,7 @@ void *as_hashtable_find (ASHashTable *table, ASHashTableForeachFunc func,
 		if (tablelength <= (j = ++(index)))
 			return NULL;
 
-		while ((next = table->table[j]))
+		while (!(next = table->table[j]))
 		{
 	        if (++j >= tablelength)
 				return NULL;
