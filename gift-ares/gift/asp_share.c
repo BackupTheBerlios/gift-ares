@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.9 2004/12/24 18:22:20 mkern Exp $
+ * $Id: asp_share.c,v 1.10 2004/12/28 18:28:41 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -100,6 +100,13 @@ void asp_giftcb_share_free (Protocol *p, Share *share, void *data)
 	assert (!share_get_udata (share, PROTO->name));
 }
 
+static int compare_share (ASShare *a, ASShare *b)
+{
+	assert (a->path && b->path);
+
+	return strcmp (a->path, b->path);
+}
+
 /* Called by giFT when share is added. */
 BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 {
@@ -149,7 +156,8 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 	ashare->udata = share;
 
 	/* Add share to list and commit to ares library using a timer. */
-	sharelist = list_prepend (sharelist, ashare);
+	sharelist = list_insert_sorted (sharelist,
+					(CompareFunc)compare_share, &ashare);
 
 	if (share_timer != INVALID_TIMER)
 		timer_reset (share_timer);
