@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.39 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_ares.h,v 1.40 2004/09/19 18:51:47 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -63,6 +63,14 @@ typedef int            as_bool;
 #ifndef S_ISREG
 # define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
 #endif
+
+#ifndef VA_COPY
+# ifdef _MSC_VER
+#  define VA_COPY(d,s) (d) = (s)
+# else
+#  define VA_COPY __va_copy
+# endif
+#endif /* !VA_COPY */
 
 #define TRUE 1
 #define FALSE 0

@@ -1,5 +1,5 @@
 /*
- * $Id: as_strobj.c,v 1.2 2004/09/03 20:03:21 HEx Exp $
+ * $Id: as_strobj.c,v 1.3 2004/09/19 18:51:47 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -117,14 +117,6 @@ static int string_resize (String *sobj, int new_size)
 }
 
 /*****************************************************************************/
-
-#ifndef VA_COPY
-# ifdef _MSC_VER
-#  define VA_COPY(d,s) (d) = (s)
-# else
-#  define VA_COPY va_copy
-# endif
-#endif /* !VA_COPY */
 
 int string_appendvf (String *sobj, const char *fmt, va_list args)
 {
