@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.3 2004/09/16 02:47:52 HEx Exp $
+ * $Id: as_share.c,v 1.4 2004/09/16 02:49:21 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -109,7 +109,7 @@ static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
 		return FALSE;
 
 	as_packet_put_8 (p, map->type);
-	as_packet_put_ustr (p, tag->value, strlen (tag->value)+1);
+	as_packet_put_strnul (p, tag->value);
 
 	return TRUE;
 }
@@ -135,7 +135,7 @@ ASPacket *share_packet (ASShare *share)
 	as_packet_put_8 (p, share->realm); /* realm */
 	as_packet_put_le32 (p, share->size); /* filesize */
 	as_packet_put_hash (p, share->hash);
-	as_packet_put_ustr (p, share->ext, strlen (share->ext)+1);
+	as_packet_put_strnul (p, share->ext);
 
 	as_meta_foreach_tag (share->meta, (ASMetaForeachFunc)share_add_tag, p);
 
