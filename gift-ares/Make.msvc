@@ -1,15 +1,16 @@
-# $Id: Make.msvc,v 1.8 2004/11/06 12:36:58 mkern Exp $
+# $Id: Make.msvc,v 1.9 2004/12/24 16:09:26 mkern Exp $
 
 
 VERSION = 0.1.0
 HEAVY_DEBUG = 0
 
-ASLIB_ROOT   = $(BUILD_ROOT)\lib
-TEST_ROOT    = $(BUILD_ROOT)\test
-DELPHI_ROOT  = $(BUILD_ROOT)\delphi
-BIN_ROOT     = $(BUILD_ROOT)\bin
+ASLIB_ROOT   = $(ARES_ROOT)\lib
+TEST_ROOT    = $(ARES_ROOT)\test
+DELPHI_ROOT  = $(ARES_ROOT)\delphi
+BIN_ROOT     = $(ARES_ROOT)\bin
+ARESDLL_ROOT = $(ARES_ROOT)\aresdll
+PLUGIN_ROOT  = $(ARES_ROOT)\gift
 ZLIB_ROOT    = $(BUILD_ROOT)\zlib
-ARESDLL_ROOT = $(BUILD_ROOT)\aresdll
 
 O = .obj
 
@@ -67,25 +68,39 @@ LIBS     = $(LIBS)     zlib$(D).lib
 # general
 ##########################
 
+ASLIB_LIB     = aslib$(DEXT).lib
+ASLIBGIFT_LIB = aslibgift$(DEXT).lib
+TEST_EXE      = astest$(DEXT).exe
+DELPHI_LIB    = asdelphi$(DEXT).lib
+ARES_DLL      = aresdll$(DET).dll
+ARES_DLL_LIB  = aresdll$(DET).lib   # import lib
 
-ASLIB_LIB    = aslib$(DEXT).lib
-TEST_EXE     = astest$(DEXT).exe
-DELPHI_LIB   = asdelphi$(DEXT).lib
-ARES_DLL     = aresdll$(DET).dll
-ARES_DLL_LIB = aresdll$(DET).lib   # import lib
+# temporary till we don't require giFT symbols anymore
+GIFT_LIB      		= giFT$(DEXT).lib
+GIFT_DLL      		= giFT$(DEXT).dll
+GIFT_EXE   			= giFT$(DEXT).exe
+
+LIBGIFT_LIB      	= libgiFT$(DEXT).lib
+LIBGIFT_DLL      	= libgiFT$(DEXT).dll
+LIBGIFTPROTO_LIB	= libgiFTproto$(DEXT).lib
+LIBGIFTPROTO_DLL	= libgiFTproto$(DEXT).dll
+PLUGIN_LIB      	= Ares$(DEXT).lib
+PLUGIN_DLL          = Ares$(DEXT).dll
 
 # threaded clib
 CFLAGS   = $(CFLAGS) -MT$(D)
 CFLAGS   = $(CFLAGS) -nologo
 
-DEFS     = $(DEFS) -DHAVE_CONFIG_H -DWIN32 -DNO_STRICT
+DEFS     = $(DEFS) -DHAVE_CONFIG_H -DWIN32 -DNO_STRICT -DVERSION=\"$(VERSION)\"
 INCLUDES = -I$(ASLIB_ROOT) $(INCLUDES)
+INCLUDES = -I$(BUILD_ROOT) -I$(BUILD_ROOT)\libgift\win32 $(INCLUDES)
 
 
 #LDFLAGS  = $(LDFLAGS)  /NODEFAULTLIB:"msvcrtd"
 LDFLAGS  = $(LDFLAGS) /NODEFAULTLIB:"LIBC"
 LDFLAGS  = $(LDFLAGS) -nologo -version:$(VERSION) 
 LDFLAGS  = $(LDFLAGS) -libpath:"$(ASLIB_ROOT)"
+LDFLAGS  = $(LDFLAGS) -libpath:"$(BUILD_ROOT)\libgift" -libpath:"$(BUILD_ROOT)\libgift\proto"
 
 LIBS     = $(LIBS) binmode.obj oldnames.lib advapi32.lib user32.lib wsock32.lib
 
