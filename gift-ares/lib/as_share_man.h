@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.h,v 1.5 2004/10/24 01:18:56 HEx Exp $
+ * $Id: as_share_man.h,v 1.6 2004/12/04 15:30:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -48,6 +48,10 @@ as_bool as_shareman_submit (ASShareMan *man, ASSession *session);
 
 /* Submit list of shares to all connected supernodes and add shares to
  * manager. Takes ownership of list values (shares).
+ *
+ * IMPORTANT: If the list contains multiple shares with the same hash
+ *            only one of them will be added and the other will be freed
+ *            without notice.
  */
 as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares);
 

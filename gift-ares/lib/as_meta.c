@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.14 2004/11/05 01:43:40 HEx Exp $
+ * $Id: as_meta.c,v 1.15 2004/12/04 15:30:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -415,18 +415,17 @@ ASRealm as_meta_realm_from_filename (const char *path)
 
 /*****************************************************************************/
 
-/* Ares only tokenizes (and thus searches) metadata, not
-   filenames. This brain-dead decision is responsible for the
-   following ugly hack. */
+/* Ares only tokenizes (and thus searches) metadata, not filenames. This
+ * brain-dead decision is responsible for the following ugly hack.
+ */
 as_bool as_meta_set_fake (ASMeta *meta)
 {
-	char *filename = strdup (as_meta_get_tag (meta, "filename")), *ext;
-	
+	char *filename, *ext;
+
+	filename = gift_strdup (as_meta_get_tag (meta, "filename"));
 	assert (filename);
 
-	ext = strrchr (filename, '.');
-
-	if (ext)
+	if ((ext = strrchr (filename, '.')))
 		*ext = '\0';
 
 	/* Ares painstakingly splits the filename up into
@@ -434,6 +433,7 @@ as_bool as_meta_set_fake (ASMeta *meta)
 	 * sufficiently ugly and broken as it is, so we don't
 	 * bother. */
 	as_meta_add_tag (meta, "title", filename);
+	free (filename);
 
 	/* Don't submit filename with fake shares - this may have been
 	 * intended as an optimization, but is useful for

@@ -1,12 +1,4 @@
 
-giFT plugin
------------
-
-- Directly notify giFT of upload progress instead of using the periodic
-  progress callback.
-
-- Share submit timer reliably crashes for me during ares packet creation.
-
 
 lib
 ---

@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.2 2004/12/04 14:11:27 mkern Exp $
+ * $Id: asp_share.c,v 1.3 2004/12/04 15:30:46 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -117,7 +117,10 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 		return FALSE;
 	}
 
-	/* Associate ares share with giFT and vice versa. */
+	/* Associate ares share with giFT and vice versa.
+	 * FIXME: submit_share will free share objects with duplicate hashes later
+	 *        without notice.
+	 */
 	assert (!share_get_udata (share, PROTO->name));
 	share_set_udata (share, PROTO->name, ashare);
 	ashare->udata = share;

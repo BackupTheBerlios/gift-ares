@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.11 2004/12/04 14:11:27 mkern Exp $
+ * $Id: as_share_man.c,v 1.12 2004/12/04 15:30:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -175,9 +175,9 @@ static as_bool conglobulator_assimilate (Conglobulator *glob, ASPacket *p)
 
 static int share_send (ASShare *share, Conglobulator *glob)
 {
-	ASPacket *p = as_share_packet (share);
+	ASPacket *p;
 
-	if (!p)
+	if (!(p = as_share_packet (share)))
 		return FALSE;
 
 	as_packet_header (p, PACKET_SHARE);
@@ -193,7 +193,7 @@ static as_bool submit_share_list (ASSession *session, List *shares)
 	list_foreach (shares, (ListForeachFunc)share_send, &glob);
 
 	conglobulator_flush (&glob);
-		
+
 	return TRUE;
 }
 
@@ -212,6 +212,10 @@ as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 
 /* Submit list of shares to all connected supernodes and add shares to
  * manager. Takes ownership of list values (shares).
+ *
+ * IMPORTANT: If the list contains multiple shares with the same hash
+ *            only one of them will be added and the other will be freed
+ *            without notice.
  */
 as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares)
 {

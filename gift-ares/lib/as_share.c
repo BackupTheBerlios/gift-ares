@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.20 2004/11/27 22:30:37 hex Exp $
+ * $Id: as_share.c,v 1.21 2004/12/04 15:30:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -196,7 +196,13 @@ static void add_meta_tags (ASPacket *p, ASShare *share)
 		const char *value;
 
 		if (i == TAG_XXX)
+		{
 			add_realm_tag (p, meta, share->realm);
+			/* I think there should be a continue here. We don't want to rely
+			 * on obscure situations in other parts of the code for the
+			 * following if to succeed.
+			 */
+		}
 
 		if (!(map = as_meta_tag_type (i)) ||
 		    !(value = as_meta_get_tag (meta, map->name)))
