@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.20 2004/09/13 15:29:58 HEx Exp $
+ * $Id: as_session.c,v 1.21 2004/09/13 19:50:53 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -561,8 +561,6 @@ static as_bool session_ping_timeout (ASSession *session)
 	AS_ERR_2 ("Ping timeout for %s:%d",
 	          net_ip_str (session->host), session->port);
 	session_error (session);
-
-	session->pong_timer = 0;
 
 	return FALSE;
 }
