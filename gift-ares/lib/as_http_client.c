@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.c,v 1.1 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_http_client.c,v 1.2 2004/09/03 20:05:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,8 @@
  */
 
 #include "as_ares.h"
+
+#include <netdb.h>
 
 /*
 #define LOG_HTTP_HEADERS
