@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.28 2004/09/19 22:05:11 HEx Exp $
+ * $Id: as_session.c,v 1.29 2004/10/29 16:00:09 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -539,10 +539,20 @@ static as_bool session_ping (ASSession *session)
 {
 	ASPacket *p = as_packet_create ();
 
-	/* not a clue what any of these are */
-	as_packet_put_le32 (p, AS->netinfo->unk1);
-	as_packet_put_le16 (p, AS->netinfo->unk2);
-	as_packet_put_8 (p, 0);
+	/* send transfer stats */
+	if (AS->upman)
+	{
+		as_packet_put_8 (p, AS->upman->nuploads);
+		as_packet_put_8 (p, AS->upman->max);
+		as_packet_put_8 (p, 0); /* unknown */
+		as_packet_put_8 (p, AS->upman->nqueued);
+		as_packet_put_le16 (p, 0); /* unknown */
+	}
+	else
+	{	
+		as_packet_put_le32 (p, 0);
+		as_packet_put_le16 (p, 0);
+	}
 	
 	AS_DBG_2 ("Sent ping to %s:%d",
 	          net_ip_str (session->host), session->port);
