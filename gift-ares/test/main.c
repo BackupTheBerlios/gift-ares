@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.4 2004/08/25 19:46:14 mkern Exp $
+ * $Id: main.c,v 1.5 2004/08/25 21:14:12 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -60,14 +60,18 @@ void stdin_cb (int fd, input_id id, void *udata)
 {
 	static char buf[1024*16];
 	static int buf_pos = 0;
-	int read, len;
+	int read_buf, len;
 	int argc;
 	char **argv;
 
-	if ((read = recv (fd, buf + buf_pos, sizeof (buf) - buf_pos, 0)) < 0)
+#ifdef WIN32
+	if ((read_buf = recv (fd, buf + buf_pos, sizeof (buf) - buf_pos, 0)) < 0)
+#else
+	if ((read_buf = read (fd, buf + buf_pos, sizeof (buf) - buf_pos)) < 0)
+#endif
 		return;
 
-	buf_pos += read;
+	buf_pos += read_buf;
 
 	/* check for LF */
 	for (len = 0; len < buf_pos; len++)
@@ -141,8 +145,7 @@ int main (int argc, char *argv[])
 		exit (1);
 	}
 #else
-	/* FIXME: *unix console input */
-	stdin_handle = -1;
+	stdin_handle = 0;
 #endif
 
 	/* add callback for command handling */
