@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.1 2004/09/06 12:58:26 mkern Exp $
+ * $Id: as_meta.h,v 1.2 2004/09/06 13:12:28 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,14 +14,13 @@
 
 typedef enum
 {
-	REALM_ARCHIVE = 0,
-	REALM_AUDIO = 1,
+	REALM_ARCHIVE  = 0,
+	REALM_AUDIO    = 1,
 	REALM_SOFTWARE = 3,
-	REALM_VIDEO = 5,
+	REALM_VIDEO    = 5,
 	REALM_DOCUMENT = 6,
-	REALM_IMAGE = 7,
-
-	REALM_ANY = 0xFFFF /* does something like this exist in the protocol? */
+	REALM_IMAGE    = 7,
+	REALM_ANY      = 0x14
 } ASRealm;
 
 typedef enum
