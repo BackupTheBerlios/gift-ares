@@ -76,7 +76,8 @@ int main (int argc, char* argv[])
 		fprintf (stderr, "Usage: %s <format> <ip>\n", argv[0]);
 		fprintf (stderr, "Format is one of:\n"
 		                 "- 'signed' ip is a signed integer\n"
-						 "- 'dotted' ip is dotted decimal\n");
+				 "- 'unsigned' ip is an unsigned integer\n"
+				 "- 'dotted' ip is dotted decimal\n");
 		exit (1);
 	}
 
@@ -87,6 +88,15 @@ int main (int argc, char* argv[])
 		ipb = (ip >> 16) & 0xFF;
 		ipc = (ip >> 8) & 0xFF;
 		ipd = (ip) & 0xFF;
+	}
+	else if (!strcmp (argv[1], "unsigned"))
+	{
+		ip = 0;
+		sscanf(argv[2], "%u", &ip);
+		ipa = (ip >> 24) & 0xFF;
+		ipb = (ip >> 16) & 0xFF;
+		ipc = (ip >> 8) & 0xFF;
+		ipd = (ip) & 0xFF;	
 	}
 	else if (!strcmp (argv[1], "dotted"))
 	{
