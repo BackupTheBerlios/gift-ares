@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.6 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_node_man.c,v 1.7 2004/09/03 20:01:12 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -470,7 +470,7 @@ as_bool as_nodeman_save (ASNodeMan *man, const char *file)
 	list = list_sort (list, (CompareFunc) node_save_cmp);
 
 	/* Save first AS_MAX_NODEFILE_SIZE nodes */
-	saved = 1;
+	saved = 0;
 	link = list;
 
 	while (link && saved <= AS_MAX_NODEFILE_SIZE)
