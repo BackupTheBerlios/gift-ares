@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.16 2004/09/09 22:16:27 HEx Exp $
+ * $Id: cmd.c,v 1.17 2004/09/10 11:21:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,6 +27,7 @@ COMMAND_FUNC (connect_to);
 COMMAND_FUNC (go);
 COMMAND_FUNC (search);
 COMMAND_FUNC (info);
+COMMAND_FUNC (result_stats);
 COMMAND_FUNC (clear);
 COMMAND_FUNC (download);
 COMMAND_FUNC (dl);
@@ -74,20 +75,24 @@ commands[] =
 	         "Search connected hosts for files.")
 
 	COMMAND (info,
-		 "<result number>",
-		 "Show details for a given search result.")
+	         "<result number>",
+	         "Show details for a given search result.")
+
+	COMMAND (result_stats,
+	         "",
+	         "Show stats about search results.")
 
 	COMMAND (clear,
-		 "",
-		 "Clear search results.")
+	         "",
+	         "Clear search results.")
 
 	COMMAND (download,
-		 "<ip> <port> <hash> <filename>",
-		 "Download file.")
+	         "<ip> <port> <hash> <filename>",
+	         "Download file.")
 
 	COMMAND (dl,
-		 "<result number>",
-		 "Download search result.")
+	         "<result number>",
+	         "Download search result.")
 
 	COMMAND (quit,
              "",
@@ -340,6 +345,42 @@ COMMAND_FUNC (info)
 	return TRUE;
 }
 
+COMMAND_FUNC (result_stats)
+{
+	ASResult *r;
+	List *l;
+	int result_count = 0, firewalled = 0, push_info = 0;
+
+	if (!results)
+	{
+		printf ("No results.\n");
+		return FALSE;
+	}
+
+	for (l = results; l; l = l->next)
+	{
+		r = l->data;
+		result_count++;
+
+		if (as_source_firewalled (r->source))
+			firewalled++;
+
+		if (as_source_has_push_info (r->source))
+			push_info++;
+	}
+
+	printf ("Results: %d\n", result_count);
+	printf ("Firewalled: %d (%d%%)\n", firewalled,
+	        firewalled == 0 ? 0 : result_count * 100 / firewalled);
+	/* push info is probably not needed at all if pushes are triggerd by hash
+	 * searches 
+	 */
+	printf ("Have push info: %d (%d%%)\n", push_info,
+	        push_info == 0 ? 0 : result_count * 100 / push_info);
+
+	return TRUE;
+}
+
 COMMAND_FUNC (clear)
 {
 	if (!test_search)
@@ -364,6 +405,7 @@ COMMAND_FUNC (dl)
 	int i;
 	char *str;
 	ASResult *r;
+	ASDownload *dl;
 
 	if (argc < 2)
 		return FALSE;
@@ -377,8 +419,6 @@ COMMAND_FUNC (dl)
 		printf ("Invalid result number\n");
 		return TRUE;
 	}
-
-	ASDownload *dl;
 
 	dl = as_download_new (r->source, r->hash, r->filename);
 
