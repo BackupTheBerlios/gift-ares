@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.h,v 1.4 2004/10/23 09:23:50 mkern Exp $
+ * $Id: as_share_man.h,v 1.5 2004/10/24 01:18:56 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,7 +19,7 @@ typedef struct
 	                     * maximise compression when submitting */
 	ASHashTable *table; /* Points to links in shares list. Keyed by hash. */
 	int      nshares;
-	double   size;      /* Gb */
+	double   size;      /* Mb */
 } ASShareMan;
 
 /*****************************************************************************/

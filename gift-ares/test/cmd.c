@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.35 2004/10/22 12:11:21 mkern Exp $
+ * $Id: cmd.c,v 1.36 2004/10/24 01:19:06 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -715,7 +715,7 @@ COMMAND_FUNC (share)
 
 COMMAND_FUNC (share_stats)
 {
-	printf ("%d files shared, %.2f Gb\n",
+	printf ("%d files shared, %.2f Mb\n",
 		AS->shareman->nshares, AS->shareman->size);
 
 	return TRUE;
