@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.3 2004/08/25 20:52:29 HEx Exp $
+ * $Id: cmd.c,v 1.4 2004/08/26 16:00:40 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,7 @@
  */
 
 #include "cmd.h"
+#include "as_ares.h"
 
 /*****************************************************************************/
 
@@ -18,6 +19,8 @@
 COMMAND_FUNC (help);
 
 COMMAND_FUNC (event_test);
+
+COMMAND_FUNC (connect);
 
 COMMAND_FUNC (quit);
 
@@ -37,6 +40,10 @@ commands[] =
 	COMMAND (event_test,
 	         "",
 	         "Test event system.")
+
+	COMMAND (connect,
+	         "<host> <port>",
+	         "Connect to a given host.")
 
 	COMMAND (quit,
              "",
@@ -88,6 +95,20 @@ COMMAND_FUNC (help)
 COMMAND_FUNC (event_test)
 {
 	test_event_system ();
+}
+
+/*****************************************************************************/
+
+COMMAND_FUNC (connect)
+{
+	if (argc < 3)
+		return;
+
+	in_addr_t ip = net_ip (argv[1]);
+	in_port_t port = atoi (argv[2]);
+
+	printf ("connecting to %s (%08x), port %d\n", argv[1], ip, port);
+	as_session_new (ip, port);
 }
 
 /*****************************************************************************/
