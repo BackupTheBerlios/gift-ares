@@ -13,9 +13,6 @@ Essential stuff:
 
 - Make file hashing non-blocking.
 
-- Check how Ares handles same file names for downloads and do the same.
-  Reverse _ARESTRA_ file appendix.
-
 - Determine when to look for more sources for a download and start hash 
   search. Make use of pushes resulting from said search.
 

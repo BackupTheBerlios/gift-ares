@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.7 2004/09/15 22:46:04 mkern Exp $
+ * $Id: as_download.h,v 1.8 2004/09/16 19:13:16 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -36,7 +36,9 @@ typedef as_bool (*ASDownloadStateCb) (ASDownload *dl, ASDownloadState state);
 struct as_download_t
 {
 	ASHash *hash;      /* file hash */
-	char   *filename;  /* save file name */
+	char   *path;      /* path to incomplete or completed file */
+	char   *filename;  /* pointer into path where completed file name starts
+	                    * (i.e. after ___ARESTRA___ prefix) */
 	size_t  size;      /* file size */
 	size_t  received;  /* total number of bytes already received */
 	FILE   *fp;        /* file pointer */
@@ -71,12 +73,12 @@ void as_download_free (ASDownload *dl);
 
 /* Start download using hash, filesize and save name. */
 as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
-                           const char *filename);
+                           const char *save_path);
 
 /* Restart download from incomplete ___ARESTRA___ file. This will fail if the
  * file is not found/corrupt/etc.
  */
-as_bool as_download_restart (ASDownload *dl, const char *filename);
+as_bool as_download_restart (ASDownload *dl, const char *path);
 
 /* Cancels download and removes incomplete file. */
 as_bool as_download_cancel (ASDownload *dl);

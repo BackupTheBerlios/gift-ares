@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.13 2004/09/16 18:24:46 mkern Exp $
+ * $Id: as_download.c,v 1.14 2004/09/16 19:13:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -88,6 +88,7 @@ ASDownload *as_download_create (ASDownloadStateCb state_cb)
 
 	dl->hash     = NULL;
 	dl->filename = NULL;
+	dl->path     = NULL;
 	dl->size     = 0;
 	dl->received = 0;
 	dl->fp       = NULL;
@@ -137,10 +138,10 @@ void as_download_free (ASDownload *dl)
 
 /* Start download using hash, filesize and save name. */
 as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
-                           const char *filename)
+                           const char *save_path)
 {
 	ASDownChunk *chunk;
-	char *incomplete;
+	char *incomplete, *dir;
 
 	if (dl->state != DOWNLOAD_NEW)
 	{
@@ -148,34 +149,42 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 		return FALSE;
 	}
 
-	if (!hash || !filename || filesize == 0)
+	if (!hash || !save_path || filesize == 0)
 	{
 		assert (hash);
-		assert (filename);
+		assert (save_path);
 		assert (filesize > 0);
 		return FALSE;
 	}
 
-	/* create incomplete file name */
-	incomplete = stringf_dup ("%s%s", INCOMPLETE_PREFIX, filename);
+	/* create incomplete file path */
+	dir = gift_strndup (save_path, as_get_filename (save_path) - save_path);
+	incomplete = stringf_dup ("%s%s%s", dir ? dir : "", INCOMPLETE_PREFIX,
+	                          as_get_filename (save_path));
+	free (dir);
 
 	/* find a name which is not used already */
-	if (!(dl->filename = get_available_filename (incomplete)))
+	if (!(dl->path = get_available_filename (incomplete)))
 	{
 		AS_ERR_1 ("Couldn't find available file name for download \"%s\"",
-		          dl->filename);
+		          dl->path);
 		free (incomplete);
 		return FALSE;
 	}
-
 	free (incomplete);
 
+	/* set filename after __ARESTRA__prefix */
+	dl->filename = as_get_filename (dl->path);
+	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
+		dl->filename += strlen (INCOMPLETE_PREFIX);
+
 	/* open file */
-	if (!(dl->fp = fopen (dl->filename, "w+b")))
+	if (!(dl->fp = fopen (dl->path, "w+b")))
 	{
 		AS_ERR_1 ("Unable to open download file \"%s\" for writing",
-		          dl->filename);
-		free (dl->filename);
+		          dl->path);
+		free (dl->path);
+		dl->path = NULL;
 		dl->filename = NULL;
 		return FALSE;
 	}
@@ -186,7 +195,8 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 	if (!(chunk = as_downchunk_create (0, dl->size)))
 	{
 		AS_ERR_1 ("Couldn't create initial chunk (0,%u)", dl->size);
-		free (dl->filename);
+		free (dl->path);
+		dl->path = NULL;
 		dl->filename = NULL;
 		dl->size = 0;
 		return FALSE;
@@ -220,7 +230,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 /* Restart download from incomplete ___ARESTRA___ file. This will fail if the
  * file is not found/corrupt/etc.
  */
-as_bool as_download_restart (ASDownload *dl, const char *filename)
+as_bool as_download_restart (ASDownload *dl, const char *path)
 {
 	if (dl->state != DOWNLOAD_NEW)
 	{
@@ -228,30 +238,37 @@ as_bool as_download_restart (ASDownload *dl, const char *filename)
 		return FALSE;
 	}
 
-	if (!filename)
+	if (!path)
 	{
-		assert (filename);
+		assert (path);
 		return FALSE;
 	}
 
-	/* copy file name */
-	dl->filename = strdup (filename);
+	/* copy file path */
+	dl->path = strdup (path);
+
+	/* set filename after __ARESTRA__prefix */
+	dl->filename = as_get_filename (dl->path);
+	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
+		dl->filename += strlen (INCOMPLETE_PREFIX);
 
 	/* make sure the file exists */
-	if (!as_file_exists (dl->filename))
+	if (!as_file_exists (dl->path))
 	{
-		AS_ERR_1 ("Incomplete file \"%s\" does not exist.", dl->filename);
-		free (dl->filename);
+		AS_ERR_1 ("Incomplete file \"%s\" does not exist.", dl->path);
+		free (dl->path);
+		dl->path = NULL;
 		dl->filename = NULL;
 		return FALSE;
 	}
 
 	/* open file */
-	if (!(dl->fp = fopen (dl->filename, "r+b")))
+	if (!(dl->fp = fopen (dl->path, "r+b")))
 	{
 		AS_ERR_1 ("Unable to open download file \"%s\" for writing",
-		          dl->filename);
-		free (dl->filename);
+		          dl->path);
+		free (dl->path);
+		dl->path = NULL;
 		dl->filename = NULL;
 		return FALSE;
 	}
@@ -260,10 +277,11 @@ as_bool as_download_restart (ASDownload *dl, const char *filename)
 	if (!as_downstate_load (dl))
 	{
 		AS_ERR_1 ("Unable to load state for incomplete download file \"%s\"",
-		          dl->filename);
+		          dl->path);
 		fclose (dl->fp);
 		dl->fp = NULL;
-		free (dl->filename);
+		free (dl->path);
+		dl->path = NULL;
 		dl->filename = NULL;
 		return FALSE;	
 	}
@@ -313,8 +331,8 @@ as_bool as_download_cancel (ASDownload *dl)
 	}
 
 	/* delete incomplete file. */
-	if (unlink (dl->filename) < 0)
-		AS_ERR_1 ("Failed to unlink incomplete file \"%s\"", dl->filename);
+	if (unlink (dl->path) < 0)
+		AS_ERR_1 ("Failed to unlink incomplete file \"%s\"", dl->path);
 
 	/* raise callback */
 	if (!download_set_state (dl, DOWNLOAD_CANCELLED, TRUE))
@@ -1254,10 +1272,10 @@ static as_bool download_failed (ASDownload *dl)
 
 	/* delete incomplete file. */
 #ifndef KEEP_FAILED
-	if (unlink (dl->filename) < 0)
-		AS_ERR_1 ("Failed to unlink incomplete file \"%s\"", dl->filename);
+	if (unlink (dl->path) < 0)
+		AS_ERR_1 ("Failed to unlink incomplete file \"%s\"", dl->path);
 #else
-	AS_WARN_1 ("Keeping failed download \"%s\" for debugging.", dl->filename);
+	AS_WARN_1 ("Keeping failed download \"%s\" for debugging.", dl->path);
 #endif
 
 	/* raise callback */
@@ -1269,6 +1287,8 @@ static as_bool download_failed (ASDownload *dl)
 
 static as_bool download_complete (ASDownload *dl)
 {
+	char *prefixed_name;
+
 	AS_DBG_1 ("Completed download \"%s\"", dl->filename);
 
 	/* close fd */
@@ -1279,38 +1299,47 @@ static as_bool download_complete (ASDownload *dl)
 	}
 
 	/* rename complete file to not include the prefix. */
-	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
+	prefixed_name = as_get_filename (dl->path);
+
+	if (strncmp (prefixed_name, INCOMPLETE_PREFIX,
+	             strlen (INCOMPLETE_PREFIX)) == 0)
 	{
-		char *complete_name = dl->filename + strlen (INCOMPLETE_PREFIX);
-		char *uniq_name;
-	
-		if ((uniq_name = get_available_filename (complete_name)))
+		char *completed_path, *uniq_path, *dir;
+
+		/* construct path without ___ARESTRA___ prefix */
+		dir = gift_strndup (dl->path, prefixed_name - dl->path);
+		completed_path = stringf_dup ("%s%s", dir ? dir : "",
+		                        prefixed_name + strlen (INCOMPLETE_PREFIX));
+		free (dir);
+
+		if ((uniq_path = get_available_filename (completed_path)))
 		{
-			if (rename (dl->filename, uniq_name) >= 0)
+			if (rename (dl->path, uniq_path) >= 0)
 			{
 				AS_DBG_2 ("Moved complete file \"%s\" to \"%s\"",
-				          dl->filename, uniq_name);
+				          dl->path, uniq_path);
 
 				/* update download filename */
-				free (dl->filename);
-				dl->filename = uniq_name;
+				free (dl->path);
+				dl->path = uniq_path;
+				dl->filename = as_get_filename (dl->path);
 			}
 			else
 			{
 				AS_ERR_2 ("Renaming file from \"%s\" to \"%s\" failed.",
-				          dl->filename, uniq_name);
-				free (uniq_name);
+				          dl->path, uniq_path);
+				free (uniq_path);
 			}
 		}
 		else
 		{
-			AS_ERR_1 ("No unique name found for \"%s\"", dl->filename);
+			AS_ERR_1 ("No unique name found for \"%s\"", dl->path);
 		}
 	}
 	else
 	{
 		AS_WARN_1 ("Complete file \"%s\" has no prefix. No renaming performed.",
-		           dl->filename);
+		           dl->path);
 	}
 
 	/* raise callback */
@@ -1348,30 +1377,30 @@ static as_bool download_finished (ASDownload *dl)
 	 * the end.
 	 */
 #ifndef WIN32
-	if (truncate (dl->filename, dl->size) < 0)
+	if (truncate (dl->path, dl->size) < 0)
 #else
-	if ((fd = _open (dl->filename, _O_BINARY | _O_WRONLY)) < 0 ||
+	if ((fd = _open (dl->path, _O_BINARY | _O_WRONLY)) < 0 ||
 	    _chsize (fd, dl->size) != 0 ||
 	    _close (fd) != 0)
 #endif
 	{
 		AS_ERR_1 ("Failed to truncate complete download \"%s\"",
-		          dl->filename);
+		          dl->path);
 		/* File is probably still useful so continue. */
 	}
 
 	/* Hash file and compare hashes.
 	 * TODO: Make non-blocking.
 	 */
-	if (!(hash = as_hash_file (dl->filename)))
+	if (!(hash = as_hash_file (dl->path)))
 	{
-		AS_ERR_1 ("Couldn't hash \"%s\" for verification", dl->filename);
+		AS_ERR_1 ("Couldn't hash \"%s\" for verification", dl->path);
 		return download_failed (dl);
 	}
 
 	if (!as_hash_equal (dl->hash, hash))
 	{
-		AS_ERR_1 ("Downloaded file \"%s\" corrupted!", dl->filename);
+		AS_ERR_1 ("Downloaded file \"%s\" corrupted!", dl->path);
 		as_hash_free (hash);
 		return download_failed (dl);
 	}
