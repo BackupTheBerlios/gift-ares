@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.38 2004/10/30 01:00:54 mkern Exp $
+ * $Id: cmd.c,v 1.39 2004/10/30 22:27:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,6 +26,7 @@ COMMAND_FUNC (connect);
 COMMAND_FUNC (connect_to);
 COMMAND_FUNC (go);
 COMMAND_FUNC (search);
+COMMAND_FUNC (locate);
 COMMAND_FUNC (info);
 COMMAND_FUNC (result_stats);
 COMMAND_FUNC (clear);
@@ -83,6 +84,10 @@ commands[] =
 	COMMAND (search,
 	         "<query>",
 	         "Search connected hosts for files.")
+
+	COMMAND (locate,
+	         "<base64 hash>",
+	         "Search sources for file.")
 
 	COMMAND (info,
 	         "<result number>",
@@ -281,7 +286,7 @@ COMMAND_FUNC (connect_to)
 COMMAND_FUNC (go)
 {
 	static char *load[]    = { "load_nodes", "nodes" };
-	static char *connect[] = { "connect", "1" };
+	static char *connect[] = { "connect", "4" };
 	
 	dispatch_cmd (sizeof (load) / sizeof (char*), load);
 	dispatch_cmd (sizeof (connect) / sizeof (char*), connect);
@@ -366,6 +371,44 @@ COMMAND_FUNC (search)
 	return TRUE;
 }
 
+COMMAND_FUNC (locate)
+{
+	ASHash *hash;
+
+	if (argc < 2)
+		return FALSE;
+
+	if (test_search)
+	{
+		printf ("Only one search allowed at a time in this test app\n");
+		return TRUE;
+	}
+
+	assert (results == NULL);
+
+	if (!(hash = as_hash_decode (argv[1])))
+	{
+		printf ("Couldn't parse hash %s\n", argv[1]);
+		return TRUE;
+	}
+
+	test_search = as_searchman_locate (AS->searchman,
+	                                   (ASSearchResultCb) search_callback,
+	                                   hash);
+
+	if (!test_search)
+	{
+		printf ("Failed to start locate for \"%s\"\n", as_hash_str (hash));
+		as_hash_free (hash);
+		return TRUE;
+	}
+	
+	printf ("Started locate for \"%s\"\n", as_hash_str (hash));
+
+	as_hash_free (hash);
+	return TRUE;
+}
+
 COMMAND_FUNC (info)
 {
 	int rnum;
@@ -398,9 +441,12 @@ COMMAND_FUNC (info)
 	printf (" [%s]\n", str);
 	free (str);
 
-	printf ("Meta tags:\n");
-	i = as_meta_foreach_tag (r->meta, meta_tag_itr, NULL);
-	printf ("(%d tags total)\n", i);
+	if (r->meta)
+	{
+		printf ("Meta tags:\n");
+		i = as_meta_foreach_tag (r->meta, meta_tag_itr, NULL);
+		printf ("(%d tags total)\n", i);
+	}
 
 	return TRUE;
 }
