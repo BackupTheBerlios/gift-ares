@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.9 2004/09/15 13:02:19 mkern Exp $
+ * $Id: as_download_conn.c,v 1.10 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,39 @@ static as_bool downconn_set_state (ASDownConn *conn, ASDownConnState state,
 	return TRUE;
 }
 
+static ASDownConn *downconn_new ()
+{
+	ASDownConn *conn;
+
+	if (!(conn = malloc (sizeof (ASDownConn))))
+		return NULL;
+
+	conn->source      = NULL;
+	conn->hash        = NULL;
+	conn->chunk_start = 0;
+	conn->chunk_size  = 0;
+	conn->client      = NULL;
+	conn->pushed      = FALSE;
+
+	conn->queue_pos      = 0;
+	conn->queue_len      = 0;
+	conn->queue_last_try = 0;
+	conn->queue_next_try = 0;
+
+	conn->total_downloaded = 0;
+	conn->average_speed    = 0;
+	conn->fail_count       = 0;
+
+	conn->state    = DOWNCONN_UNUSED;
+	conn->state_cb = NULL;
+	conn->data_cb  = NULL;
+
+	conn->udata1 = NULL;
+	conn->udata2 = NULL;
+
+	return conn;
+}
+
 static void downconn_reset (ASDownConn *conn)
 {
 	conn->chunk_start = 0;
@@ -47,30 +80,52 @@ ASDownConn *as_downconn_create (ASSource *source, ASDownConnStateCb state_cb,
 
 	assert (source);
 
-	if (!(conn = malloc (sizeof (ASDownConn))))
+	if (!(conn = downconn_new ()))
 		return NULL;
 
-	conn->source      = as_source_copy (source);
-	conn->hash        = NULL;
-	conn->chunk_start = 0;
-	conn->chunk_size  = 0;
-	conn->client      = NULL;
-
-	conn->queue_pos      = 0;
-	conn->queue_len      = 0;
-	conn->queue_last_try = 0;
-	conn->queue_next_try = 0;
-
-	conn->total_downloaded = 0;
-	conn->average_speed    = 0;
-	conn->fail_count       = 0;
-
-	conn->state    = DOWNCONN_UNUSED;
+	conn->source   = as_source_copy (source);
 	conn->state_cb = state_cb;
 	conn->data_cb  = data_cb;
 
-	conn->udata1 = NULL;
-	conn->udata2 = NULL;
+	return conn;
+}
+
+/* Create new download connection from pushed connection. */
+ASDownConn *as_downconn_create_tcpc (TCPC *c, ASDownConnStateCb state_cb,
+                                     ASDownConnDataCb data_cb)
+{
+	ASDownConn *conn;
+
+	assert (c);
+
+	if (!(conn = downconn_new ()))
+		return NULL;
+
+	conn->pushed   = TRUE;
+	conn->state_cb = state_cb;
+	conn->data_cb  = data_cb;
+
+	if (!(conn->source = as_source_create ()))
+	{
+		as_downconn_free (conn);
+		return NULL;
+	}
+
+	/* Get ip and port from endpoint of pushed connection */
+	conn->source->host = c->host;
+	conn->source->port = c->port;
+	
+	/* Create new http client using connection */
+	conn->client = as_http_client_create_tcpc (c, downconn_http_callback);
+
+	if (!conn->client)
+	{
+		AS_ERR_2 ("Failed to create http client push from %s:%d",
+		          net_ip_str (conn->source->host), conn->source->port);
+		return NULL;
+	}
+
+	conn->client->udata = conn;
 
 	return conn;
 }
@@ -114,30 +169,21 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
 
 	if (!conn->client)
 	{
-		/* we need to create a new http client */
-		if (as_source_firewalled (conn->source))
+		if (conn->pushed)
 		{
-#if 0
-			/* set state to connecting and raise callback */
-			if (!downconn_set_state (conn, DOWNCONN_CONNECTING, TRUE))
-				return FALSE; /* connection was freed by callback */
-
-			/* TODO: Send a push request and create http client once we have a
-			 * tcp connection. Or maybe we need to rethink our strategy if
-			 * there are no push requests.
+			/* This shouldn't happen. Pushed downloads should be removed
+			 * immediately by as_download when the http client is closed.
 			 */
-
-			return TRUE;
-#else
-			AS_ERR_2 ("UNSUPPORTED: tried to use firewalled source %s:%d",
-			          net_ip_str (conn->source->host), conn->source->port);
+			AS_ERR_2 ("Tried to start download pushed from %s:%d but there is "
+			          "no http client", net_ip_str (conn->source->host),
+			          conn->source->port);
 
 			conn->fail_count++;
 			downconn_reset (conn);
 			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
-			
+
+			assert (0);
 			return FALSE;
-#endif
 		}
 
 		/* create http client for direct connection */

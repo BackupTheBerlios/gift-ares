@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.9 2004/09/16 15:45:32 HEx Exp $
+ * $Id: as_search.c,v 1.10 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -34,9 +34,7 @@ ASSearch *as_search_create (as_uint16 id, ASSearchResultCb result_cb,
 
 	search->type      = SEARCH_QUERY;
 	search->id        = id;
-#if 0
 	search->intern    = FALSE;
-#endif
 	search->finished  = FALSE;
 	search->sent      = 0;
 	search->result_cb = result_cb;
@@ -65,9 +63,7 @@ ASSearch *as_search_create_locate (as_uint16 id, ASSearchResultCb result_cb,
 
 	search->type      = SEARCH_LOCATE;
 	search->id        = id;
-#if 0
 	search->intern    = FALSE;
-#endif
 	search->finished  = FALSE;
 	search->sent      = 0;
 	search->result_cb = result_cb;

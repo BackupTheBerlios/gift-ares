@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.15 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_download.c,v 1.16 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -24,6 +24,9 @@
 
 /* If defined failed downloads will not be deleted */
 #define KEEP_FAILED
+
+/* Define to get very verbose chunk logging */
+/* #define CHUNK_DEBUG */
 
 /*****************************************************************************/
 
@@ -97,6 +100,7 @@ ASDownload *as_download_create (ASDownloadStateCb state_cb)
 	dl->chunks = NULL;
 
 	dl->maintenance_timer = INVALID_TIMER;
+	dl->search = NULL;
 
 	dl->state    = DOWNLOAD_NEW;
 	dl->state_cb = state_cb;
@@ -117,9 +121,13 @@ void as_download_free (ASDownload *dl)
 
 	/* Cancel all active connections. */
 	stop_all_connections (dl);
-	
+
+	/* Make sure any source search is gone */
+	if (dl->search)
+		as_searchman_remove (AS->searchman, dl->search);
+
 	as_hash_free (dl->hash);
-	free (dl->filename);
+	free (dl->path);
 	if (dl->fp)
 		fclose (dl->fp);
 
@@ -327,6 +335,11 @@ as_bool as_download_cancel (ASDownload *dl)
 	/* stop all connections */
 	stop_all_connections (dl);
 
+	/* Make sure any source search is gone */
+	if (dl->search)
+		as_searchman_remove (AS->searchman, dl->search);
+	dl->search = NULL;
+
 	/* close fd */
 	if (dl->fp)
 	{
@@ -496,6 +509,110 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 	return TRUE;
 }
 
+/* Make download use incoming push connection. */
+as_bool as_download_take_push (ASDownload *dl, TCPC *c)
+{
+	List *l;
+	ASDownConn *conn;
+
+	/* Only add connections to active downloads */
+	if (dl->state != DOWNLOAD_ACTIVE)
+	{
+		AS_HEAVY_DBG ("Not adding pushed connection to inactive download");
+		return FALSE;
+	}
+
+	/* Create new connection */
+	if (!(conn = as_downconn_create_tcpc (c, conn_state_cb, conn_data_cb)))
+	{
+		AS_ERR ("Failed to create connection for push");
+		return FALSE;
+	}
+
+	/* Make sure we do not already have a connection to this host. */
+	for (l = dl->conns; l; l = l->next)
+	{
+		if (as_source_equal (((ASDownConn *)l->data)->source, conn->source))
+		{
+			AS_ERR_1 ("Pushed connection \"%s\" already added.",
+			          as_source_str (conn->source));
+			as_downconn_free (conn);
+			return FALSE;
+		}
+	}
+
+	/* point udata1 to download, we will use udata2 for the chunk */
+	conn->udata1 = dl;
+
+	dl->conns = list_prepend (dl->conns, conn);
+
+	/* check if the source should be used now */
+	if (dl->state == DOWNLOAD_ACTIVE)
+		download_maintain (dl);
+
+	return TRUE;
+}
+
+/*****************************************************************************/
+
+static void search_result_cb (ASSearch *search, ASResult *result)
+{
+	ASDownload *dl = search->udata;
+
+	if (!result)
+	{
+		/* Search finished. */
+		if (!as_searchman_remove (AS->searchman, search))
+		{
+			AS_ERR_1 ("Couldn't remove finished source search for download \"%s\"",
+			          dl->filename);
+		}
+
+		dl->search = NULL;
+
+		AS_DBG_1 ("Finished source search for download \"%s\"", dl->filename);
+		return;
+	}
+
+	/* Make sure this result has correct hash */
+	if (!as_hash_equal (result->hash, dl->hash))
+	{
+		AS_WARN_1 ("Ignoring source result with wrong hash for download \"%s\"",
+		           dl->filename);
+		return;
+	}
+
+	/* Add source do download */
+	if (!as_download_add_source (dl, result->source))
+		return;
+
+	AS_HEAVY_DBG_3 ("Added hash result source %s:%d to download \"%s\"",
+	                net_ip_str (result->source->host), result->source->port,
+	                dl->filename);
+}
+
+/* Start a source search for this download */
+as_bool as_download_find_sources (ASDownload *dl)
+{
+	if (dl->search)
+		return TRUE; /* we are already looking for sources */
+
+	if (!(dl->search = as_searchman_locate (AS->searchman, search_result_cb,
+	                                        dl->hash)))
+	{
+		AS_ERR_1 ("Couldn't start hash search for download \"%s\"",
+		          dl->filename);
+		return FALSE;
+	}
+
+	dl->search->udata = dl;
+	dl->search->intern = TRUE;
+
+	AS_DBG_1 ("Started source search for download \"%s\"", dl->filename);
+
+	return TRUE;
+}
+
 /*****************************************************************************/
 
 /* Return download state as human readable static string. */
@@ -585,6 +702,18 @@ static as_bool disassociate_conn (ASDownConn *conn)
 		AS_DBG_3 ("Removing source %s:%d after it failed %d times",
 		          net_ip_str (conn->source->host), conn->source->port,
 		          conn->fail_count);
+
+		/* remove connection */
+		as_downconn_free (conn);
+		dl->conns = list_remove (dl->conns, conn);
+		return FALSE;
+	}
+
+	/* remove connection if it was pushed and failed */
+	if (conn->pushed && conn->fail_count > 0)
+	{
+		AS_DBG_2 ("Removing failed pushed source %s:%d",
+		          net_ip_str (conn->source->host), conn->source->port);
 
 		/* remove connection */
 		as_downconn_free (conn);
@@ -749,9 +878,23 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 
 			as_downconn_cancel (conn);
 
+#if 0
 			/* disassociate chunk */
 			conn->udata2 = NULL;
 			chunk->udata = NULL;
+
+			/* remove connection if it was pushed */
+			if (conn->pushed)
+			{
+				AS_DBG_2 ("Removing pushed source %s:%d",
+				          net_ip_str (conn->source->host),
+				          conn->source->port);
+				as_downconn_free (conn);
+				dl->conns = list_remove (dl->conns, conn);
+			}
+#else
+			disassociate_conn (conn);
+#endif
 
 			/* clean up / start new connections / etc */
 			download_maintain (dl);
@@ -1166,16 +1309,13 @@ static void download_maintain (ASDownload *dl)
 		return;
 	}
 
-#ifdef HEAVY_DEBUG
-	assert (verify_chunks (dl)); /* Remove me */
-
+#ifdef CHUNK_DEBUG
 	AS_HEAVY_DBG ("Chunk state after consolidating:");
 	dump_chunks (dl);
 
-/*
+
 	AS_HEAVY_DBG ("Connection state after consolidating:");
 	dump_connections (dl);
-*/
 #endif
 
 	/* Is the download complete? */
@@ -1266,6 +1406,11 @@ static as_bool download_failed (ASDownload *dl)
 
 	/* Stop all chunk downloads if there are still any */
 	stop_all_connections (dl);
+
+	/* Make sure any source search is gone */
+	if (dl->search)
+		as_searchman_remove (AS->searchman, dl->search);
+	dl->search = NULL;
 
 	/* close fd */
 	if (dl->fp)
@@ -1360,6 +1505,14 @@ static as_bool download_finished (ASDownload *dl)
 #ifdef WIN32
 	int fd;
 #endif
+
+	/* Stop all chunk downloads if there are still any */
+	stop_all_connections (dl);
+
+	/* Make sure any source search is gone */
+	if (dl->search)
+		as_searchman_remove (AS->searchman, dl->search);
+	dl->search = NULL;
 
 	AS_DBG_1 ("Verifying download \"%s\"", dl->filename);
 

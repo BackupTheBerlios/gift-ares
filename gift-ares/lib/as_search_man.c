@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.4 2004/09/10 17:58:53 mkern Exp $
+ * $Id: as_search_man.c,v 1.5 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -283,7 +283,7 @@ ASSearch *as_searchman_lookup_hash (ASSearchMan *man, ASHash *hash)
 	if (!hash)
 		return NULL;
 
-	if (!(search = as_hashtable_lookup (man->searches, hash->data,
+	if (!(search = as_hashtable_lookup (man->hash_searches, hash->data,
 	                                    AS_HASH_SIZE)))
 	{
 		return NULL;

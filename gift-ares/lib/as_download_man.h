@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.h,v 1.2 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_download_man.h,v 1.3 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,6 +92,9 @@ as_bool as_downman_cancel (ASDownMan *man, ASDownload *dl);
 
 /* Remove and free finished, failed or cancelled download. */
 as_bool as_downman_remove (ASDownMan *man, ASDownload *dl);
+
+/* Start source search for download. */
+as_bool as_downman_find_sources (ASDownMan *man, ASDownload *dl);
 
 /*****************************************************************************/
 

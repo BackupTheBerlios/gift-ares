@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.4 2004/09/09 15:06:29 HEx Exp $
+ * $Id: as_search.h,v 1.5 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -32,11 +32,11 @@ struct as_search_t
 	ASSearchType type;     /* normal or hash search */
 
 	as_uint16    id;       /* search id used on network and interface */
-#if 0
+
 	as_bool      intern;   /* TRUE if the search wasn't started and should not
 	                        * be display to the GUI. e.g. intern source search
 	                        */
-#endif
+
 	as_bool      finished; /* TRUE if search is finished, timed out or was
 	                        * cancelled. Now new results will be accepted.
 	                        */

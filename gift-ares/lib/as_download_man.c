@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.2 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_download_man.c,v 1.3 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -299,8 +299,7 @@ as_bool as_downman_pause (ASDownMan *man, ASDownload *dl, as_bool pause)
 {
 	if (!list_find (man->downloads, dl))
 	{
-		AS_HEAVY_DBG_1 ("Tried to pause invalid download \"%s\"",
-		                dl->filename);
+		AS_HEAVY_DBG ("Tried to pause invalid download");
 		return FALSE;
 	}
 
@@ -317,8 +316,7 @@ as_bool as_downman_cancel (ASDownMan *man, ASDownload *dl)
 {
 	if (!list_find (man->downloads, dl))
 	{
-		AS_HEAVY_DBG_1 ("Tried to cancel invalid download \"%s\"",
-		                dl->filename);
+		AS_HEAVY_DBG ("Tried to cancel invalid download");
 		return FALSE;
 	}
 
@@ -332,8 +330,7 @@ as_bool as_downman_remove (ASDownMan *man, ASDownload *dl)
 
 	if (!(link = list_find (man->downloads, dl)))
 	{
-		AS_HEAVY_DBG_1 ("Tried to remove invalid download \"%s\"",
-		                dl->filename);
+		AS_HEAVY_DBG ("Tried to remove invalid download");
 		return FALSE;
 	}
 
@@ -358,6 +355,18 @@ as_bool as_downman_remove (ASDownMan *man, ASDownload *dl)
 	as_download_free (dl);
 
 	return TRUE;
+}
+
+/* Start source search for download. */
+as_bool as_downman_find_sources (ASDownMan *man, ASDownload *dl)
+{
+	if (!list_find (man->downloads, dl))
+	{
+		AS_HEAVY_DBG ("Tried to find sources for invalid download");
+		return FALSE;
+	}
+
+	return as_download_find_sources (dl);
 }
 
 /*****************************************************************************/

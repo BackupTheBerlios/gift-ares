@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.9 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_download.h,v 1.10 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -53,6 +53,8 @@ struct as_download_t
 	timer_id maintenance_timer; /* regular timer running while download is
 	                             * active to check the queued sources */
 
+	ASSearch *search;  /* Search object when doing a source search. */
+
 	/* download state */
 	ASDownloadState state;
 	ASDownloadStateCb state_cb;
@@ -103,6 +105,14 @@ ASDownloadState as_download_state (ASDownload *dl);
 
 /* Add source to download (copies source). */
 as_bool as_download_add_source (ASDownload *dl, ASSource *source);
+
+/* Make download use incoming push connection. */
+as_bool as_download_take_push (ASDownload *dl, TCPC *c);
+
+/*****************************************************************************/
+
+/* Start a source search for this download */
+as_bool as_download_find_sources (ASDownload *dl);
 
 /*****************************************************************************/
 

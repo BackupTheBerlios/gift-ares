@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.28 2004/09/18 19:11:46 mkern Exp $
+ * $Id: cmd.c,v 1.29 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,9 +29,13 @@ COMMAND_FUNC (search);
 COMMAND_FUNC (info);
 COMMAND_FUNC (result_stats);
 COMMAND_FUNC (clear);
-COMMAND_FUNC (download);
 COMMAND_FUNC (dl);
-COMMAND_FUNC (resume);
+COMMAND_FUNC (dl_resume);
+COMMAND_FUNC (dl_list);
+COMMAND_FUNC (dl_find_more);
+COMMAND_FUNC (dl_pause);
+COMMAND_FUNC (dl_unpause);
+COMMAND_FUNC (dl_cancel);
 COMMAND_FUNC (share);
 COMMAND_FUNC (share_stats);
 COMMAND_FUNC (network_stats);
@@ -91,17 +95,33 @@ commands[] =
 	         "",
 	         "Clear search results.")
 
-	COMMAND (download,
-	         "<ip> <port> <hash> <filename>",
-	         "Download file.")
-
 	COMMAND (dl,
 	         "<result number>",
 	         "Download search result.")
 
-	COMMAND (resume,
+	COMMAND (dl_resume,
 	         "<file>",
 	         "Resume incomplete download.")
+
+	COMMAND (dl_list,
+	         "",
+			 "List downloads.")
+
+	COMMAND (dl_find_more,
+	         "<download id>",
+	         "Find more sources for download.")
+
+	COMMAND (dl_pause,
+	         "<download id>",
+	         "Pause download.")
+
+	COMMAND (dl_unpause,
+	         "<download id>",
+	         "Resume paused download.")
+
+	COMMAND (dl_cancel,
+	         "<download id>",
+	         "Cancel download.")
 
 	COMMAND (share,
 	         "<path> <size> <realm> <hash> [<metadata pairs>...]",
@@ -440,9 +460,10 @@ as_bool downman_cb (ASDownMan *man, ASDownload *dl, ASDownloadState state)
 		break;
 	case DOWNLOAD_VERIFYING:
 		break;
+	case DOWNLOAD_CANCELLED:
+		break;
 	case DOWNLOAD_COMPLETE:
 	case DOWNLOAD_FAILED:
-	case DOWNLOAD_CANCELLED:
 		/* remove download */
 		printf ("Removing finished download\n");
 		if (!as_downman_remove (man, dl))
@@ -479,12 +500,12 @@ COMMAND_FUNC (dl)
 		return TRUE;
 	}
 
-	printf ("Download of \"%s\" started\n", r->filename);
+	printf ("Download [%p] of \"%s\" started\n", dl, r->filename);
 
 	return TRUE;
 }
 
-COMMAND_FUNC (resume)
+COMMAND_FUNC (dl_resume)
 {
 	ASDownload *dl;
 	char *filename;
@@ -508,6 +529,132 @@ COMMAND_FUNC (resume)
 
 	return TRUE;
 }
+
+COMMAND_FUNC (dl_list)
+{
+	List *l;
+	ASDownload *dl;
+	int i = 0;
+
+	printf ("Active downloads:\n");
+	printf ("  Id         State      Complete  File\n");
+
+	for (l = AS->downman->downloads; l; l = l->next)
+	{
+		dl = l->data;
+		printf ("  [%08p] %-10s     %3d%%  %s\n", dl,
+		        as_download_state_str (dl),
+		        dl->received * 100 / dl->size, dl->filename);
+		i++;
+	}
+
+	printf ("(%d downloads)\n", i);
+	
+	return TRUE;
+}
+
+COMMAND_FUNC (dl_find_more)
+{
+	ASDownload *dl;
+
+	if (argc < 2)
+		return FALSE;
+
+	if (sscanf (argv[1], "%X", &dl) != 1)
+	{
+		printf ("Couldn't parse Id\n");
+		return TRUE;
+	}
+
+	if (!as_downman_find_sources (AS->downman, dl))
+	{
+		printf ("Find sources failed\n");
+		return TRUE;
+	}
+
+	printf ("Started source search for download \"%s\"\n", dl->filename);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (dl_pause)
+{
+	ASDownload *dl;
+
+	if (argc < 2)
+		return FALSE;
+
+	if (sscanf (argv[1], "%X", &dl) != 1)
+	{
+		printf ("Couldn't parse Id\n");
+		return TRUE;
+	}
+
+	if (!as_downman_pause (AS->downman, dl, TRUE))
+	{
+		printf ("Pause download failed\n");
+		return TRUE;
+	}
+
+	printf ("Paused download \"%s\"\n", dl->filename);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (dl_unpause)
+{
+	ASDownload *dl;
+
+	if (argc < 2)
+		return FALSE;
+
+	if (sscanf (argv[1], "%X", &dl) != 1)
+	{
+		printf ("Couldn't parse Id\n");
+		return TRUE;
+	}
+
+	if (!as_downman_pause (AS->downman, dl, FALSE))
+	{
+		printf ("Resume download failed\n");
+		return TRUE;
+	}
+
+	printf ("Resumed paused download \"%s\"\n", dl->filename);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (dl_cancel)
+{
+	ASDownload *dl;
+
+	if (argc < 2)
+		return FALSE;
+
+	if (sscanf (argv[1], "%X", &dl) != 1)
+	{
+		printf ("Couldn't parse Id\n");
+		return TRUE;
+	}
+
+	if (!as_downman_cancel (AS->downman, dl))
+	{
+		printf ("Cancelling download failed\n");
+		return TRUE;
+	}
+
+	printf ("Cancelled download \"%s\"\n", dl->filename);
+
+	if (!as_downman_remove (AS->downman, dl))
+		printf ("Error: Couldn't remove download\n");
+
+	printf ("Removed cancelled download\n");
+
+	return TRUE;
+}
+
+/*****************************************************************************/
 
 COMMAND_FUNC (share)
 {
@@ -620,41 +767,6 @@ COMMAND_FUNC (exec)
 	printf ("%d commands processed.\n", count);
 
 	return TRUE;
-}
-
-COMMAND_FUNC (download)
-{
-#if 0
-	in_addr_t ip;
-	in_port_t port;
-	ASSource *source;
-	ASHash *hash;
-	unsigned char *filename;
-	ASDownload *dl;
-
-	if (argc < 5)
-		return FALSE;
-
-	ip = net_ip (argv[1]);
-	port = (in_port_t) atoi (argv[2]);
-	hash = as_hash_decode (argv[3]);
-	filename = argv[4];
-
-	source = as_source_create ();
-
-	source->host = ip;
-	source->port = port;
-
-	dl = as_download_new (source, hash, filename);
-
-	as_download_start (dl);
-
-	return TRUE;
-#else
-	printf ("Unimplemented\n");
-
-	return TRUE;
-#endif
 }
 
 /*****************************************************************************/

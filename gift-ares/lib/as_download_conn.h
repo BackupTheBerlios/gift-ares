@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.8 2004/09/15 13:02:19 mkern Exp $
+ * $Id: as_download_conn.h,v 1.9 2004/09/19 17:53:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,6 +56,7 @@ struct as_down_conn_t
 
 	/* the actually http client for downloading */
 	ASHttpClient *client;
+	as_bool pushed;        /* TRUE if the connection was pushed to us */
 
 	/* remote queue handling */
 	unsigned int queue_pos;        /* our position in source's queue */
@@ -84,6 +85,10 @@ struct as_down_conn_t
 /* Create new download connection from source (copies source). */
 ASDownConn *as_downconn_create (ASSource *source, ASDownConnStateCb state_cb,
                                 ASDownConnDataCb data_cb);
+
+/* Create new download connection from pushed connection. */
+ASDownConn *as_downconn_create_tcpc (TCPC *c, ASDownConnStateCb state_cb,
+                                     ASDownConnDataCb data_cb);
 
 /* Free download connection. */
 void as_downconn_free (ASDownConn *conn);
