@@ -1,11 +1,14 @@
 /*
- * $Id: as_upload.h,v 1.7 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_upload.h,v 1.8 2004/12/04 11:37:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
  *
  * All rights reserved.
  */
+
+#ifndef __AS_UPLOAD_H
+#define __AS_UPLOAD_H
 
 /*****************************************************************************/
 
@@ -109,3 +112,5 @@ ASUploadState as_upload_state (ASUpload *up);
 const char *as_upload_state_str (ASUpload *up);
 
 /*****************************************************************************/
+
+#endif /* __AS_UPLOAD_H */

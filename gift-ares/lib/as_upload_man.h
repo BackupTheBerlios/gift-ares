@@ -1,11 +1,14 @@
 /*
- * $Id: as_upload_man.h,v 1.7 2004/10/31 13:01:48 mkern Exp $
+ * $Id: as_upload_man.h,v 1.8 2004/12/04 11:37:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
  *
  * All rights reserved.
  */
+
+#ifndef __AS_UPLOAD_MAN_H
+#define __AS_UPLOAD_MAN_H
 
 /*****************************************************************************/
 
@@ -95,3 +98,5 @@ as_bool as_upman_remove (ASUpMan *man, ASUpload *up);
 ASUploadState as_upman_state (ASUpMan *man, ASUpload *up);
 
 /*****************************************************************************/
+
+#endif /* __AS_UPLOAD_MAN_H */
