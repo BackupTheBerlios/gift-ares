@@ -246,6 +246,7 @@ int asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 	{
 		AS_DBG_1 ("malformed hash '%s'", source->hash);
 		gift_proto->source_abort (gift_proto, source->chunk->transfer, source);
+		as_source_free (s);
 
 		return FALSE;
 	}
