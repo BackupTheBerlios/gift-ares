@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.7 2004/12/19 21:24:53 hex Exp $
+ * $Id: asp_share.c,v 1.8 2004/12/19 22:09:27 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -178,16 +178,16 @@ BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
 		return FALSE;
 	}
 
-	/* Lookup ares share. */
-	if (!(ashare = as_shareman_lookup (AS->shareman, ashash)))
-	{
-		AS_ERR_1 ("Share '%s' not found for removal.", share->path);
-		as_hash_free (ashash);
-		return FALSE;
-	}
+	/* Disassociate from giFT share. */
+	share_set_udata (share, PROTO->name, NULL);
 
-	/* giFT allows multiple shares with same hash. */
-	if (ashare->udata == share)
+	/* giFT allows multiple shares with same hash. Thus, this
+	 * lookup can legitimately fail if we added two duplicate
+	 * shares then removed the first one.  So we return TRUE even
+	 * if lookup fails.
+	 */
+	if ((ashare = as_shareman_lookup (AS->shareman, ashash)) &&
+	    ashare->udata == share)
 	{
 		/* Remove share. */
 		if (!as_shareman_remove (AS->shareman, ashash))
@@ -199,9 +199,6 @@ BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
 	}
 
 	as_hash_free (ashash);
-
-	/* Disassociate from giFT share. */
-	share_set_udata (share, PROTO->name, NULL);
 
 	return TRUE;
 }
