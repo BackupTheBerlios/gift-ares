@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.11 2004/10/30 23:52:06 mkern Exp $
+ * $Id: as_upload.c,v 1.12 2004/11/04 23:31:53 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -169,6 +169,9 @@ as_bool as_upload_start (ASUpload *up)
 	{
 		int i = sscanf (range, "bytes=%u-%u", &up->start, &up->stop);
 
+		if (!i)
+			i = sscanf (range, "bytes %u-%u", &up->start, &up->stop);
+		
 		if (i == 1) /* only start specified */
 			up->stop = up->share->size;
 		else
