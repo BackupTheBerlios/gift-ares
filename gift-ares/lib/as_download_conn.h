@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.2 2004/09/09 16:55:46 mkern Exp $
+ * $Id: as_download_conn.h,v 1.3 2004/09/09 22:52:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,8 +45,9 @@ typedef struct as_down_conn_t
 	/* data about source from search result */
 	ASSource *source;
 
-	/* the chunk we are currently downloading */
+	/* the chunk and hash we are currently downloading */
 	ASDownChunk *chunk;
+	ASHash      *hash;
 
 	/* the actually http client for downloading */
 	ASHttpClient *client;
@@ -80,11 +81,12 @@ void as_downconn_free (ASDownConn *conn);
 
 /*****************************************************************************/
 
-/* Associate this connection with chunk start download. */
-as_bool as_downconn_start (ASDownConn *conn, ASDownChunk *chunk);
+/* Associate this connection with chunk and hash and start download of file */
+as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
+                           ASDownChunk *chunk);
 
-/* Stop current download and disassociate from chunk. Does not raise callback.
- * State is set to DOWNCONN_UNUSED. 
+/* Stop current download and disassociate from chunk and hash. Does not raise
+ * callback. State is set to DOWNCONN_UNUSED. 
  */
 as_bool as_downconn_cancel (ASDownConn *conn);
 
