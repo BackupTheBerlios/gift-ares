@@ -380,6 +380,7 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
 {
 	Hash *hash;
+	ASShare *ashare;
 	as_bool ret;
 	
 	assert (!share_timer);
@@ -388,6 +389,11 @@ BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
 	hash = share_get_hash (share, "SHA1");
 
 	if (!hash)
+		return FALSE;
+
+	ashare = as_shareman_lookup (AS->shareman, (ASHash *)(hash->data));
+
+	if (!ashare || ashare->udata != share)
 		return FALSE;
 
 	ret = as_shareman_remove (AS->shareman, (ASHash *)(hash->data));
