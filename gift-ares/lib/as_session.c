@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.18 2004/09/13 13:40:04 mkern Exp $
+ * $Id: as_session.c,v 1.19 2004/09/13 15:00:20 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,7 +50,8 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 	session->packet_cb  = packet_cb;
 	session->udata      = NULL;
 	session->search_id  = 0;
-	session->ping_timer = NULL;
+	session->ping_timer = 0;
+	session->pong_timer = 0;
 
 	return session;
 }
@@ -59,6 +60,7 @@ static void session_cleanup (ASSession *session)
 {
 	input_remove (session->input);
 	timer_remove_zero (&session->ping_timer);
+	timer_remove_zero (&session->pong_timer);
 
 	tcp_close (session->c);
 	as_cipher_free (session->cipher);
@@ -177,6 +179,8 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		AS_ERR ("Send failed");
 		return FALSE;
 	}
+
+	timer_reset (session->ping_timer);
 
 	return TRUE;
 }
@@ -301,10 +305,7 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 		as_packet_free (packet);
 	}
 
-	timer_remove (session->ping_timer);
-
-	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
-					 (TimerCallback)session_ping, session);
+	timer_remove_zero (&session->pong_timer);
 
 	return; /* wait for more */
 }
@@ -546,7 +547,8 @@ static as_bool session_ping (ASSession *session)
 
 	as_packet_free (p);
 
-	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
+	assert (!session->pong_timer);
+	session->pong_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
 	                                 (TimerCallback)session_ping_timeout,
 	                                 session);
 
