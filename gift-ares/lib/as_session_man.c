@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.22 2004/09/07 18:30:02 mkern Exp $
+ * $Id: as_session_man.c,v 1.23 2004/09/09 21:50:01 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -329,6 +329,9 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		free (nick);
 		break;
 	}
+	case PACKET_NODELIST:
+		/* FIXME */
+		break;
 	default:
 		AS_WARN_1 ("Got unknown packet 0x%02x:", type);
 		as_packet_dump (packet);
