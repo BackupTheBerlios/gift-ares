@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.10 2004/10/17 17:43:03 mkern Exp $
+ * $Id: as_meta.c,v 1.11 2004/10/17 18:27:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -47,15 +47,15 @@ ASMeta *as_meta_create ()
 
 static int tag_copy_itr (ASMetaTag *tag, ASMeta *new_meta)
 {
-	ASMetaTag *tag;
+	ASMetaTag *new_tag;
 
-	if ((tag = malloc (sizeof (ASMetaTag))))
+	if ((new_tag = malloc (sizeof (ASMetaTag))))
 	{
-		tag->name = gift_strdup (name);
-		tag->value = gift_strdup (value);
+		new_tag->name = gift_strdup (tag->name);
+		new_tag->value = gift_strdup (tag->value);
 
 		/* insert into list */
-		new_meta->tags = list_prepend (new_meta->tags, tag);
+		new_meta->tags = list_prepend (new_meta->tags, new_tag);
 	}	
 
 	return TRUE;
