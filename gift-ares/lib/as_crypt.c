@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.4 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_crypt.c,v 1.5 2004/08/31 20:05:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -259,10 +259,11 @@ in_port_t as_ip2port (in_addr_t ip)
 	as_uint16 ip_token;
 	as_uint32 port;
 
-	ip_str[0] = (as_uint8) ((ip >> 24) & 0xFF);
-	ip_str[1] = (as_uint8) ((ip >> 16) & 0xFF);
-	ip_str[2] = (as_uint8) ((ip >> 8)  & 0xFF);
-	ip_str[3] = (as_uint8) ((ip)       & 0xFF);
+	/* FIXME: How will this behave on big-endian? */
+	ip_str[0] = (as_uint8) ((ip >> 0)  & 0xFF);
+	ip_str[1] = (as_uint8) ((ip >> 8)  & 0xFF);
+	ip_str[2] = (as_uint8) ((ip >> 16) & 0xFF);
+	ip_str[3] = (as_uint8) ((ip >> 24) & 0xFF);
 
 	ip_token = hash_lowered_token (ip_str, 4);
 

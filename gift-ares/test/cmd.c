@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.6 2004/08/31 17:44:19 mkern Exp $
+ * $Id: cmd.c,v 1.7 2004/08/31 20:05:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,6 +20,7 @@ COMMAND_FUNC (help);
 
 COMMAND_FUNC (event_test);
 
+COMMAND_FUNC (load_nodes);
 COMMAND_FUNC (connect);
 COMMAND_FUNC (connect_to);
 
@@ -42,12 +43,16 @@ commands[] =
 	         "",
 	         "Test event system.")
 
+	COMMAND (load_nodes,
+	         "<file>",
+	         "Load nodes file.")
+
 	COMMAND (connect,
 	         "<no_sessions>",
 	         "Maintain no_sessions connections to network.")
 
 	COMMAND (connect_to,
-	         "<host> <port>",
+	         "<host> [<port>]",
 	         "Create session to a given host.")
 
 	COMMAND (quit,
@@ -116,6 +121,19 @@ COMMAND_FUNC (event_test)
 
 /*****************************************************************************/
 
+COMMAND_FUNC (load_nodes)
+{
+	if (argc != 2)
+		return FALSE;
+
+	printf ("Loading nodes from file %s.\n", argv[1]);
+
+	if (!as_nodeman_load (AS->nodeman, argv[1]))
+		printf ("Node file load failed.\n");
+
+	return TRUE;
+}
+
 COMMAND_FUNC (connect)
 {
 	int i;
@@ -126,7 +144,7 @@ COMMAND_FUNC (connect)
 	i = atoi (argv[1]);
 	assert (i >= 0);
 
-	printf ("Telling seesion manager to connect to %d nodes.", i);
+	printf ("Telling seesion manager to connect to %d nodes.\n", i);
 
 	as_sessman_connect (AS->sessman, i);
 
@@ -139,11 +157,16 @@ COMMAND_FUNC (connect_to)
 	in_addr_t ip;
 	in_port_t port;
 
-	if (argc < 3)
+	if (argc < 2)
 		return FALSE;
 
 	ip = net_ip (argv[1]);
-	port = atoi (argv[2]);
+	
+	/* if no port is given derive it from ip */
+	if (argc > 2)
+		port = atoi (argv[2]);
+	else
+		port = as_ip2port (ip);
 
 	printf ("connecting to %s (%08x), port %d\n", argv[1], ip, port);
 	sess = as_session_create (NULL, NULL);

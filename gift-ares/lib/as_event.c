@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.9 2004/08/27 17:56:40 mkern Exp $
+ * $Id: as_event.c,v 1.10 2004/08/31 20:05:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -286,7 +286,7 @@ input_id input_add (int fd, void *udata, InputState state,
 	 * set by libevent to work around non-standard behaviour in window's
 	 * select().
 	 */
-	assert (state & INPUT_ERROR == 0);
+	assert ((ev->input.state & INPUT_ERROR) == 0);
 
 	event_set (&ev->ev, ev->input.fd, trigger, libevent_cb, (void *)ev);
 
