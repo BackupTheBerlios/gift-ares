@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.h,v 1.4 2004/09/16 13:06:11 mkern Exp $
+ * $Id: as_source.h,v 1.5 2004/09/24 22:27:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,6 +17,9 @@ typedef struct
 	/* source host and port */
 	in_addr_t host;
 	in_port_t port; 
+
+	/* the source's local ip */
+	in_addr_t inside_ip;
 	
 	/* source's supernode host and port */
 	in_addr_t shost;

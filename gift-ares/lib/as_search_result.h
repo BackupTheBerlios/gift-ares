@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.h,v 1.1 2004/09/06 13:21:12 mkern Exp $
+ * $Id: as_search_result.h,v 1.2 2004/09/24 22:27:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,7 @@ typedef struct as_result_t
 
 	/* always 0x61? (could be bandwidth) */
 	as_uint8  unknown;
+	as_uint8  unk[5];
 
 } ASResult;
 

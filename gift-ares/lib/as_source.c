@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.7 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_source.c,v 1.8 2004/09/24 22:27:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,6 +21,7 @@ ASSource *as_source_create ()
 
 	source->host = INADDR_NONE;
 	source->port = 0;
+	source->inside_ip = INADDR_NONE;
 	source->shost = INADDR_NONE;
 	source->sport = 0;
 	source->username = NULL;

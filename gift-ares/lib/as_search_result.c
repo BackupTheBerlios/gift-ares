@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.6 2004/09/09 16:15:35 HEx Exp $
+ * $Id: as_search_result.c,v 1.7 2004/09/24 22:27:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -38,6 +38,7 @@ ASResult *as_result_create ()
 	result->filename = NULL;
 	result->fileext  = NULL;
 	result->unknown  = 0;
+	memset (result->unk, 0, sizeof (result->unk));
 
 	return result;
 }
@@ -105,8 +106,11 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		r->source->username = as_packet_get_strnul (packet);
 
 		/* unknown, may be split differently */
-		as_packet_get_8 (packet);
-		as_packet_get_le32 (packet);
+		r->unk[0] = as_packet_get_8 (packet);
+		r->unk[1] = as_packet_get_8 (packet);
+		r->unk[2] = as_packet_get_8 (packet);
+		r->unk[3] = as_packet_get_8 (packet);
+		r->unk[4] = as_packet_get_8 (packet);
 
 		r->realm = (ASRealm) as_packet_get_8 (packet);
 		r->filesize = as_packet_get_le32 (packet);
@@ -159,7 +163,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 
 		r->source->username = as_packet_get_strnul (packet);
 		r->hash = as_packet_get_hash (packet);
-		r->fileext = as_packet_get_strnul (packet);
+		r->source->inside_ip = as_packet_get_ip (packet);
 		break;
 
 	default:

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.31 2004/09/19 19:06:34 mkern Exp $
+ * $Id: cmd.c,v 1.32 2004/09/24 22:27:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -302,9 +302,19 @@ static void search_callback (ASSearch *search, ASResult *r)
 {
 	assert (search == test_search);
 
+#if 1
+	/* usable */
 	printf ("%3d) %25s %10d %c [%s]\n", list_length (results),
 		r->source->username, r->filesize,
 		realm_chars[r->realm], r->filename);
+#else
+	/* debuggable */
+	printf ("%3d) %02x %02x %02x (%d) %02x %02x %02x  %s %s\n", list_length (results),
+		r->unknown, r->unk[0], r->unk[1],
+		r->unk[0] | ((int)r->unk[1] << 8),
+		r->unk[2], r->unk[3], r->unk[4],
+		net_ip_str (r->source->host), r->source->username);
+#endif
 
 #if 0
 	{
