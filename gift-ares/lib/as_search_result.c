@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.10 2004/12/24 12:06:26 mkern Exp $
+ * $Id: as_search_result.c,v 1.11 2005/01/05 00:42:32 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,6 +92,27 @@ static void parse_username (ASResult *r, char *username)
 	}
 }
 
+static void munge_filename (char *filename)
+{
+	char *ptr;
+
+	if (filename)
+	{
+		for (ptr = filename; *ptr; ptr++)
+		{
+			switch (*ptr)
+			{
+			case '/':
+#ifdef WIN32
+			case '\\':
+			case ':':
+#endif
+				*ptr = '_';
+			}
+		}
+	}
+}
+
 static as_bool result_parse (ASResult *r, ASPacket *packet)
 {
 	int reply_type;
@@ -159,6 +180,8 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 
 			r->filename = string_free_keep (filename);
 		}
+
+		munge_filename (r->filename);
 
 		break;
 		
