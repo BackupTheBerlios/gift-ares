@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.20 2004/10/17 17:43:03 mkern Exp $
+ * $Id: as_download.c,v 1.21 2004/10/19 16:18:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -463,7 +463,9 @@ as_bool as_download_resume (ASDownload *dl)
 	if (!download_set_state (dl, DOWNLOAD_ACTIVE, TRUE))
 		return FALSE;
 
-	download_maintain (dl);
+	/* start things off if we are still in active state */
+	if (dl->state == DOWNLOAD_ACTIVE)
+		download_maintain (dl);
 
 	return TRUE;
 }

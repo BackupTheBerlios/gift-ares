@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.43 2004/10/03 17:37:49 HEx Exp $
+ * $Id: as_ares.h,v 1.44 2004/10/19 16:18:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -161,6 +161,9 @@ typedef int            as_bool;
 
 /* Number of request fails after which a source is removed */
 #define AS_DOWNLOAD_SOURCE_MAX_FAIL (2)
+
+/* Time between download manager's progress callbacks */
+#define AS_DOWNLOAD_PROGRESS_INTERVAL (1 * SECONDS)
 
 /* Timeout for tcp connect to firewalled source's supernode. */
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)

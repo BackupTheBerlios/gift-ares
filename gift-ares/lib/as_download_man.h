@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.h,v 1.4 2004/09/19 18:10:41 HEx Exp $
+ * $Id: as_download_man.h,v 1.5 2004/10/19 16:18:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,6 +20,11 @@ typedef struct as_downman_t ASDownMan;
 typedef as_bool (*ASDownManStateCb) (ASDownMan *man, ASDownload *dl,
                                      ASDownloadState state);
 
+/* Called every AS_DOWNLOAD_PROGRESS_INTERVAL while there are active
+ * downloads.
+ */
+typedef void (*ASDownManProgressCb) (ASDownMan *man);
+
 struct as_downman_t
 {
 	/* List of downloads */
@@ -28,8 +33,11 @@ struct as_downman_t
 	/* Hashtable keyed by file hash and pointing to links in downloads. */
 	ASHashTable *hash_index;
 
-	/* the state callback we trigger for all downloads */
+	/* The state callback we trigger for all downloads */
 	ASDownManStateCb state_cb;
+	/* Periodic progress callback */
+	ASDownManProgressCb progress_cb;
+	timer_id progress_timer;
 
 	/* Whether all downloads are queued. */
 	as_bool stopped;
@@ -45,6 +53,10 @@ void as_downman_free (ASDownMan *man);
 
 /* Set callback triggered for every state change in one of the downloads. */
 void as_downman_set_state_cb (ASDownMan *man, ASDownManStateCb state_cb);
+
+/* Set callback triggered periodically for progress updates. */
+void as_downman_set_progress_cb (ASDownMan *man,
+                                 ASDownManProgressCb progress_cb);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.5 2004/10/17 18:27:41 mkern Exp $
+ * $Id: as_download_man.c,v 1.6 2004/10/19 16:18:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,6 +17,9 @@ static unsigned int active_downloads (ASDownMan *man);
  * management.
  */
 static as_bool download_state_cb (ASDownload *dl, ASDownloadState state);
+
+/* Periodic timer function which in turn calls progress callback. */
+static as_bool progress_timer_func (ASDownMan *man);
 
 /*****************************************************************************/
 
@@ -39,6 +42,8 @@ ASDownMan *as_downman_create ()
 	man->downloads = NULL;
 	man->stopped = FALSE;
 	man->state_cb = NULL;
+	man->progress_cb = NULL;
+	man->progress_timer = INVALID_TIMER;
 
 	return man;
 }
@@ -64,6 +69,7 @@ void as_downman_free (ASDownMan *man)
 	list_free (man->downloads);
 
 	as_hashtable_free (man->hash_index, FALSE);
+	timer_remove_zero (&man->progress_timer);
 
 	free (man);
 }
@@ -72,6 +78,28 @@ void as_downman_free (ASDownMan *man)
 void as_downman_set_state_cb (ASDownMan *man, ASDownManStateCb state_cb)
 {
 	man->state_cb = state_cb;
+}
+
+/* Set callback triggered periodically for progress updates. */
+void as_downman_set_progress_cb (ASDownMan *man,
+                                 ASDownManProgressCb progress_cb)
+{
+	if (progress_cb)
+	{
+		man->progress_cb = progress_cb;
+
+		if (man->progress_timer == INVALID_TIMER &&
+		    active_downloads (man) > 0)
+		{
+			man->progress_timer = timer_add (AS_DOWNLOAD_PROGRESS_INTERVAL,
+		                             (TimerCallback)progress_timer_func, man);
+		}
+	}
+	else
+	{
+		man->progress_cb = NULL;
+		timer_remove_zero (&man->progress_timer);
+	}
 }
 
 /*****************************************************************************/
@@ -292,7 +320,13 @@ ASDownload *as_downman_restart_file (ASDownMan *man, const char *path)
  */
 int as_downman_restart_dir (ASDownMan *man, const char *dir)
 {
-	return -1;
+
+#ifdef HAVE_DIRENT_H
+	/* TODO */
+	abort (0);
+#else
+
+#endif
 }
 
 /*****************************************************************************/
@@ -441,7 +475,7 @@ static as_bool download_state_cb (ASDownload *dl, ASDownloadState state)
 
 	/* If we are at the limit don't allow any download to become active. */
 	if (state == DOWNLOAD_ACTIVE &&
-	    (active >= AS_DOWNLOAD_MAX_ACTIVE || man->stopped))
+	    (active > AS_DOWNLOAD_MAX_ACTIVE || man->stopped))
 	{
 		/* This triggers us again and the user is then notified of the new
 		 * queued state.
@@ -475,7 +509,33 @@ static as_bool download_state_cb (ASDownload *dl, ASDownloadState state)
 		}
 	}
 
+	/* start or stop progress timer */
+	if (active > 0)
+	{
+		if (man->progress_timer == INVALID_TIMER)
+		{
+			man->progress_timer = timer_add (AS_DOWNLOAD_PROGRESS_INTERVAL,
+		                             (TimerCallback)progress_timer_func, man);
+		}
+	}
+	else
+	{
+		timer_remove_zero (&man->progress_timer);
+	}
+
 	return ret;
+}
+
+/* Periodic timer function which in turn calls progress callback. */
+static as_bool progress_timer_func (ASDownMan *man)
+{
+	assert (man->progress_cb);
+	assert (active_downloads (man) > 0); /* REMOVE ME */
+
+	/* raise callback */
+	man->progress_cb (man);
+
+	return TRUE; /* reset timer */
 }
 
 /*****************************************************************************/
