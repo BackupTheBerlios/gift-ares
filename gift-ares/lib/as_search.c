@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.13 2004/10/21 17:11:26 mkern Exp $
+ * $Id: as_search.c,v 1.14 2004/10/23 14:13:56 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -209,7 +209,7 @@ as_bool as_search_sent_to (ASSearch *search, ASSession *session)
  */
 void as_search_add_result (ASSearch *search, ASResult *result)
 {
-	List *head;
+	List *head, *l;
 	as_bool duplicate;
 
 	if (!result)
@@ -221,6 +221,20 @@ void as_search_add_result (ASSearch *search, ASResult *result)
 	{
 		/* find list of results for this hash if there is one */
 		head = as_search_get_results (search, result->hash);
+
+		/* Ignore duplicate results from same user */
+		for (l = head; l; l = l->next)
+		{
+			if (as_source_equal (result->source, ((ASResult *)l->data)->source))
+			{
+#if 0
+				AS_HEAVY_DBG_1 ("Ignoring duplicate result from %s",
+				                net_ip_str (result->source->host));
+#endif
+				as_result_free (result);
+				return;
+			}
+		}
 
 		duplicate = head ? TRUE : FALSE;
 
