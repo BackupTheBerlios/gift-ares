@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.6 2004/09/15 13:02:19 mkern Exp $
+ * $Id: as_download.c,v 1.7 2004/09/15 17:24:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -752,7 +752,7 @@ static as_bool consolidate_chunks (ASDownload *dl)
 			(last_chunk->received == 0 && chunk->received == 0)))
 		{	
 			AS_HEAVY_DBG_5 ("Merging %s chunks (%u,%u) and (%u,%u)",
-			                (chunk->received == 0) ? "complete" : "empty",
+			                (chunk->received == 0) ? "empty" : "complete",
 			                last_chunk->start, last_chunk->size,
 			                chunk->start, chunk->size);
 
