@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.1 2004/08/26 16:05:33 HEx Exp $
+ * $Id: as_session.c,v 1.2 2004/08/26 16:20:37 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -106,36 +106,36 @@ static void session_handshake (int fd, input_id input, ASSession *sess)
 
 static void session_get_packet(int fd, input_id input, ASSession *sess)
 {
-        ASPacket *packet;
-
-        input_remove (input);
-
-        if(net_sock_error (sess->c->fd))
-        {
+	ASPacket *packet;
+	
+	input_remove (input);
+	
+	if (net_sock_error (sess->c->fd))
+	{
 //                FST_HEAVY_DBG_2 ("socket error for %s:%d",
 //                                                 session->node->host, session->node->port);
 //                fst_session_disconnect (session);
-                return;
-        }
+		return;
+	}
 
         if (! (packet = as_packet_create ()))
-        {
-//                fst_session_disconnect (session);
+	{
+//		fst_session_disconnect (session);
                 return;
-        }
+	}
 
-        if (!as_packet_recv (packet, sess->c))
-        {
-                as_packet_free (packet);
-//                fst_session_disconnect (session);
-                return;
+	if (!as_packet_recv (packet, sess->c))
+	{
+		as_packet_free (packet);
+//		fst_session_disconnect (session);
+		return;
         }
 
 	as_packet_append (sess->packet, packet);
 	as_packet_free (packet);
 
-        while (as_packet_remaining (sess->packet))
-        {
+	while (as_packet_remaining (sess->packet))
+	{
 		int len, type;
 
 		if (as_packet_remaining (sess->packet) < 3)
