@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.7 2004/09/03 16:18:14 mkern Exp $
+# $Id: Makefile.msvc,v 1.8 2004/09/04 18:21:51 mkern Exp $
 
 
 !include ../Make.msvc
@@ -20,7 +20,7 @@ OBJECTS = \
 	as_strobj$(O) \
 	as_http_header$(O) \
 	as_http_client$(O) \
-#	as_http_server$(O) \
+	as_http_server$(O) \
 	as_tokenize$(O) \
 	as_hashtable$(O) \
 	as_session$(O) \

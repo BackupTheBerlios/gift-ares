@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_header.c,v 1.1 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_http_header.c,v 1.2 2004/09/04 18:21:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -82,13 +82,6 @@ ASHttpHeader *as_http_header_parse (char *data, int *data_len)
 		if (i <= (*data_len)-4 && p[2] == '\r' && p[3] == '\n')
 		{
 			len = i + 4; 
-			break;
-		}
-
-		/* kazaa weirdness */
-		if (p[2] == '\n')
-		{
-			len = i + 3; 
 			break;
 		}
 	}

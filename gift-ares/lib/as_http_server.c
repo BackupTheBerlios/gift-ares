@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.1 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_http_server.c,v 1.2 2004/09/04 18:21:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,6 +22,8 @@ typedef struct
 	TCPC *tcpcon;			/* new connection */
 	in_addr_t remote_ip;
 
+	String *buf;            /* http request buffer */
+
 } ServCon;
 
 /*****************************************************************************/
@@ -36,9 +38,9 @@ static void server_binary (int fd, input_id input, ServCon *servcon);
 
 /* alloc and init server */
 ASHttpServer *as_http_server_create (in_port_t port,
-									   ASHttpServerRequestCb request_cb,
-									   ASHttpServerPushCb push_cb,
-									   ASHttpServerBinaryCb binary_cb)
+                                     ASHttpServerRequestCb request_cb,
+                                     ASHttpServerPushCb push_cb,
+                                     ASHttpServerBinaryCb binary_cb)
 {
 	ASHttpServer *server;
 
@@ -108,7 +110,8 @@ static void server_accept (int fd, input_id input, ASHttpServer *server)
 	}
 
 	servcon->server = server;
-	servcon->remote_ip = net_peer (servcon->tcpcon->fd);
+	servcon->remote_ip = net_peer_ip (servcon->tcpcon->fd, NULL);
+	servcon->buf = NULL;
 
 #if 0
 	/* deny requests from banned ips */
@@ -174,12 +177,28 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
 				   (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
 	}
+
+/* FIXME: Ares push support */
+#if 0
 	else if (!strcmp (buf, "GIVE"))
 	{
 		AS_HEAVY_DBG_2 ("connection from %s is a push reply [%s]",
 		                 net_ip_str (servcon->remote_ip), buf);
+
 		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
 				   (InputCallback)server_push, HTSV_REQUEST_TIMEOUT);
+	}
+#endif
+
+	else if (!strcmp (buf, "CHAT"))
+	{
+		/* drop all ares chat requests */
+		AS_HEAVY_DBG_2 ("connection from %s is a chat request [%s]. Ignoring.",
+		                net_ip_str (servcon->remote_ip), buf);
+
+		tcp_close_null (&servcon->tcpcon);
+		free (servcon);
+		return;
 	}
 	else 
 	{
@@ -195,9 +214,8 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 
 static void server_request (int fd, input_id input, ServCon *servcon)
 {
-	FDBuf *buf;
+	unsigned char buf[1024];
 	int len;
-	char *header_str;
 	ASHttpHeader *request;
 
 	input_remove (input);
@@ -209,23 +227,41 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 				   net_ip_str (servcon->remote_ip));
 
 		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
 		free (servcon);
 		return;
 	}
 
-	buf = tcp_readbuf (servcon->tcpcon);
+	/* get us a buffer */
+	if (!servcon->buf)
+		servcon->buf = string_new (NULL, 0, 0, FALSE);
 
-	if ((len = fdbuf_delim (buf, "\r\n\r\n")) < 0)
+	/* read a chunk */
+	if ((len = tcp_recv (servcon->tcpcon, buf, sizeof (buf))) <= 0)
 	{
-		AS_DBG_1 ("fdbuf_delim() < 0 for connection from %s",
+		AS_DBG_1 ("tcp_recv() < 0 for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
 		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
 		free (servcon);
 		return;
 	}
 
-	if (len > 0)
+	/* append to connection buffer */
+	if (string_appendu (servcon->buf, buf, len) != len)
+	{
+		AS_ERR ("Insufficient memory");
+		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
+		free (servcon);
+		return;
+	}
+
+	len = servcon->buf->len;
+
+	/* check if we got entire header */
+	if (strstr (servcon->buf->str, "\r\n\r\n") == NULL)
 	{
 		if (len > HTSV_MAX_REQUEST_LEN)
 		{
@@ -234,6 +270,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 					   HTSV_MAX_REQUEST_LEN, net_ip_str (servcon->remote_ip));
 
 			tcp_close_null (&servcon->tcpcon);
+			string_free (servcon->buf);
 			free (servcon);
 			return;
 		}
@@ -246,27 +283,23 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 		return;
 	}
 
-	header_str = fdbuf_data (buf, &len);
-
 	/* parse header */
-	if (! (request = as_http_header_parse (header_str, &len)))
+	if (!(request = as_http_header_parse (servcon->buf->str, &len)))
 	{
 		AS_DBG_1 ("parsing header failed for connection from %s, closing connection",
 				   net_ip_str (servcon->remote_ip));
 
-		fdbuf_release (buf);
 		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
 		free (servcon);
 		return;
 	}
 
 #ifdef LOG_HTTP_HEADERS
-	header_str[len] = 0; /* chops off last '\n', we just use it for debugging */
+	servcon->buf->str[len] = 0; /* chops off last '\n', we just use it for debugging */
 	AS_HEAVY_DBG_2 ("http request received from %s:\r\n%s",
-					 net_ip_str(servcon->remote_ip), header_str);
+					 net_ip_str(servcon->remote_ip), servcon->buf->str);
 #endif
-
-	fdbuf_release (buf);
 
 	/* raise callback */
 	if (!servcon->server->request_cb ||
@@ -278,13 +311,14 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 		tcp_close_null (&servcon->tcpcon);
 	}
 
+	string_free (servcon->buf);
 	free (servcon);
 }
 
 static void server_push (int fd, input_id input, ServCon *servcon)
 {
-	FDBuf *buf;
-	char *give_str, *p;
+	unsigned char buf[1024];
+	char *p;
 	int len;
 	unsigned int push_id; 
 
@@ -301,19 +335,36 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 		return;
 	}
 
-	buf = tcp_readbuf (servcon->tcpcon);
+	/* get us a buffer */
+	if (!servcon->buf)
+		servcon->buf = string_new (NULL, 0, 0, FALSE);
 
-	if ((len = fdbuf_delim (buf, "\r\n")) < 0)
+	/* read a chunk */
+	if ((len = tcp_recv (servcon->tcpcon, buf, sizeof (buf))) <= 0)
 	{
-		AS_DBG_1 ("fdbuf_delim() < 0 for connection from %s",
+		AS_DBG_1 ("tcp_recv() < 0 for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
 		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
 		free (servcon);
 		return;
 	}
 
-	if (len > 0)
+	/* append to connection buffer */
+	if (string_appendu (servcon->buf, buf, len) != len)
+	{
+		AS_ERR ("Insufficient memory");
+		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
+		free (servcon);
+		return;
+	}
+
+	len = servcon->buf->len;
+
+	/* check if we got entire header */
+	if (strstr (servcon->buf->str, "\r\n") == NULL)
 	{
 		if (len > HTSV_MAX_REQUEST_LEN)
 		{
@@ -322,6 +373,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 					   HTSV_MAX_REQUEST_LEN, net_ip_str (servcon->remote_ip));
 
 			tcp_close_null (&servcon->tcpcon);
+			string_free (servcon->buf);
 			free (servcon);
 			return;
 		}
@@ -334,20 +386,16 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 		return;
 	}
 
-	give_str = fdbuf_data (buf, &len);
-
 #ifdef LOG_HTTP_HEADERS
-	give_str[len] = 0; /* chops off last '\n', we just use it for debugging */
+	servcon->buf->str[len] = 0; /* chops off last '\n', we just use it for debugging */
 	AS_HEAVY_DBG_2 ("push reply received from %s:\r\n%s",
-					 net_ip_str(servcon->remote_ip), give_str);
+					 net_ip_str(servcon->remote_ip), servcon->buf->str);
 #endif
 
 	/* parse push reply */
-	p = give_str;
+	p = servcon->buf->str;
 	string_sep (&p, " "); /* skip "GIVE " */
-	push_id = ATOL (p);
-
-	fdbuf_release (buf);
+	push_id = gift_strtol (p);
 
 	/* raise callback */
 	if (!servcon->server->push_cb ||
@@ -358,6 +406,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 		tcp_close_null (&servcon->tcpcon);
 	}
 
+	string_free (servcon->buf);
 	free (servcon);
 }
 

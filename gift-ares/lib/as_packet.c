@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.12 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_packet.c,v 1.13 2004/09/04 18:21:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -387,7 +387,8 @@ as_bool as_packet_recv (ASPacket *packet, TCPC *tcpcon)
 
 	packet_resize(packet, packet->used + 1024);
 
-	ret = tcp_recv(tcpcon, packet->data + packet->used, packet->allocated - packet->used);
+	ret = tcp_recv(tcpcon, packet->data + packet->used,
+	               packet->allocated - packet->used);
 
 	if(ret <= 0)
 		return FALSE;

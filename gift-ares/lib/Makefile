@@ -12,7 +12,7 @@ OBJECTS = \
 	as_strobj.o \
 	as_http_header.o \
 	as_http_client.o \
-#	as_http_server.o \
+	as_http_server.o \
 	as_search.o \
 	as_session.o \
 	as_session_man.o \
