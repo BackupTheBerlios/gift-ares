@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.11 2004/09/16 16:52:45 mkern Exp $
+ * $Id: as_download.c,v 1.12 2004/09/16 17:01:13 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,7 +17,7 @@
 
 /* Interval of maintenance timer used to check on queued sources and save
  * download state. */
-#define MAINTENANCE_TIMER_INTERVAL (20 * SECONDS)
+#define MAINTENANCE_TIMER_INTERVAL (30 * SECONDS)
 
 /* Filename prefix for incomplete files */
 #define INCOMPLETE_PREFIX "___ARESTRA___"
