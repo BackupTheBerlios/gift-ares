@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.13 2004/09/07 15:58:00 mkern Exp $
+ * $Id: cmd.c,v 1.14 2004/09/07 17:16:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -305,7 +305,7 @@ COMMAND_FUNC (info)
 	for (i=0; i < AS_HASH_SIZE; i++)
 		printf ("%02x", r->hash->data[i]);
 	str = as_hash_encode (r->hash);
-	printf (" [%s]\n");
+	printf (" [%s]\n", str);
 	free (str);
 
 	printf ("Meta tags:\n");
