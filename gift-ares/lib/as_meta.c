@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.5 2004/09/09 16:15:15 HEx Exp $
+ * $Id: as_meta.c,v 1.6 2004/09/15 22:18:25 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,23 @@
  */
 
 #include "as_ares.h"
+
+/*****************************************************************************/
+
+/* these are only string types that have a type to themselves;
+ * realm-specific tags are handled separately */
+static const ASTagMapping tag_types[] = {
+	{ "title",     TAG_TITLE,    TRUE  },
+	{ "artist",    TAG_ARTIST,   TRUE  },
+	{ "album",     TAG_ALBUM,    TRUE  },
+	{ "unknown_1", TAG_UNKSTR,   FALSE },
+	{ "year",      TAG_YEAR,     FALSE },
+	{ "codec",     TAG_CODEC,    FALSE },
+	{ "keywords",  TAG_KEYWORDS, TRUE  },
+	{ "filename",  TAG_FILENAME, TRUE  }
+};
+
+#define NUM_TYPES (sizeof(tag_types) / sizeof(ASTagMapping))
 
 /*****************************************************************************/
 
@@ -146,6 +163,30 @@ int as_meta_foreach_tag (ASMeta *meta, ASMetaForeachFunc func, void *udata)
 
 /*****************************************************************************/
 
+const ASTagMapping *as_meta_tag_name (const char *name)
+{
+	int i;
+	
+	for (i=0; i < NUM_TYPES; i++)
+		if (!strcasecmp (tag_types[i].name, name))
+			return &tag_types[i];
+
+	return NULL;
+}
+
+const ASTagMapping *as_meta_tag_type (ASTagType type)
+{
+	int i;
+	
+	for (i=0; i < NUM_TYPES; i++)
+		if (tag_types[i].type == type)
+			return &tag_types[i];
+
+	return NULL;
+}
+
+/*****************************************************************************/
+
 static void meta_add_string (ASMeta *meta, ASPacket *packet, const char *name)
 {
 	char *value;
@@ -168,20 +209,18 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 	{
 		int meta_type = as_packet_get_8 (p);
 
+		const ASTagMapping *map;
+		
 		/* turn everything into gift style meta tags */
+		if ((map = as_meta_tag_type (meta_type)))
+		{
+			meta_add_string (meta, p, map->name);
+			continue;
+		}
+
+		/* handle the realm-specific/non-string stuff */
 		switch (meta_type)
 		{
-		case TAG_TITLE:    meta_add_string (meta, p, "title");     break;
-		case TAG_ARTIST:   meta_add_string (meta, p, "artist");    break;
-		case TAG_ALBUM:    meta_add_string (meta, p, "album");     break;
-		case TAG_UNKSTR:   meta_add_string (meta, p, "unknown_1"); break;
-		case TAG_YEAR:     meta_add_string (meta, p, "year");      break;
-		case TAG_CODEC:    meta_add_string (meta, p, "codec");     break;
-		case TAG_KEYWORDS: meta_add_string (meta, p, "keywords");  break;
-
-		/* we handle filename explicitly later in as_search_result.c */
-		case TAG_FILENAME: meta_add_string (meta, p, "filename");  break;
-			
 		case TAG_XXX:
 			switch (realm)
 			{
