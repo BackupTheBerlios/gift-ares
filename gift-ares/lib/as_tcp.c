@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.9 2004/09/17 20:12:51 HEx Exp $
+ * $Id: as_tcp.c,v 1.10 2004/11/19 21:16:13 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -436,21 +436,14 @@ char *net_ip_str (in_addr_t ip)
 	return inet_ntoa (addr);
 }
 
-in_addr_t net_peer_ip (int fd, in_port_t *portret)
+in_addr_t net_peer (int fd)
 {
 	struct sockaddr_in addr;
 	in_addr_t ip  = 0;
-	in_port_t port = 0;
 	int len = sizeof (addr);
 
 	if (getpeername (fd, (struct sockaddr *)&addr, &len) == 0)
-	{
 		ip = addr.sin_addr.s_addr;
-		port = ntohs (addr.sin_port);
-	}
-
-	if (portret)
-		*portret = port;
 
 	return ip;
 }
@@ -473,27 +466,6 @@ in_addr_t net_local_ip (int fd, in_port_t *portret)
 		*portret = port;
 
 	return ip;
-}
-
-/*****************************************************************************/
-
-/* returns TRUE if ip is routable on the internet */
-as_bool net_ip_routable (in_addr_t ip)
-{
-	ip = ntohl (ip);
-
-	/* TODO: filter multicast and broadcast */
-	if (((ip & 0xff000000) == 0x7f000000) || /* 127.0.0.0 */
-	    ((ip & 0xffff0000) == 0xc0a80000) || /* 192.168.0.0 */
-	    ((ip & 0xfff00000) == 0xac100000) || /* 172.16-31.0.0 */
-	    ((ip & 0xff000000) == 0x0a000000) || /* 10.0.0.0 */
-		(ip == 0) ||
-		(ip == INADDR_NONE)) /* invalid ip */
-	{
-		return FALSE;
-	}
-
-	return TRUE;
 }
 
 /*****************************************************************************/

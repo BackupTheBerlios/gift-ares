@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.h,v 1.8 2004/09/17 20:12:51 HEx Exp $
+ * $Id: as_tcp.h,v 1.9 2004/11/19 21:16:13 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,6 +12,7 @@
 
 /*****************************************************************************/
 
+#ifndef GIFT_PLUGIN
 typedef struct
 {
 	in_addr_t         host;     /* host we are connected to */
@@ -68,14 +69,11 @@ in_addr_t net_ip (const char *ip_str);
 
 char *net_ip_str (in_addr_t ip);
 
-in_addr_t net_peer_ip (int fd, in_port_t *portret);
+in_addr_t net_peer (int fd);
 
 in_addr_t net_local_ip (int fd, in_port_t *portret);
 
-/*****************************************************************************/
-
-/* returns TRUE if ip is routable on the internet */
-as_bool net_ip_routable (in_addr_t ip);
+#endif
 
 /*****************************************************************************/
 
