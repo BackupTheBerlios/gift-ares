@@ -1,5 +1,5 @@
 /*
- * $Id: as_push_reply.c,v 1.3 2004/12/19 18:54:59 mkern Exp $
+ * $Id: as_push_reply.c,v 1.4 2004/12/19 19:19:01 mkern Exp $
  *
  * Copyright (C) 2004 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -140,7 +140,7 @@ static void pushreply_connected (int fd, input_id input, ASPushReply *reply)
 	/* Free reply but keep connection alive. */
 	as_pushreply_free (reply, FALSE);
 
-	AS_DBG_1 ("Pushed to %s succeeded.", net_peer_ip (c->fd));
+	AS_DBG_1 ("Push to %s succeeded.", net_peer_ip (c->fd));
 
 	/* Hand off connection to http server if it still exists. */
 	if (AS->server)
