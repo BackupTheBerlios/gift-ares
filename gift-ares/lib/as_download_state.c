@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_state.c,v 1.2 2004/09/16 16:52:45 mkern Exp $
+ * $Id: as_download_state.c,v 1.3 2004/12/19 18:34:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -586,6 +586,8 @@ static as_bool read_tlvs (ASDownload *dl, ASPacket *packet)
 	return TRUE;
 }
 
+/* Currently unused. */
+#if 0
 static void tlv_append_str (ASPacket *packet, ASDownStateTags type,
                             const char *str)
 {
@@ -597,6 +599,7 @@ static void tlv_append_str (ASPacket *packet, ASDownStateTags type,
 	/* data */
 	as_packet_put_ustr (packet, (as_uint8 *)str, len);
 }
+#endif
 
 static as_bool tlv_append_sources (ASPacket *packet, ASDownload *dl)
 {
