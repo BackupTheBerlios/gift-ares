@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.14 2004/09/07 17:16:58 mkern Exp $
+ * $Id: cmd.c,v 1.15 2004/09/07 18:37:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -24,6 +24,7 @@ COMMAND_FUNC (load_nodes);
 COMMAND_FUNC (save_nodes);
 COMMAND_FUNC (connect);
 COMMAND_FUNC (connect_to);
+COMMAND_FUNC (go);
 COMMAND_FUNC (search);
 COMMAND_FUNC (info);
 COMMAND_FUNC (clear);
@@ -62,6 +63,10 @@ commands[] =
 	COMMAND (connect_to,
 	         "<host> [<port>]",
 	         "Create session to a given host.")
+
+	COMMAND (go,
+	         "",
+	         "Loads nodes and connects to network.")
 
 	COMMAND (search,
 	         "<query>",
@@ -213,6 +218,17 @@ COMMAND_FUNC (connect_to)
 	return TRUE;
 }
 
+COMMAND_FUNC (go)
+{
+	static char *load[]    = { "load_nodes", "nodes" };
+	static char *connect[] = { "connect", "1" };
+	
+	dispatch_cmd (sizeof (load) / sizeof (char*), load);
+	dispatch_cmd (sizeof (connect) / sizeof (char*), connect);
+
+	return TRUE;
+}
+
 /*****************************************************************************/
 
 static const char *realm_chars="RA?S?VDI";
@@ -229,7 +245,6 @@ static as_bool meta_tag_itr (ASMetaTag *tag, void *udata)
 
 static void search_callback (ASSearch *search, ASResult *r)
 {
-	int i;
 	assert (search == test_search);
 
 	printf ("%3d) %20s %10d %c [%s]\n", list_length (results),
@@ -237,9 +252,13 @@ static void search_callback (ASSearch *search, ASResult *r)
 		realm_chars[r->realm], r->filename);
 
 #if 0
+	{
+	int i;
+
 	printf ("Meta tags:\n");
 	i = as_meta_foreach_tag (r->meta, meta_tag_itr, NULL);
 	printf ("(%d tags total)\n", i);
+	}
 #endif
 
 	results = list_append (results, r);
