@@ -34,7 +34,8 @@ OBJECTS = \
 	as_download_state.o \
 	as_download.o \
 	as_incoming.o \
-	as_share.o
+	as_share.o \
+	as_share_man.o
 
 all: libares.a($(OBJECTS))
 

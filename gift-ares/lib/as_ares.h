@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.35 2004/09/16 02:37:01 HEx Exp $
+ * $Id: as_ares.h,v 1.36 2004/09/16 15:45:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -103,6 +103,7 @@ typedef int            as_bool;
 #include "as_download_state.h"
 #include "as_incoming.h"
 #include "as_share.h"
+#include "as_share_man.h"
 
 /*****************************************************************************/
 
@@ -163,6 +164,9 @@ typedef struct
 
 	/* search manager */
 	ASSearchMan *searchman;
+
+	/* share manager */
+	ASShareMan *shareman;
 
 	/* HTTP (and other stuff) server */
 	ASHttpServer *server;

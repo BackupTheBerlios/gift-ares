@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.13 2004/09/16 02:25:08 HEx Exp $
+ * $Id: as_packet.h,v 1.14 2004/09/16 15:45:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,25 +25,33 @@ typedef struct
 
 typedef enum
 {
-	PACKET_SYN       = 0x5A,  /* first packet sent by connecting party */
-	PACKET_ACK       = 0x33,  /* first packet sent back by supernode */
-	PACKET_HANDSHAKE = 0x00,  /* info about our node */
-	PACKET_STATS     = 0x01,  /* network stats 1 */
-	PACKET_STATS2    = 0x1E,  /* network stats 2 */
-	PACKET_LOCALIP   = 0x25,  /* local (external) IP */
-	PACKET_NICKNAME  = 0x05,  /* your nickname */
-	PACKET_SHARE     = 0x32,  /* used to send shares to supernode, compressed! */
-	PACKET_SEARCH    = 0x09,  /* token search */
-	PACKET_LOCATE    = 0x50,  /* hash search */
-	PACKET_RESULT    = 0x12,  /* search result */
-	PACKET_NODELIST  = 0x36,  /* list of index nodes? */
+	/* unencrypted */
+	PACKET_NODE_REQ   = 70, /* 0x46, request nodes from index node */
+	PACKET_SYN        = 90, /* 0x5A, first packet sent by connecting party */
+
+	/* otherwise specially handled */
+	PACKET_COMPRESSED = 50, /* 0x32, zlib compression encapsulation layer */
+	PACKET_ACK        = 51, /* 0x33, first packet sent back by supernode */
+
+	/* encrypted */
+	PACKET_HANDSHAKE  = 0,  /* 0x00, info about our node */
+	PACKET_STATS      = 1,  /* 0x01, network stats 1 */
+	PACKET_STATS2     = 30, /* 0x1E, network stats 2 */
+	PACKET_LOCALIP    = 37, /* 0x25, local (external) IP */
+	PACKET_NICKNAME   = 5,  /* 0x05, your nickname */
+	PACKET_SHARE      = 28, /* 0x1C, used to send shares to supernode */
+	PACKET_SEARCH     = 9,  /* 0x09, token search */
+	PACKET_LOCATE     = 80, /* 0x50, hash search */
+	PACKET_RESULT     = 18, /* 0x12, search result */
+	PACKET_NODELIST   = 54, /* 0x36, list of index nodes? */
+	PACKET_PUSH       = 8,  /* 0x08, push request */
 } ASPacketType;
 
 typedef enum
 {
-	PACKET_PLAIN      = 0x00, /* Packet is neighter compressed nor encrypted */
-	PACKET_ENCRYPTED  = 0x01, /* Packet it encrypted */
-	PACKET_COMPRESSED = 0x02  /* Packet is compressed */
+	PACKET_PLAIN    = 0x00, /* Packet is neither compressed nor encrypted */
+	PACKET_ENCRYPT  = 0x01, /* Packet it encrypted */
+	PACKET_COMPRESS = 0x02  /* Packet is compressed */
 } ASPacketFlag;
 
 /*****************************************************************************/

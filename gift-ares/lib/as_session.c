@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.24 2004/09/15 21:30:02 HEx Exp $
+ * $Id: as_session.c,v 1.25 2004/09/16 15:45:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -150,7 +150,7 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 	case PACKET_PLAIN:
 		break;
 
-	case PACKET_ENCRYPTED:
+	case PACKET_ENCRYPT:
 		if (!as_packet_encrypt (body, session->cipher))
 		{
 			AS_ERR ("Encrypt failed");
@@ -158,7 +158,7 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		}
 		break;
 
-	case PACKET_COMPRESSED:
+	case PACKET_COMPRESS:
 		if (!as_packet_compress (body))
 		{
 			AS_ERR ("Compression failed");
@@ -420,7 +420,7 @@ static as_bool session_send_handshake (ASSession *session,
 	as_packet_put_ip (packet, net_local_ip (session->c->fd, NULL));
 
 	if (!as_session_send (session, PACKET_HANDSHAKE, packet,
-	                      PACKET_ENCRYPTED))
+	                      PACKET_ENCRYPT))
 	{
 		AS_ERR ("Send failed");
 		as_packet_free (packet);
@@ -544,7 +544,7 @@ static as_bool session_ping (ASSession *session)
 	AS_DBG_2 ("Sent ping to %s:%d",
 	          net_ip_str (session->host), session->port);
 
-	as_session_send (session, PACKET_STATS2, p, PACKET_ENCRYPTED);
+	as_session_send (session, PACKET_STATS2, p, PACKET_ENCRYPT);
 
 	as_packet_free (p);
 

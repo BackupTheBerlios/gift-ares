@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.8 2004/09/10 17:58:53 mkern Exp $
+ * $Id: as_search.c,v 1.9 2004/09/16 15:45:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -158,7 +158,7 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 	}
 
 	/* send packet */
-	if (!as_session_send (session, type, packet, PACKET_ENCRYPTED))
+	if (!as_session_send (session, type, packet, PACKET_ENCRYPT))
 	{
 		AS_ERR ("as_session_send failed for search query");
 		as_packet_free (packet);

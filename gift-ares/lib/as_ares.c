@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.8 2004/09/14 01:18:25 HEx Exp $
+ * $Id: as_ares.c,v 1.9 2004/09/16 15:45:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -82,6 +82,19 @@ as_bool as_init ()
 	if (!(AS->searchman = as_searchman_create ()))
 	{
 		AS_ERR ("Failed to create search manager");
+		as_http_server_free (AS->server);
+		as_netinfo_free (AS->netinfo);
+		as_sessman_free (AS->sessman);
+		as_nodeman_free (AS->nodeman);
+		free (AS);
+		AS = NULL;
+		return FALSE;
+	}
+
+	if (!(AS->shareman = as_shareman_create ()))
+	{
+		AS_ERR ("Failed to create share manager");
+		as_searchman_free (AS->searchman);
 		as_http_server_free (AS->server);
 		as_netinfo_free (AS->netinfo);
 		as_sessman_free (AS->sessman);
