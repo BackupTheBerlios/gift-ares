@@ -254,10 +254,11 @@ int asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 	dc = as_downconn_create (s, (ASDownConnStateCb)dl_state_callback,
 				 (ASDownConnDataCb)dl_data_callback);
 	
+	as_source_free (s);
+
 	if (!dc)
 	{	
 		AS_DBG_1 ("dc failed '%s'", source->url);
-		as_source_free (s);
 		return FALSE;
 	}
 
