@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.5 2004/10/30 18:28:30 mkern Exp $
+ * $Id: as_upload_man.h,v 1.6 2004/10/30 23:52:06 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,6 +92,6 @@ as_bool as_upman_remove (ASUpMan *man, ASUpload *up);
  * before accessing it. If the upload is invalid UPLOAD_INVALID is
  * returned.
  */
-ASUploadState as_upnman_state (ASUpMan *man, ASUpload *up);
+ASUploadState as_upman_state (ASUpMan *man, ASUpload *up);
 
 /*****************************************************************************/

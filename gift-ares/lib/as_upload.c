@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.10 2004/10/30 23:08:06 mkern Exp $
+ * $Id: as_upload.c,v 1.11 2004/10/30 23:52:06 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -556,7 +556,7 @@ static void send_file (int fd, input_id input, ASUpload *up)
 
 	in = fread (buf, 1, wanted, up->file);
 	
-	if (in < wanted)
+	if (in < (int)wanted)
 	{
 		AS_WARN_3 ("Read (%d of %d) failed from %s. Cancelling upload.",
 		           in, wanted, up->share->path);

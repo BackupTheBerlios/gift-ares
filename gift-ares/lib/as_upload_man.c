@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.8 2004/10/30 23:08:07 mkern Exp $
+ * $Id: as_upload_man.c,v 1.9 2004/10/30 23:52:06 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,11 @@
  */
 
 #include "as_ares.h"
+
+/*****************************************************************************/
+
+/* Verify count of active uploads by going through hash table each time */
+#define VERIFY_ACTIVE_COUNT
 
 /*****************************************************************************/
 
@@ -31,6 +36,10 @@ static int upload_auth_cb (ASUpload *up, int *queue_length);
 static void progress_timer_update (ASUpMan *man);
 /* Periodic timer function which in turn calls progress callback. */
 static as_bool progress_timer_func (ASUpMan *man);
+
+#ifdef VERIFY_ACTIVE_COUNT
+static int active_uploads_from_table (ASUpMan *man);
+#endif
 
 /*****************************************************************************/
 
@@ -221,7 +230,7 @@ as_bool as_upman_remove (ASUpMan *man, ASUpload *up)
  * before accessing it. If the upload is invalid UPLOAD_INVALID is
  * returned.
  */
-ASUploadState as_upnman_state (ASUpMan *man, ASUpload *up)
+ASUploadState as_upman_state (ASUpMan *man, ASUpload *up)
 {
 	if (!upman_valid_upload (man, up))
 		return UPLOAD_INVALID;
@@ -315,6 +324,10 @@ static int upload_auth_cb (ASUpload *up, int *queue_length)
 /* Add or Remove progress timer as necessary. */
 static void progress_timer_update (ASUpMan *man)
 {
+#ifdef VERIFY_ACTIVE_COUNT
+	assert (active_uploads_from_table (man) == man->nuploads);
+#endif
+
 	if (man->progress_cb && 
 	    man->nuploads > 0 &&
 	    man->progress_timer == INVALID_TIMER)
@@ -393,6 +406,10 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 	struct queue *q;
 	int i;
 
+#ifdef VERIFY_ACTIVE_COUNT
+	assert (active_uploads_from_table (man) == man->nuploads);
+#endif
+
 	if ((up = as_hashtable_lookup_int (man->uploads, (as_uint32)host)))
 	{
 		/* There may be non active downloads in the hash table. Specifically
@@ -461,5 +478,30 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 
 	return i;
 }
+
+/*****************************************************************************/
+
+#ifdef VERIFY_ACTIVE_COUNT
+
+static as_bool active_upload_itr (ASHashTableEntry *entry, int *count)
+{
+	if (((ASUpload *)entry->val)->state == UPLOAD_ACTIVE)
+		(*count)++;
+
+	return FALSE; /* don't delete item */
+}
+
+static int active_uploads_from_table (ASUpMan *man)
+{
+	int i = 0;
+
+	/* check if upload is in the hash table */
+	as_hashtable_foreach (man->uploads,
+	                      (ASHashTableForeachFunc)active_upload_itr, &i);
+
+	return i;
+}
+
+#endif
 
 /*****************************************************************************/
