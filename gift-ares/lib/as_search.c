@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.2 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_search.c,v 1.3 2004/09/02 21:00:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,6 +14,7 @@ typedef enum {
 	TAG_ARTIST = 2,
 	TAG_ALBUM  = 3,
 	TAG_XXX    = 4, /* depends on realm */
+	TAG_UNKSTR = 5, /* some unknown string, maybe "comment" */
 	TAG_YEAR   = 6,
 	TAG_CODEC  = 7,
 	TAG_KEYWORDS = 15, /* verify */
@@ -84,6 +85,7 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 		case TAG_TITLE:
 		case TAG_ARTIST:
 		case TAG_ALBUM:
+		case TAG_UNKSTR:
 		case TAG_YEAR:
 		case TAG_CODEC:
 		case TAG_KEYWORDS:
@@ -134,14 +136,16 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 				 * we have no choice but to bail when
 				 * an unknown tag type is encountered
 				 */
-				printf("unknown realm for 04 %d\n", r->realm);
+				printf("unknown realm for 04 %d, offset %x\n", r->realm, packet->read_ptr-packet->data);
+				as_packet_dump (packet);
 				return;
 			}
 			break;
 
 		default:
 			/* see above */
-			printf("unknown tag type %d\n", meta_type);
+			printf("unknown tag type %d, offset %x\n", meta_type, packet->read_ptr-packet->data);
+			as_packet_dump (packet);
 			return;
 		}
 	}
