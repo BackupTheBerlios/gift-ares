@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.10 2004/09/18 02:13:03 HEx Exp $
+ * $Id: as_share.c,v 1.11 2004/10/20 00:55:42 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -102,6 +102,72 @@ static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
 	return TRUE;
 }
 
+as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
+{
+	as_packet_put_8 (p, TAG_XXX);
+
+	switch (realm)
+	{
+	case REALM_AUDIO:
+	{
+		int bitrate, duration;
+		bitrate  = as_meta_get_int (meta, "bitrate");
+		duration = as_meta_get_int (meta, "duration");
+		as_packet_put_le16 (p, bitrate);
+		as_packet_put_le32 (p, duration);
+		break;
+	}
+	case REALM_IMAGE:
+	{
+		int width, height;
+		width  = as_meta_get_int (meta, "width");
+		height = as_meta_get_int (meta, "height");
+		as_packet_put_le16 (p, width);
+		as_packet_put_le16 (p, height);
+		as_packet_put_8 (p, 2); /* unknown */
+		as_packet_put_le32 (p, 24); /* depth? */
+		break;
+	}
+	case REALM_VIDEO:
+	{
+		/* FIXME */
+		break;
+	}
+	case REALM_ARCHIVE:
+	case REALM_DOCUMENT:
+		/* nothing */
+		break;
+	default:
+		assert (0);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+void add_meta_tags (ASPacket *p, ASShare *share)
+{
+	ASMeta *meta = share->meta;
+	const ASTagMapping *map;
+	int i;
+
+	/* add tags in order */
+	for (i = 0; i <= 16; i++)
+	{
+		const char *value;
+
+		if (i == TAG_XXX)
+			add_realm_tag (p, meta, share->realm);
+
+		if (!(map = as_meta_tag_type (i)) ||
+		    !(value = as_meta_get_tag (meta, map->name)))
+			continue;
+		
+		as_packet_put_8 (p, map->type);
+		as_packet_put_strnul (p, value);
+	}
+}
+
 ASPacket *as_share_packet (ASShare *share)
 {
 	ASPacket *p = as_packet_create (), *tokens;
@@ -133,7 +199,12 @@ ASPacket *as_share_packet (ASShare *share)
 	as_packet_put_hash (p, share->hash);
 	as_packet_put_strnul (p, share->ext);
 
+#if 0
+	/* appears not to work */
 	as_meta_foreach_tag (share->meta, (ASMetaForeachFunc)share_add_tag, p);
+#else
+	add_meta_tags (p, share);
+#endif
 
 	return p;
 }
