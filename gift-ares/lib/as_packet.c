@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.16 2004/09/15 22:46:04 mkern Exp $
+ * $Id: as_packet.c,v 1.17 2004/09/16 02:25:08 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -156,6 +156,11 @@ as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip)
 as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len)
 {
 	return packet_write (packet, str, len);
+}
+
+as_bool as_packet_put_strnul (ASPacket *packet, as_uint8 *str)
+{
+	return packet_write (packet, str, strlen (str) + 1);
 }
 
 as_bool as_packet_put_hash (ASPacket *packet, ASHash *hash)
