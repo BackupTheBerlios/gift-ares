@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.3 2004/09/09 22:52:59 mkern Exp $
+ * $Id: as_download_conn.h,v 1.4 2004/09/10 13:19:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,6 +12,12 @@
 
 /*****************************************************************************/
 
+/* TODO:
+ *   - calculate average speed
+ */
+
+/*****************************************************************************/
+
 typedef enum
 {
 	DOWNCONN_UNUSED,        /* Initial state and state after canceling */
@@ -19,9 +25,9 @@ typedef enum
 	DOWNCONN_TRANSFERRING,  /* We are receiving data. */
 	DOWNCONN_FAILED,        /* Connect or request failed. Chunk is
 	                         * disassociated */
-	DOWNCONN_COMPLETE,      /* Requested chunk completed. If possible the
-	                         * connection is kept alive but the chunk is
-	                         * disassociated. */
+	DOWNCONN_COMPLETE,      /* Requested chunk completed or connection was
+	                         * closed. If possible the connection is kept
+	                         * alive but the chunk is disassociated. */
 	DOWNCONN_QUEUED,        /* We are in the source's upload queue. Connection
 	                         * is kept alive if possible but chunk is
 	                         * disassociated. */
@@ -54,6 +60,7 @@ typedef struct as_down_conn_t
 
 	/* remote queue handling */
 	unsigned int queue_pos;        /* our position in source's queue */
+	unsigned int queue_len;        /* length source's queue */
 	time_t queue_last_try;         /* last time we tried and got queue_pos */
 	time_t queue_next_try;         /* time we were told to try next */
 

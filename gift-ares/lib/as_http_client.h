@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.h,v 1.1 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_http_client.h,v 1.2 2004/09/10 13:19:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -55,7 +55,7 @@ typedef enum
 typedef struct _ASHttpClient ASHttpClient;
 
 typedef int (*ASHttpClientCallback)(ASHttpClient *client,
-									 ASHttpClientCbCode code);
+                                    ASHttpClientCbCode code);
 
 struct _ASHttpClient
 {
