@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.26 2004/09/16 22:54:10 HEx Exp $
+ * $Id: as_session_man.c,v 1.27 2004/10/10 15:22:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -111,6 +111,9 @@ static as_bool sessman_maintain (ASSessMan *man)
 	unsigned int connecting = list_length (man->connecting);
 	int len;
 		
+	/* Let NetInfo know what's going on */
+	as_netinfo_handle_connect (AS->netinfo, man->connections, connected);
+
 	if (man->connections == 0)
 	{
 		/* disconnect everything */

@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.4 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_netinfo.c,v 1.5 2004/10/10 15:22:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,9 +19,13 @@ ASNetInfo *as_netinfo_create ()
 	if (!(info = malloc (sizeof (ASNetInfo))))
 		return NULL;
 
+	info->conn_want  = 0;
+	info->conn_have  = 0;
 	info->users      = 0;
 	info->files      = 0;
 	info->size       = 0;
+	info->stats_cb   = NULL;
+
 	info->outside_ip = 0;
 	info->port       = 0;
 
@@ -41,6 +45,29 @@ void as_netinfo_free (ASNetInfo *info)
 }
 
 /*****************************************************************************/
+
+/* set callback for stats changes */
+void as_netinfo_set_stats_cb (ASNetInfo *info, ASNetInfoStatsCb stats_cb)
+{
+	info->stats_cb = stats_cb;
+}
+
+/*****************************************************************************/
+
+/* handle connect state change */
+void as_netinfo_handle_connect (ASNetInfo *info, unsigned int conn_want,
+                                unsigned int conn_have)
+{
+	if (info->conn_want != conn_want || info->conn_have != conn_have)
+	{
+		info->conn_want = conn_want;
+		info->conn_have = conn_have;
+
+		/* Raise callback */
+		if (info->stats_cb)
+			info->stats_cb (info);
+	}
+}
 
 /* handle stats packet */
 as_bool as_netinfo_handle_stats (ASNetInfo *info, ASSession *session,
@@ -65,6 +92,10 @@ as_bool as_netinfo_handle_stats (ASNetInfo *info, ASSession *session,
 	info->users = users;
 	info->files = files;
 	info->size  = size;
+
+	/* Raise callback */
+	if (info->stats_cb)
+		info->stats_cb (info);
 
 	return TRUE;
 }
