@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.18 2004/10/19 23:41:48 HEx Exp $
+ * $Id: as_packet.h,v 1.19 2004/10/20 17:47:28 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -104,10 +104,10 @@ as_bool as_packet_put_be32 (ASPacket *packet, as_uint32 data);
 as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip);
 
 /* append string of length len to packet */
-as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len);
+as_bool as_packet_put_ustr (ASPacket *packet, const as_uint8 *str, size_t len);
 
 /* append nul-terminated string to packet */
-as_bool as_packet_put_strnul (ASPacket *packet, as_uint8 *str);
+as_bool as_packet_put_strnul (ASPacket *packet, const as_uint8 *str);
 
 /* append 20 byte sha1 hash */
 as_bool as_packet_put_hash (ASPacket *packet, ASHash *hash);

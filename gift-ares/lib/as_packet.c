@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.20 2004/09/17 11:42:19 mkern Exp $
+ * $Id: as_packet.c,v 1.21 2004/10/20 17:47:28 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,8 +12,8 @@
 /*****************************************************************************/
 
 static as_bool packet_resize (ASPacket *packet, size_t len);
-static as_bool packet_write(ASPacket *packet, void *data, size_t size);
-static as_bool packet_read(ASPacket *packet, void *data, size_t size);
+static as_bool packet_write (ASPacket *packet, const void *data, size_t size);
+static as_bool packet_read (ASPacket *packet, void *data, size_t size);
 
 /*****************************************************************************/
 
@@ -163,12 +163,12 @@ as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip)
 	return packet_write (packet, &ip, sizeof (in_addr_t));
 }
 
-as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len)
+as_bool as_packet_put_ustr (ASPacket *packet, const as_uint8 *str, size_t len)
 {
 	return packet_write (packet, str, len);
 }
 
-as_bool as_packet_put_strnul (ASPacket *packet, as_uint8 *str)
+as_bool as_packet_put_strnul (ASPacket *packet, const as_uint8 *str)
 {
 	return packet_write (packet, str, strlen (str) + 1);
 }
@@ -533,7 +533,7 @@ static as_bool packet_resize (ASPacket *packet, size_t len)
 	return TRUE;
 }
 
-static as_bool packet_write(ASPacket *packet, void *data, size_t size)
+static as_bool packet_write (ASPacket *packet, const void *data, size_t size)
 {
 	if (!packet_resize (packet, packet->used + size))
 		return FALSE;
