@@ -1,5 +1,5 @@
 /*
- * $Id: testing.c,v 1.3 2004/08/27 10:25:09 mkern Exp $
+ * $Id: testing.c,v 1.2 2004/08/27 10:23:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -15,7 +15,7 @@ void input_cb (int fd, input_id input, TCPC *c)
 {
 	int test_id = (int) c->udata;
 
-	input_remove (input);
+//	input_remove (input);
 
 	if (fd < 0)
 	{
@@ -33,8 +33,8 @@ void input_cb (int fd, input_id input, TCPC *c)
 		printf ("[%d]   Connection established.\n", test_id);
 	}
 
-	printf ("[%d]   Connection test successful. Closing Connection.\n", test_id);
-	tcp_close (c);
+//	printf ("[%d]   Connection test successful. Closing Connection.\n", test_id);
+//	tcp_close (c);
 
 	printf ("[%d] Event system test complete.\n", test_id);
 }
