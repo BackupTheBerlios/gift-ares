@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.3 2004/08/31 23:25:49 mkern Exp $
+ * $Id: as_node_man.c,v 1.4 2004/09/01 12:44:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -368,6 +368,7 @@ as_bool as_nodeman_load (ASNodeMan *man, const char *file)
 	FILE *fp;
 	List *link;
 	ASNode *node;
+	time_t now = time (NULL);
 	int loaded = 0, ret, port;
 	unsigned int reports, attempts, connects;
 	unsigned int first_seen, last_seen, last_attempt;
@@ -415,6 +416,13 @@ as_bool as_nodeman_load (ASNodeMan *man, const char *file)
 		node->last_seen    = (time_t) last_seen;
 		node->last_attempt = (time_t) last_attempt;
 
+		/* Fake missing data so weighting works correctly */
+		if (node->first_seen == 0 || node->last_seen == 0)
+			node->first_seen = node->last_seen = now - 72 * EHOURS;
+
+		/* Calculate node weight */
+		node->weight = node_weight (node);
+		
 		/* Add node to list and index */
 		man->nodes = list_insert_sorted (man->nodes,
 		                                 (CompareFunc)node_connect_cmp, node);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.7 2004/09/01 10:30:18 mkern Exp $
+ * $Id: as_session.c,v 1.8 2004/09/01 12:44:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -144,7 +144,7 @@ static void session_connected (int fd, input_id input, ASSession *session)
 		return;
 	}
 
-	AS_DBG_2 ("CONNECTED %s:%d", net_ip_str (session->host),
+	AS_DBG_2 ("Connected to %s:%d", net_ip_str (session->host),
 	          session->port);
 	
 	/* set up packet buffer */
@@ -305,7 +305,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 static as_bool session_handshake (ASSession *session,  ASPacketType type,
                                   ASPacket *packet)
 {
-	as_uint16 kind;
+	as_uint16 children;
 	as_uint16 seed_16;
 	as_uint8 seed_8;
 
@@ -335,22 +335,10 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	as_packet_dump (packet);
 #endif
 
-	kind = as_packet_get_le16 (packet);
+	/* we think this is the child count of the supernode */
+	children = as_packet_get_le16 (packet);
 
-	if (kind > 0x15E)
-	{
-		/*
-		 * When this happens Ares skips after the seed fields and reads
-		 * <ip><port> pairs (of other supernodes presumably).
-		 * 0x5E == 94, a load percentage? 
-		 */
-		AS_ERR_2 ("FIXME: Handshake with %s:%d failed. kind > 0x15E.",
-		          net_ip_str (session->host), session->port);
-		session_error (session);
-		return FALSE;
-	}
-
-	/* skip unknown stuff */
+	/* Skip unknown stuff. Supernode GUID? */
 	as_packet_get_le32 (packet);
 	as_packet_get_le32 (packet);
 	as_packet_get_le32 (packet);
@@ -360,12 +348,39 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	seed_16 = as_packet_get_le16 (packet);
 	seed_8 = as_packet_get_8 (packet);
 
+	/* Add supplied nodes to our cache. */
+	while (as_packet_remaining (packet) >= 6)
+	{
+		in_addr_t host = (in_addr_t) as_packet_get_le32 (packet);
+		in_port_t port = (in_port_t) as_packet_get_le16 (packet);
+
+		/* FIXME: The session manager should really do this. Accessing the
+		 * node manager from here is ugly.
+		 */
+		as_nodeman_update_reported (AS->nodeman, host, port);
+	}
+
+	if (children > 350)
+	{
+		/* Ares disconnects if there are more than 350 children. Do the
+		 * same.
+		 */
+		AS_DBG_3 ("Handshake with %s:%d aborted. Supernode has %d (>350) children.",
+		          net_ip_str (session->host), session->port, (int)children);
+		session_error (session);
+		return FALSE;
+	}
+
+	/* Finish handshake. */
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
 
 	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x04X and 0x02X",
-	          net_ip_str (session->host), session->port,
-	          (int)seed_16, (int)seed_8);
-	
+		      net_ip_str (session->host), session->port,
+			  (int)seed_16, (int)seed_8);
+
+	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
+		return FALSE; /* session was freed */
+
 	return TRUE;
 }
 
