@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.3 2004/09/06 15:06:20 HEx Exp $
+ * $Id: sniff.c,v 1.4 2004/09/06 19:38:32 HEx Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -491,7 +491,6 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				done=1;
 			}	
 			break;
-#if 0
 		case STATE_PUSH:
 			fprintf(stderr, "%s PUSH\n", buf);
 			print_bin_data (data, len);
@@ -500,7 +499,6 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 			done=1;
 			c->state=STATE_HTTP;
 			break;
-#endif
 		default:
 			/* fprintf(stderr, "%s %d skipped\n", buf,len); */
 			done_read=-1;
