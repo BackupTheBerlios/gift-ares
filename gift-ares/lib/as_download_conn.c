@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.17 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_download_conn.c,v 1.18 2005/01/04 20:39:12 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,7 +31,7 @@ static as_bool downconn_set_state (ASDownConn *conn, ASDownConnState state,
 	return TRUE;
 }
 
-static ASDownConn *downconn_new ()
+static ASDownConn *downconn_new (void)
 {
 	ASDownConn *conn;
 
