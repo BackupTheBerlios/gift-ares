@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.5 2004/08/25 21:14:12 HEx Exp $
+ * $Id: main.c,v 1.6 2004/08/26 16:03:41 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -171,6 +171,8 @@ int main (int argc, char *argv[])
 
 	/* winsock shutdown */
 	tcp_cleanup ();
+
+	return 0;
 }
 
 /*****************************************************************************/
