@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.9 2004/09/15 22:46:04 mkern Exp $
+ * $Id: as_download.c,v 1.10 2004/09/15 23:05:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -34,6 +34,7 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state);
 static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
                              unsigned int len);
 
+static as_bool verify_chunks (ASDownload *dl);
 static void download_maintain (ASDownload *dl);
 static as_bool maintenance_timer_func (ASDownload *dl);
 
