@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.8 2004/10/03 18:00:20 mkern Exp $
+ * $Id: as_hashtable.c,v 1.9 2004/12/04 11:54:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -591,7 +591,7 @@ void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
 	ASHashTableEntry *e = NULL;
     ASHashTableEntry *parent = NULL;
     ASHashTableEntry *next;
-	ASHashTableEntry *remember_e, *remember_parent;
+	ASHashTableEntry *remember_e = NULL, *remember_parent = NULL;
 	unsigned int index = table->tablelength;
 	unsigned int i, j,tablelength;
 	as_bool remove;

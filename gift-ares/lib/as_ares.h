@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.54 2004/11/28 21:10:03 mkern Exp $
+ * $Id: as_ares.h,v 1.55 2004/12/04 11:54:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -105,21 +105,14 @@ typedef int            as_bool;
 /*****************************************************************************/
 
 /* beware the ordering of these */
-#ifndef GIFT_PLUGIN
-#  include "as_list.h"
-#endif
-
+#include "as_log.h"
+#include "as_file.h"
 #include "as_hashtable.h"
 
 #ifndef GIFT_PLUGIN
+#  include "as_list.h"
 #  include "as_parse.h"
 #  include "as_strobj.h"
-#endif
-
-#include "as_file.h"
-#include "as_log.h"
-
-#ifndef GIFT_PLUGIN
 #  include "as_event.h"
 #  include "as_tcp.h"
 #endif
