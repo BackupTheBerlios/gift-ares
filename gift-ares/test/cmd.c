@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.8 2004/09/01 12:43:23 mkern Exp $
+ * $Id: cmd.c,v 1.9 2004/09/01 17:49:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -24,6 +24,7 @@ COMMAND_FUNC (load_nodes);
 COMMAND_FUNC (save_nodes);
 COMMAND_FUNC (connect);
 COMMAND_FUNC (connect_to);
+COMMAND_FUNC (search);
 
 COMMAND_FUNC (quit);
 
@@ -58,6 +59,10 @@ commands[] =
 	COMMAND (connect_to,
 	         "<host> [<port>]",
 	         "Create session to a given host.")
+
+	COMMAND (search,
+	         "<query>",
+	         "Search connected hosts for files.")
 
 	COMMAND (quit,
              "",
@@ -189,6 +194,23 @@ COMMAND_FUNC (connect_to)
 	sess = as_session_create (NULL, NULL);
 	assert (sess);
 	as_session_connect (sess, ip, port);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (search)
+{
+	unsigned char *query;
+	int count;
+
+	if (argc < 2)
+		return FALSE;
+
+	query = argv[1];
+	
+	count = as_send_search (AS->sessman, query);
+
+	printf ("sent query '%s' to %d nodes\n", query, count);
 
 	return TRUE;
 }

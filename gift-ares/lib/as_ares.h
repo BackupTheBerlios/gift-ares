@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.12 2004/09/01 16:55:38 mkern Exp $
+ * $Id: as_ares.h,v 1.13 2004/09/01 17:49:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -70,6 +70,7 @@ typedef int            as_bool;
 #include "as_tcp.h"
 #include "as_packet.h"
 #include "as_tokenize.h"
+#include "as_search.h"
 #include "as_node.h"
 #include "as_node_man.h"
 #include "as_session.h"

@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.7 2004/09/01 13:06:10 mkern Exp $
+ * $Id: as_list.c,v 1.8 2004/09/01 17:49:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -215,13 +215,19 @@ List *list_find_custom (List *head, void *data, CompareFunc func)
 
 /*****************************************************************************/
 
-/* Iterate through the list and call func for each node */
-void list_foreach (List *head, ListForeachFunc func, void *udata)
+/* Iterate through the list and call func for each node, and returns count
+ * of links for which func returns TRUE.
+ */
+int list_foreach (List *head, ListForeachFunc func, void *udata)
 {
+	int count = 0;
+
 	assert (func);
 
 	for (; head; head = head->next)
-		func (head->data, udata);
+		count += !!func (head->data, udata);
+	
+	return count;
 }
 
 static int remove_free (void *data, void *udata)

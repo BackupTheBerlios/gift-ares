@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.10 2004/09/01 16:55:38 mkern Exp $
+ * $Id: as_session.c,v 1.11 2004/09/01 17:49:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -46,6 +46,7 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 	session->state_cb  = state_cb;
 	session->packet_cb = packet_cb;
 	session->udata     = NULL;
+	session->search_id = 0;
 
 	return session;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.9 2004/09/01 16:58:54 mkern Exp $
+ * $Id: as_session_man.c,v 1.10 2004/09/01 17:49:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -281,6 +281,10 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		          users, files, size);
 		break;
 	}
+	case PACKET_RESULT:
+		parse_search_result (packet);
+		break;
+
 	default:
 		AS_WARN_1 ("Got unknown packet 0x%02x:", type);
 		as_packet_dump (packet);
@@ -333,6 +337,28 @@ static as_bool send_nodeinfo (ASSession *session)
 	as_packet_free (packet);
 
 	return TRUE;
+}
+
+static int send_search (ASSession *session, unsigned char *query)
+{
+	ASPacket *packet;
+
+	packet = search_request (query, session->search_id++);
+
+	if (!packet)
+		return FALSE;
+
+	if (!as_session_send (session, PACKET_SEARCH, packet, PACKET_ENCRYPTED))
+		return FALSE;
+
+	AS_HEAVY_DBG_2 ("sent query '%s' to %s", query, net_ip_str (session->host));
+	return TRUE;
+} 
+
+int as_send_search (ASSessMan *man, unsigned char *query)
+{
+	return list_foreach (man->connecting,
+			     (ListForeachFunc)send_search, query);
 }
 
 /*****************************************************************************/

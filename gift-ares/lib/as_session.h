@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.7 2004/09/01 16:55:38 mkern Exp $
+ * $Id: as_session.h,v 1.8 2004/09/01 17:49:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -51,6 +51,8 @@ struct as_session_t
 
 	ASSessionStateCb  state_cb;
 	ASSessionPacketCb packet_cb;
+
+	as_uint16      search_id;
 
 	void *udata; /* user data */
 };
