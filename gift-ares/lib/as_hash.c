@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.c,v 1.1 2004/09/06 09:50:28 mkern Exp $
+ * $Id: as_hash.c,v 1.2 2004/09/06 12:31:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,7 +25,7 @@ ASHash *as_hash_create (const as_uint8 *src, unsigned int src_len)
 	if (!(hash = malloc (sizeof (ASHash))))
 		return NULL;
 
-	memcpy (hash->data, src, src_len)
+	memcpy (hash->data, src, src_len);
 
 	return hash;
 }
