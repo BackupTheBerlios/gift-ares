@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.21 2004/12/04 15:30:46 mkern Exp $
+ * $Id: as_share.c,v 1.22 2004/12/24 11:36:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -120,6 +120,8 @@ static ASPacket *share_add_tokens (ASMeta *meta)
 	return p;
 }
 
+/* Not currently used. */
+#if 0
 static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
 {
 	const ASTagMapping *map;
@@ -134,6 +136,7 @@ static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
 
 	return TRUE;
 }
+#endif
 
 static as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 {
