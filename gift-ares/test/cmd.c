@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.10 2004/09/05 02:55:01 HEx Exp $
+ * $Id: cmd.c,v 1.11 2004/09/06 17:27:57 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,6 +27,7 @@ COMMAND_FUNC (connect_to);
 COMMAND_FUNC (search);
 COMMAND_FUNC (info);
 COMMAND_FUNC (clear);
+COMMAND_FUNC (download);
 
 COMMAND_FUNC (quit);
 
@@ -73,6 +74,10 @@ commands[] =
 	COMMAND (clear,
 		 "",
 		 "Clear search results.")
+
+	COMMAND (download,
+		 "<ip> <port> <hash> <filename>",
+		 "Download file.")
 
 	COMMAND (quit,
              "",
@@ -298,6 +303,29 @@ COMMAND_FUNC (info)
 COMMAND_FUNC (clear)
 {
 	clear_results ();
+
+	return TRUE;
+}
+
+COMMAND_FUNC (download)
+{
+	if (argc < 5)
+		return FALSE;
+
+	in_addr_t ip = net_ip(argv[1]);
+	in_addr_t port = argv[2];
+	ASSource *source;
+
+	ASHash *hash = as_hash_decode (argv[3]);
+
+	unsigned char *filename = argv[4];
+
+	source = as_source_create ();
+
+	source->host = ip;
+	source->port = port;
+
+	as_download_start (as_download_new (source, hash, filename));
 
 	return TRUE;
 }

@@ -23,7 +23,8 @@ OBJECTS = \
 	as_sha1.o \
 	as_hash.o \
 	as_encoding.o \
-	as_download.o
+	as_download.o \
+	as_source.o \
 
 all: libares.a($(OBJECTS))
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.20 2004/09/06 15:08:57 HEx Exp $
+ * $Id: as_ares.h,v 1.21 2004/09/06 17:27:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -85,6 +85,7 @@ typedef int            as_bool;
 #include "as_session.h"
 #include "as_session_man.h"
 #include "as_source.h"
+#include "as_download.h"
 
 /*****************************************************************************/
 

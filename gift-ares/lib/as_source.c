@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.1 2004/09/06 12:58:26 mkern Exp $
+ * $Id: as_source.c,v 1.2 2004/09/06 17:27:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,26 +8,6 @@
  */
 
 #include "as_ares.h"
-
-/*****************************************************************************/
-
-typedef struct
-{
-	/* source host and port */
-	in_addr_t host;
-	in_port_t port; 
-	
-	/* source's supernode host and port */
-	in_addr_t shost;
-	in_addr_t sport;
-
-	/* source's username */
-	unsigned char *username;
-
-	/* supernode we got this source from */
-	in_addr_t parent_host;
-
-} ASSource;
 
 /*****************************************************************************/
 
@@ -61,7 +41,7 @@ ASSource *as_source_copy (ASSource *source)
 	cpy->port = source->port;
 	cpy->shost = source->host;
 	cpy->sport = source->sport;
-	gift_strdup (cpy->username, source->username);
+	cpy->username = gift_strdup (source->username);
 	cpy->parent_host = source->parent_host;
 
 	return cpy;
@@ -93,6 +73,7 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 	        gift_strcmp (a->username, b->username) == 0); 
 }
 
+#if 0
 /* returns TRUE if the source is firewalled */
 as_bool as_source_firewalled (ASSource *source)
 {
@@ -106,6 +87,7 @@ as_bool as_source_has_push_info (ASSource *source)
 	        as_utils_ip_routable (source->parent_host) &&
 			source->username && source->username[0] != '\0');
 }
+#endif
 
 /*****************************************************************************/
 
