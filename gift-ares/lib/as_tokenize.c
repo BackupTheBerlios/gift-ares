@@ -1,5 +1,5 @@
 /*
- * $Id: as_tokenize.c,v 1.4 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_tokenize.c,v 1.5 2004/09/15 21:35:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,8 +92,10 @@ static int add_token (ASPacket *packet, unsigned char *str, int len,
 	return 0;
 }
 
+/*****************************************************************************/
+
 /* returns number of tokens added */
-static int tokenize_string (ASPacket *packet, unsigned char *str, int type)
+int as_tokenize (ASPacket *packet, unsigned char *str, int type)
 {
 	unsigned char *ptr=str;
 	size_t len;
@@ -118,20 +120,12 @@ static int tokenize_string (ASPacket *packet, unsigned char *str, int type)
 	return count;
 }
 
-/*****************************************************************************/
-
 /* Tokenize str and add it to search packet. Returns number of added tokens */
 int as_tokenize_search (ASPacket *packet, unsigned char *str)
 {
 	/* 0x14 maybe means "everything" - this would imply we can
 	 * restrict searches to just a single field too */
-	return tokenize_string (packet, str, 0x14 | SEARCH_PACKET);
-}
-
-/* Tokenize str and add it to share packet. Returns number of added tokens */
-int as_tokenize_share (ASPacket *packet, unsigned char *str)
-{
-	return tokenize_string (packet, str, 1); /* FIXME: type */
+	return as_tokenize (packet, str, 0x14 | SEARCH_PACKET);
 }
 
 /*****************************************************************************/
