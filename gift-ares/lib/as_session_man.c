@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.29 2004/10/19 23:41:48 HEx Exp $
+ * $Id: as_session_man.c,v 1.30 2004/10/21 17:11:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -271,7 +271,12 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 			/* add session to connected list */
 			man->connected = list_prepend (man->connected, session);
 
+			/* send queued searches to new session */
+			as_searchman_new_session (AS->searchman, session);
+
+			/* submit shares to new supernode */
 			as_shareman_submit (AS->shareman, session);
+
 			ret = TRUE;
 		}
 		else

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.h,v 1.4 2004/10/20 17:36:43 mkern Exp $
+ * $Id: as_search_man.h,v 1.5 2004/10/21 17:11:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,8 +14,6 @@
 
 /* TODO:
  *   - timeout searches (use periodic timer and start date for each search)
- *   - notify search manager of new sessions and resend searches until
- *     AS_SEARCH_SEND_COUNT is reached.
  */
 
 typedef struct
@@ -44,6 +42,9 @@ void as_searchman_free (ASSearchMan *man);
 /* handle result packet */
 as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
                              ASPacket *packet);
+
+/* handle new supernode session by sending pending searches to it */
+void as_searchman_new_session (ASSearchMan *man, ASSession *session);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.8 2004/10/20 17:36:43 mkern Exp $
+ * $Id: as_search.h,v 1.9 2004/10/21 17:11:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -54,7 +54,8 @@ struct as_search_t
 	                        * cancelled. Now new results will be accepted.
 	                        */
 
-	int sent;    /* number of supernodes this search was sent to */
+	/* Contains a key for each ip we sent the search to */
+	ASHashTable *sent_supernodes;
 
 	/* data for normal searches */
 	unsigned char *query; /* query string */
@@ -88,6 +89,12 @@ void as_search_free (ASSearch *search);
 
 /* send a query to the specified supernode */
 as_bool as_search_send (ASSearch *search, ASSession *session);
+
+/* returns number of supernodes this search was sent to */
+unsigned int as_search_sent_count (ASSearch *search);
+
+/* returns TRUE if the search was already sent to this supernode */
+as_bool as_search_sent_to (ASSearch *search, ASSession *session);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.8 2004/10/20 17:36:43 mkern Exp $
+ * $Id: as_search_man.c,v 1.9 2004/10/21 17:11:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -108,11 +108,46 @@ as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
 	return TRUE;
 }
 
+static as_bool new_session_itr (ASHashTableEntry *entry, void *args[2])
+{
+	ASSearch *search = entry->val;
+	ASSession *session = args[0];
+	int *count = args[1];
+
+	if (as_search_sent_count (search) >= AS_SEARCH_SEND_COUNT)
+		return FALSE;
+
+	if (as_search_sent_to (search, session))
+		return FALSE;
+
+	if(as_search_send (search, session))
+		(*count)++;
+
+	return FALSE; /* don't delete item */
+}
+
+/* handle new supernode session by sending pending searches to it */
+void as_searchman_new_session (ASSearchMan *man, ASSession *session)
+{
+	int count = 0;
+	void *args[2] = { session, &count };
+
+	/* iterate over all search and send eligible one's */
+	as_hashtable_foreach (man->searches,
+	                      (ASHashTableForeachFunc)new_session_itr, args);
+
+	AS_DBG_2 ("Sent %d queued queries to new supernode %s", count,
+	          net_ip_str (session->host));
+}
+
 /*****************************************************************************/
 
 static as_bool send_search_itr (ASSession *session, ASSearch *search)
 {
-	if (search->sent >= AS_SEARCH_SEND_COUNT)
+	if (as_search_sent_count (search) >= AS_SEARCH_SEND_COUNT)
+		return FALSE;
+
+	if (as_search_sent_to (search, session))
 		return FALSE;
 
 	if (!as_search_send (search, session))
@@ -305,11 +340,6 @@ as_bool as_searchman_valid_search (ASSearchMan *man, ASSearch *search)
 {
 	/* check if search is in one of the hash tables */
 	as_hashtable_foreach (man->searches,
-	                      (ASHashTableForeachFunc)valid_search_itr, &search);
-	if (search == NULL)
-		return TRUE;
-
-	as_hashtable_foreach (man->hash_searches,
 	                      (ASHashTableForeachFunc)valid_search_itr, &search);
 	if (search == NULL)
 		return TRUE;

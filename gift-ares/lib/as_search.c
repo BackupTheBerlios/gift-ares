@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.12 2004/10/20 17:36:43 mkern Exp $
+ * $Id: as_search.c,v 1.13 2004/10/21 17:11:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -32,11 +32,18 @@ ASSearch *as_search_create (as_uint16 id, ASSearchResultCb result_cb,
 		return NULL;
 	}
 
+	/* hashtable which supernode ips we already sent the search to */
+	if (!(search->sent_supernodes = as_hashtable_create_int (TRUE)))
+	{
+		as_hashtable_free (search->results, FALSE);
+		free (search);
+		return NULL;
+	}
+
 	search->type      = SEARCH_QUERY;
 	search->id        = id;
 	search->intern    = FALSE;
 	search->finished  = FALSE;
-	search->sent      = 0;
 	search->result_cb = result_cb;
 	search->udata     = NULL;
 	search->query     = gift_strdup (query);
@@ -61,11 +68,18 @@ ASSearch *as_search_create_locate (as_uint16 id, ASSearchResultCb result_cb,
 		return NULL;
 	}
 
+	/* hashtable which supernode ips we already sent the search to */
+	if (!(search->sent_supernodes = as_hashtable_create_int (TRUE)))
+	{
+		as_hashtable_free (search->results, FALSE);
+		free (search);
+		return NULL;
+	}
+
 	search->type      = SEARCH_LOCATE;
 	search->id        = id;
 	search->intern    = FALSE;
 	search->finished  = FALSE;
-	search->sent      = 0;
 	search->result_cb = result_cb;
 	search->udata     = NULL;
 	search->hash      = as_hash_copy (hash);
@@ -97,6 +111,8 @@ void as_search_free (ASSearch *search)
 	/* clear results */
 	as_hashtable_foreach (search->results, result_itr, NULL);
 	as_hashtable_free (search->results, FALSE);
+
+	as_hashtable_free (search->sent_supernodes, FALSE);
 	
 	switch (search->type)
 	{
@@ -163,10 +179,26 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 
 	as_packet_free (packet);
 
-	/* increase number of supernodes we sent this search to */
-	search->sent++;
-
+	/* Add supernode's ip to hash table. Note the gross hack to make the
+	 * value non-NULL.
+	 */
+	as_hashtable_insert_int (search->sent_supernodes,
+	                         (as_uint32)session->host, (void*)0xCCCC);
+	
 	return TRUE;
+}
+
+/* returns number of supernodes this search was sent to */
+unsigned int as_search_sent_count (ASSearch *search)
+{
+	return as_hashtable_size (search->sent_supernodes);
+}
+
+/* returns TRUE if the search was already sent to this supernode */
+as_bool as_search_sent_to (ASSearch *search, ASSession *session)
+{
+	return as_hashtable_lookup_int (search->sent_supernodes,
+	                                (as_uint32)session->host) != NULL;
 }
 
 /*****************************************************************************/
