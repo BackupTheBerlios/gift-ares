@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_log.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -83,7 +83,7 @@ as_bool as_logger_add_output (ASLogger *logger, const char *name)
 
 			if (strcmp (name, "stdout") == 0)
 				fp = stdout;
-			else (strcmp (name, "stderr") == 0)
+			else if (strcmp (name, "stderr") == 0)
 				fp = stderr;
 			else
 			{
@@ -171,8 +171,8 @@ void as_logger_logv (ASLogger *logger,int level, const char *file,
 
 	get_timestamp (time_buf);
 
-	written = vsnprintf (buf, sizeof (buf), "%s %s:%s %s: ",
-	                     time_buf, file, line, get_loglevel_str (level));
+	written = snprintf (buf, sizeof (buf), "%s %s:%s %s: ",
+	                    time_buf, file, line, get_loglevel_str (level));
 	
 	if (written < 0 || written >= sizeof (buf))
 		return;
@@ -199,7 +199,7 @@ void as_logger_log (ASLogger *logger, int level, const char *file,
 	va_list args;
 
 	va_start (args, fmt);
-	ret = as_logger_logv (logger, level, file, line, fmt, args);
+	as_logger_logv (logger, level, file, line, fmt, args);
 	va_end (args);
 }
 

@@ -1,0 +1,57 @@
+# $Id: Makefile.msvc,v 1.1 2004/08/21 12:32:22 mkern Exp $
+# Microsoft Visual C++ 6.0 makefile
+# see README.msvc for usage
+
+!if !defined(BUILD_ROOT)
+BUILD_ROOT=$(MAKEDIR)
+!endif
+
+!include Make.msvc
+
+MAKEOPTS=-nologo -C BUILD_ROOT=$(BUILD_ROOT)
+
+all: test delphi
+
+test: aslib
+	cd test
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	cd ..
+
+
+delphi: aslib
+	cd delphi
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	cd ..
+
+
+aslib:
+	cd lib
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	cd ..
+
+
+clean: 
+	cd lib
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
+
+	cd ..\test
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
+
+	cd ..\delphi
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
+
+	cd ..
+
+
+install:
+	@-md $(BIN_ROOT)
+
+	cd lib
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
+
+	cd ..\test
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
+
+	cd ..\delphi
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
+	

@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.h,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_event.h,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -52,7 +52,7 @@ typedef as_bool (*TimerCallback) (void *udata);
 
 typedef struct
 {
-
+	int foo;
 } ASEventSys;
 
 /* the evil global from as_event.c */

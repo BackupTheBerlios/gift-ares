@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_packet.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -66,24 +66,27 @@ void as_packet_rewind(ASPacket *packet)
 void as_packet_truncate(ASPacket *packet)
 {
 	size_t remaining = as_packet_remaining(packet);
-	int i;
+	size_t i;
 	as_uint8 *src = packet->read_ptr;
 	as_uint8 *dst = packet->data;
 
-	for(i=0;i<remaining;++i,++src,++dst)
+	for(i = 0; i < remaining; ++i, ++src, ++dst)
 		*dst = *src;
 
 	packet->read_ptr = packet->data;
 	packet->used = remaining;
 }
 
-int as_packet_size(ASPacket* packet)
+size_t as_packet_size(ASPacket* packet)
 {
 	return packet->used;
 }
 
-int as_packet_remaining(ASPacket* packet)
+size_t as_packet_remaining(ASPacket* packet)
 {
+	assert (packet->read_ptr >= packet->data);
+	assert (packet->used > (packet->read_ptr - packet->data));
+
 	return packet->used - (packet->read_ptr - packet->data);
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_event.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2001-2003 giFT project (gift.sourceforge.net)
  *
@@ -13,6 +13,10 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  */
+
+#include "as_event.h"
+
+#if 0
 
 #include "libgift.h"
 
@@ -1466,4 +1470,6 @@ int main (int argc, char **argv)
 
 	return 0;
 }
+#endif
+
 #endif

@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.2 2004/08/20 13:31:07 mkern Exp $
+ * $Id: as_crypt.h,v 1.3 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,7 +35,8 @@ ASCipher *as_cipher_create (as_uint16 handshake_key);
 void as_cipher_free (ASCipher *cipher);
 
 /* set session seeds */
-void as_cipher_set_seeds (ASCipher cipher, as_uint16 seed_16, as_uint8 seed_8);
+void as_cipher_set_seeds (ASCipher *cipher, as_uint16 seed_16,
+                          as_uint8 seed_8);
 
 /*****************************************************************************/
 

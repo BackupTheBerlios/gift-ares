@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.3 2004/08/20 17:22:43 HEx Exp $
+ * $Id: as_ares.h,v 1.4 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,8 +17,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <time.h>
+#include <assert.h>
+
 #ifdef WIN32
-# include winsock.h
+# include <winsock.h>
 #endif /* WIN32 */
 
 /*****************************************************************************/
@@ -36,6 +39,10 @@ typedef int            as_bool;
 /* u_long and u_short are defined in winsock.h */
 # define in_addr_t u_long
 # define in_port_t u_short
+
+# define vsnprintf _vsnprintf
+# define snprintf _snprintf
+
 #else
 # define in_addr_t as_uint32
 # define in_port_t as_uint16
@@ -47,17 +54,16 @@ typedef int            as_bool;
 
 /*****************************************************************************/
 
-//#include "as_log.h"
+#include "as_log.h"
 #include "as_packet.h"
-//#include "as_crypt.h"
-
-//#include "as_tcp.h"
+#include "as_crypt.h"
+#include "as_tcp.h"
 
 /*****************************************************************************/
 
 typedef struct
 {
-
+	int foo;
 } ASInstance;
 
 /*****************************************************************************/

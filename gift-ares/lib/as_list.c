@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.2 2004/08/20 19:22:00 mkern Exp $
+ * $Id: as_list.c,v 1.3 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,7 @@
  */
 
 #include "as_list.h"
+#include "as_ares.h"
 
 /*****************************************************************************/
 
@@ -16,7 +17,7 @@ static List *insert_new_link (List *prev, List *next, void *data)
 {
 	List *new_link;
 
-	new_link = malloc (List);
+	new_link = malloc (sizeof (List));
 	assert (new_link != NULL);
 
 	new_link->data = data;
@@ -60,9 +61,9 @@ static List *insert_new_link (List *prev, List *next, void *data)
 List *list_append (List *head, void *data)
 {
 	if (!head)
-		return insert_new_link (NULL, NULL, data)
+		return insert_new_link (NULL, NULL, data);
 	
-	insert_new_link (list_last (head), NULL, data)
+	insert_new_link (list_last (head), NULL, data);
 	return head;
 }
 
@@ -129,7 +130,7 @@ List *list_copy (List *head)
 	new_head = new_link = insert_new_link (NULL, NULL, head->data);
 
 	for (head = head->next; head; head = head->next)
-		new_link = insert_new_link (new_link, NULL, head->data)
+		new_link = insert_new_link (new_link, NULL, head->data);
 
 	return new_head;
 }
@@ -317,7 +318,7 @@ int list_length (List *head)
 
 List *list_sort (List *head, CompareFunc func)
 {
-	List *p, *q, *e, *tail, *oldhead;
+	List *p, *q, *e, *tail;
     int insize, nmerges, psize, qsize, i;
 
     if (!head)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_ares.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,8 @@
  */
 
 #include "as_ares.h"
+
+#if 0
 
 /*****************************************************************************/
 
@@ -946,3 +948,4 @@ int FastTrack_init (Protocol *p)
 }
 
 /*****************************************************************************/
+#endif

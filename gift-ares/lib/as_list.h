@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.h,v 1.2 2004/08/20 19:22:00 mkern Exp $
+ * $Id: as_list.h,v 1.3 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>

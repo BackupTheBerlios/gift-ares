@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_tcp.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,19 @@
  */
 
 #include "as_tcp.h"
+#include "as_event.h"
+
+/*****************************************************************************/
+
+#ifdef WIN32
+
+#define optval_t const char *
+
+#ifndef SD_BOTH
+# define SD_BOTH 2
+#endif
+
+#endif
 
 /*****************************************************************************/
 
@@ -66,7 +79,7 @@ as_bool tcp_startup ()
 #endif
 }
 
-as_bool tcp_cleanup ();
+as_bool tcp_cleanup ()
 {
 #ifndef WIN32
 	return TRUE;
@@ -82,7 +95,7 @@ as_bool tcp_cleanup ();
 
 static TCPC *tcp_new (in_addr_t host, in_port_t port, int fd)
 {
-	TCPC c;
+	TCPC *c;
 
 	if (!(c = malloc (sizeof (TCPC))))
 		return NULL;
@@ -111,7 +124,7 @@ TCPC *tcp_open (in_addr_t host, in_port_t port, int block)
 	struct sockaddr_in addr;
 	TCPC *c;
 
-	if (ip == 0 || port == 0)
+	if (host == 0 || port == 0)
 		return NULL;
 
 	if ((fd = socket (AF_INET, SOCK_STREAM, IPPROTO_IP)) < 0)
@@ -124,7 +137,7 @@ TCPC *tcp_open (in_addr_t host, in_port_t port, int block)
 
 	socket_set_blocking (fd, block);
 
-	if (connect (fd, (struct sockaddr *)&server, sizeof (struct sockaddr)) < 0)
+	if (connect (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr)) < 0)
 	{
 		/* failing for non-blocking is ok */
 #ifndef WIN32
@@ -159,7 +172,7 @@ TCPC *tcp_accept (TCPC *listening, int block)
 
 	socket_set_blocking (fd, block);
 
-	if (!(c = tcp_new (addr.sin_addr.a_addr, addr.sin_port, fd)))
+	if (!(c = tcp_new (addr.sin_addr.s_addr, addr.sin_port, fd)))
 	{
 		socket_close (fd);
 		return NULL;
@@ -188,7 +201,7 @@ TCPC *tcp_bind (in_port_t port, int block)
 	reuse = 1;
 	setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, (optval_t)&reuse, sizeof (reuse));
 
-	scoket_set_blocking (fd, block);
+	socket_set_blocking (fd, block);
 
 	if (bind (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr)) < 0)
 	{
@@ -213,8 +226,7 @@ void tcp_close (TCPC *c)
 	if (!c)
 		return;
 
-	/* TODO: remove inputs? */
-#warning "FIXME: remove inputs?"
+	input_remove_all (c->fd);
 
 	socket_close (c->fd);
 	tcp_free (c);
@@ -239,13 +251,11 @@ int tcp_send (TCPC *c, unsigned char *data, size_t len)
 	if (len == 0)
 		return 0;
 
-	return send (fd, data, len, 0);
+	return send (c->fd, data, len, 0);
 }
 
 int tcp_recv (TCPC *c, unsigned char *buf, size_t len)
 {
-	int ret;
-
 	if (!c || c->fd < 0)
 		return -1;
 
@@ -257,8 +267,6 @@ int tcp_recv (TCPC *c, unsigned char *buf, size_t len)
 
 int tcp_peek (TCPC *c, unsigned char *buf, size_t len)
 {
-	int ret;
-
 	if (!c || c->fd < 0)
 		return -1;
 
@@ -282,7 +290,7 @@ char *net_ip_str (in_addr_t ip)
 {
 	struct in_addr addr;
 
-	memset (&addr, 0, sizeof (in_addr));
+	memset (&addr, 0, sizeof (addr));
 	addr.s_addr = ip;
 
 	return inet_ntoa (addr);
@@ -293,7 +301,7 @@ in_addr_t net_peer_ip (int fd, in_port_t *portret)
 	struct sockaddr_in addr;
 	in_addr_t ip  = 0;
 	in_port_t port = 0;
-	int len = sizeof (sockaddr_in);
+	int len = sizeof (addr);
 
 	if (getpeername (fd, (struct sockaddr *)&addr, &len) == 0)
 	{
@@ -312,7 +320,7 @@ in_addr_t net_local_ip (int fd, in_port_t *portret)
 	struct sockaddr_in addr;
 	in_addr_t ip = 0;
 	in_port_t port = 0;
-	int len  = sizeof (sockaddr_in);
+	int len  = sizeof (addr);
 
 	/* similar to getpeername, but grabs our portion of the socket */
 	if (getsockname (fd, (struct sockaddr *)&addr, &len) == 0)

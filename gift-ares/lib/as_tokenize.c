@@ -66,13 +66,13 @@ static int add_token (ASPacket *packet, unsigned char *str, int len,
 		/* yes, there are two different packet formats, one
 		 * for shares and one for searches... */
 		if (tl->type & SEARCH_PACKET) {
-			as_packet_put_8 (packet, tl->type);
-			as_packet_put_8 (packet, len);
+			as_packet_put_8 (packet, (as_uint8) tl->type);
+			as_packet_put_8 (packet, (as_uint8) len);
 			as_packet_put_le16 (packet, token);
 		} else {
-			as_packet_put_8 (packet, tl->type);
+			as_packet_put_8 (packet, (as_uint8) tl->type);
 			as_packet_put_le16 (packet, token);
-			as_packet_put_8 (packet, len);
+			as_packet_put_8 (packet, (as_uint8) len);
 		}			
 
 		as_packet_put_ustr (packet, buf, len);

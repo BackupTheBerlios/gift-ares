@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_packet.h,v 1.2 2004/08/21 12:32:22 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,8 +21,8 @@ typedef struct
 {
 	as_uint8 *data;     /* pointer to allocated memory */
 	as_uint8 *read_ptr; /* pointer to current read position */
-	int used;           /* used number of bytes relative to data */
-	int allocated;      /* allocated number of bytes */
+	size_t used;        /* used number of bytes relative to data */
+	size_t allocated;   /* allocated number of bytes */
 }ASPacket;
 
 /*****************************************************************************/
@@ -48,10 +48,10 @@ void as_packet_rewind(ASPacket *packet);
 void as_packet_truncate(ASPacket *packet);
 
 /* returns size of entire packet */
-int as_packet_size(ASPacket* packet);
+size_t as_packet_size(ASPacket* packet);
 
 /* returns size of remaining data */
-int as_packet_remaining(ASPacket* packet);
+size_t as_packet_remaining(ASPacket* packet);
 
 /*****************************************************************************/
 

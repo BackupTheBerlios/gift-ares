@@ -1,0 +1,129 @@
+# $Id: Make.msvc,v 1.1 2004/08/21 12:32:22 mkern Exp $
+
+
+VERSION = 0.0.1
+O = .obj
+
+ASLIB_ROOT  = $(BUILD_ROOT)\lib
+TEST_ROOT   = $(BUILD_ROOT)\test
+DELPHI_ROOT = $(BUILD_ROOT)\delphi
+BIN_ROOT    = $(BUILD_ROOT)\bin
+
+##########################
+# release / debug
+##########################
+
+!if defined(release) || defined(RELEASE)
+
+D=
+_D=
+DEBUG_OR_RELEASE=Release
+DEXT=
+
+CFLAGS  = $(CFLAGS)  -Ox -G6
+LDFLAGS = $(LDFLAGS) -release -FORCE:UNRESOLVED
+
+#DEFS    = $(DEFS)    -DNDEBUG -UDEBUG -U_DEBUG
+DEFS    = $(DEFS)    -D_DEBUG -DDEBUG -UNDEBUG -D_WALL
+
+!else # !defined(release) && !defined(RELEASE)
+
+# must be lower case:
+D=d
+_D=_d
+DEBUG_OR_RELEASE=Debug
+DEXT=d
+
+CFLAGS  = $(CFLAGS)  -Od -Gm -GZ -W3 -Zi
+DEFS    = $(DEFS)    -D_DEBUG -DDEBUG -UNDEBUG -D_WALL
+LDFLAGS = $(LDFLAGS) -debug
+
+!endif # defined(release) || defined(RELEASE)
+
+
+##########################
+# zlib support
+##########################
+
+!if defined(zlib) || defined(ZLIB)
+
+
+!if "$(ZLIB_ROOT)" == ""
+
+ZLIB_ROOT=$(BUILD_ROOT)\zlib
+
+!endif # "$(ZLIB_ROOT)" == ""
+
+
+!if !exists($(ZLIB_ROOT))
+
+!error Directory $(ZLIB_ROOT) not found!
+
+!endif # !exists($(ZLIB_ROOT))
+
+
+INCLUDES = $(INCLUDES) -I$(ZLIB_ROOT)
+DEFS     = $(DEFS)     -DUSE_ZLIB
+LDFLAGS  = $(LDFLAGS)  -libpath:"$(ZLIB_ROOT)"
+LIBS     = $(LIBS)     zlib.lib
+
+
+!if defined(dynamic) || defined(DYNAMIC)
+
+DIST_DLLS = $(DIST_DLLS) $(ZLIB_ROOT)\zlib.dll
+
+!endif #  defined(dynamic) || defined(DYNAMIC)
+
+!endif # defined(zlib) || defined(ZLIB)
+
+
+##########################
+# general
+##########################
+
+
+ASLIB_LIB  = aslib$(DEXT).lib
+TEST_EXE   = astest$(DEXT).exe
+DELPHI_LIB = asdelphi$(DEXT).lib
+
+CFLAGS   = $(CFLAGS) -nologo
+DEFS     = $(DEFS) -DHAVE_CONFIG_H -DWIN32 -DNO_STRICT
+INCLUDES = -I$(ASLIB_ROOT) $(INCLUDES)
+
+
+LDFLAGS  = $(LDFLAGS) -nologo -version:$(VERSION) 
+LDFLAGS  = $(LDFLAGS) -libpath:"$(ASLIB_ROOT)"
+
+LIBS     = $(LIBS) binmode.obj oldnames.lib advapi32.lib user32.lib wsock32.lib
+
+
+##########################
+# console/gui
+##########################
+
+
+!if defined(console) || defined(CONSOLE)
+
+
+DEFS     = $(DEFS) -D_CONSOLE -U_WINDOWS
+LDFLAGS  = $(LDFLAGS) /subsystem:console
+
+
+!else # defined(console) || defined(CONSOLE)
+
+
+DEFS     = $(DEFS) -D_WINDOWS -U_CONSOLE
+LDFLAGS  = $(LDFLAGS) /subsystem:windows
+
+
+!endif # defined(console) || defined(CONSOLE)
+
+
+##########################
+# tools
+##########################
+
+
+CC = cl
+LD = link
+LT = lib
