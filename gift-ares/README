@@ -1,4 +1,4 @@
- $Id: README,v 1.1 2004/11/28 21:10:02 mkern Exp $
+ $Id: README,v 1.2 2004/12/19 03:31:58 hex Exp $
 ---------------------
 
 This is an Ares (www.aresgalaxy.org) plugin for giFT
@@ -58,7 +58,7 @@ Running Ares behind a NAT
 
 If you are behind a NAT and you still want to download from other
 NATed / firewalled users you must forward the port in the config file
-(default is 1214) and set the config option main/forwarding=1.
+(default is 59049).
 
 
 Contact
