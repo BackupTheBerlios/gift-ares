@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.10 2004/12/24 12:14:33 mkern Exp $
+ * $Id: asp_search.c,v 1.11 2005/01/01 22:07:10 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -76,10 +76,17 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 	{
 		AS_DBG_1 ("Search complete. Id: %d.", search->id);
 
-		/* Tell giFT we're finished. This makes giFT call
-		 * asp_cb_search_cancel() which removes our search object.
-		 */
+		/* Tell giFT we're finished. */
 		PROTO->search_complete (PROTO, search->udata);
+
+		/* The above does _not_ make giFT call asp_cb_search_cancel() so
+		 * remove the search now.
+		 */
+		if (!as_searchman_remove (AS->searchman, search))
+		{
+			AS_ERR ("Failed to remove complete search");
+			assert (0);
+		}
 		return;
 	}
 
