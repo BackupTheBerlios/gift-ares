@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.4 2004/09/01 12:44:51 mkern Exp $
+ * $Id: as_node_man.c,v 1.5 2004/09/01 14:22:21 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -375,7 +375,6 @@ as_bool as_nodeman_load (ASNodeMan *man, const char *file)
 	char ip_str[32];
 	in_addr_t host;
 	char buf[1024];
-
 
 	if (!(fp = fopen (file, "r")))
 		return FALSE;

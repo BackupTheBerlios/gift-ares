@@ -1,6 +1,6 @@
 CFLAGS=-g -Wall -I../lib
 
-LDFLAGS=-L../lib -lares -levent
+LDFLAGS=-L../lib -lares -levent -lm
 
 OBJECTS= \
 	main.o \

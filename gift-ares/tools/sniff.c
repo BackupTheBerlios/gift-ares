@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: sniff.c,v 1.2 2004/09/01 14:22:22 HEx Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -383,9 +383,11 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				if (!memcmp(data, "GET ",4) ||
 				     !memcmp(data, "HEAD ",5)) {
 					/* ignore HTTP stuff on port 80 */
+#if 0
 					if (tcp->addr.dest==80)
 						c->state=STATE_UNSUPPORTED;
 					else
+#endif
 						c->state=STATE_HTTP;
 					break;
 				}
@@ -411,18 +413,13 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 						
 						//fprintf (stderr, "First word of 0x33 packet: 0x%04x\n", (int)tmp);
 						
-						if (tmp > 0x015E) {
-							fprintf(stderr, "%s tmp > 0x105E (%x) unimplemented", buf, tmp);
-							c->state=STATE_UNSUPPORTED;
-							done=1;
-						} else {
-							c->enc_state_16 = packet_body[0x12] + (packet_body[0x13] << 8);
-							c->enc_state_8 = packet_body[0x14];
-							read=plen+3;
-							c->state++;
-							fprintf(stderr, "%s got 0x33, port %d, _16=0x%x, _8=0x%x\n",
-								buf, tcp->addr.dest, c->enc_state_16, c->enc_state_8);
-						}
+						c->enc_state_16 = packet_body[0x12] + (packet_body[0x13] << 8);
+						c->enc_state_8 = packet_body[0x14];
+						read=plen+3;
+						c->state++;
+						fprintf(stderr, "%s got 0x33, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
+							buf, len, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
+						print_bin_data (data+3, plen);
 					} else {
 						c->state=STATE_UNSUPPORTED;
 						done=1;

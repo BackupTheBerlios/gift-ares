@@ -5,6 +5,7 @@
 #define MAX_PACKET_SIZE (1024*16)
 
 #define FATAL_ERROR(x) { fprintf (stderr, "\nFATAL: %s\n", x); exit (1); }
+unsigned short calc1, calc2;
 
 unsigned short table_1[256] =
 {
@@ -166,7 +167,16 @@ void decrypt_handshake_packet (unsigned char *data, int len, unsigned short key)
 	{
 		decoded = data[i] ^ (key >> 8);
 		key = (key + data[i]) * 0x5CA0 + 0x15EC;
-
+#if 0
+3597 b42e
+5ab3 1ec2
+5ab3 8d1e
+  //5ca0 15ec
+cb6f 41ba
+  //ce6d 58bf
+ce6d bfc2
+d7fb 3efd
+#endif
 		data[i] = decoded;
 	}
 }	
@@ -205,7 +215,6 @@ void print_bin_data(unsigned char *data, int len)
 	}
 }
 
-
 int main (int argc, char* argv[])
 {
 	unsigned short port;
@@ -214,7 +223,7 @@ int main (int argc, char* argv[])
 	unsigned short packet_len;
 	unsigned char packet_type;
 	unsigned char packet_seed[2];
-	unsigned char packet_body[MAX_PACKET_SIZE];
+	unsigned char packet_body[MAX_PACKET_SIZE], packet_copy[MAX_PACKET_SIZE];
 	unsigned short packet_key;
 	unsigned short tmp;
 	int i;
@@ -235,6 +244,7 @@ int main (int argc, char* argv[])
 	port = atoi (argv[2]);
 
 	/* wait for 0x33 packet */
+	//port=0;
 
 	while (!feof(fp))
 	{
@@ -248,36 +258,65 @@ int main (int argc, char* argv[])
 		}
 		else
 		{
+#if 0
 			fprintf (stderr,
 			         "WARNING: Skipping packet of type 0x%02x before 0x33\n",
 			         (int)packet_type);
+#endif
 			/* skip packet */
 			for (i = 0; i < packet_len; i++)
 				get_packet_byte (fp);
 		}
 	}
 
+
 	/* handle packet 0x33 */
 
 	if (packet_len > MAX_PACKET_SIZE)
 		FATAL_ERROR("Packet too large");
-
-	fprintf (stderr, "Found handshake packet!\n");
-	fprintf (stderr, "packet_len: %d (0x%02x)\n", (int)packet_len, (int)packet_len);
-	fprintf (stderr, "packet_type: 0x%02x\n", (int)packet_type);
 
 	for (i = 0; i < packet_len; i++)
 		packet_body[i] = get_packet_byte (fp);
 
 	if (packet_len < 0x15)
 		FATAL_ERROR ("Handshake packet shorter than 0x15");
-
+#if 0
 	printf ("--------------------------------------------------------------------\n");
-	print_bin_data (packet_body, packet_len);
+	//	print_bin_data (packet_body, packet_len);
 	printf ("--------------------------------------------------------------------\n");
+#endif
 
+#if 0
+	memcpy (packet_copy, packet_body, packet_len);
+ retry:
+	//	if (!++port)
+	if (!++port)
+	  {exit(0);}
+#endif	
 	/* decrypt using supplied port */
 	decrypt_handshake_packet (packet_body, packet_len, port);
+
+ {
+#if 0
+   int q, c=0;
+   for (q=0;q<packet_len;q++) {
+     if (packet_body[q]==24 || packet_body[q]==0x44) c++;
+   }
+#endif
+#if 0
+   if (!memmem (packet_body, packet_len, "\x45\xd4\xc3\x50\x44\x2d",4))
+	  {
+	    memcpy (packet_body, packet_copy, packet_len);
+	    goto retry;
+	  }
+#endif
+ }
+	fprintf (stdout, "Found handshake packet!\n");
+	fprintf (stdout, "packet_len: %d (0x%02x)\n", (int)packet_len, (int)packet_len);
+	fprintf (stdout, "packet_type: 0x%02x\n", (int)packet_type);
+
+	fprintf (stdout, "port: %d calc1=%d calc2=%d\n", port, calc1,calc2);
+
 
 	print_bin_data (packet_body, packet_len);
 	printf ("--------------------------------------------------------------------\n");
@@ -286,21 +325,23 @@ int main (int argc, char* argv[])
 	tmp = packet_body[0];
 	tmp |= ((unsigned short)packet_body[1]) << 8;
 
-	fprintf (stderr, "First word of 0x33 packet: 0x%04x\n", (int)tmp);
+	fprintf (stdout, "First word of 0x33 packet: 0x%04x\n", (int)tmp);
 
-	if (tmp > 0x015E)
-	{
-		FATAL_ERROR ("Case tmp > 0x105E unimplemented");
-	}
+	fprintf (stdout, "tmp = %d (should be <350 to continue this connection)\n", tmp);
 
 	enc_state_16 = packet_body[0x12];
 	enc_state_16 |= ((unsigned short) packet_body[0x13]) << 8;
 	enc_state_8 = packet_body[0x14];
 
-	fprintf (stderr, "Extracted encryption state for session!\n");
-	fprintf (stderr, "enc_state_16: %d (0x%04x)\n", (int)enc_state_16, (int)enc_state_16);
-	fprintf (stderr, "enc_state_8: %d (0x%02x)\n", (int)enc_state_8, (int)enc_state_8);
+	fprintf (stdout, "Extracted encryption state for session!\n");
+	fprintf (stdout, "enc_state_16: %d (0x%04x)\n", (int)enc_state_16, (int)enc_state_16);
+	fprintf (stdout, "enc_state_8: %d (0x%02x)\n", (int)enc_state_8, (int)enc_state_8);
 
+#if 0
+	    memcpy (packet_body, packet_copy, packet_len);
+	//	fseek(fp,0,0);
+	goto retry;
+#endif
 	fprintf (stderr, "\nDecoding normal packets...\n\n");
 
 while (!feof(fp)) /* hack for processing multiple packets */
