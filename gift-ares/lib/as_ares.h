@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.60 2004/12/24 16:09:26 mkern Exp $
+ * $Id: as_ares.h,v 1.61 2004/12/31 22:16:16 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -177,7 +177,11 @@ extern Protocol *gift_proto;
 #endif
 
 /* The client name we send to supernodes */
-#define AS_CLIENT_NAME "aREs"
+#ifdef GIFT_PLUGIN
+#  define AS_CLIENT_NAME "giFT"
+#else
+#  define AS_CLIENT_NAME "aREs"
+#endif
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
