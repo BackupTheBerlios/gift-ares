@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.65 2005/01/07 20:05:00 mkern Exp $
+ * $Id: as_ares.h,v 1.66 2005/01/17 13:25:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -196,8 +196,13 @@ extern Protocol *gift_proto;
  * clients in the future. It is sent to the supernode in encrypted form during
  * handshaking. Just like the client name we now have to keep it in sync with
  * the latest Ares client. Yes, it's pointless.
+ *
+ * Update: As of Ares build 2955 this has been removed again. Lets hope this
+ * is the beginning of a peaceful coexistence.
  */
-#define AS_LOGIN_STRING "Ares 1.8.1.2951"
+#if 0
+# define AS_LOGIN_STRING "Ares 1.8.1.2951"
+#endif
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)

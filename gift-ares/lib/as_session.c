@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.36 2005/01/07 20:05:00 mkern Exp $
+ * $Id: as_session.c,v 1.37 2005/01/17 13:25:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -437,8 +437,8 @@ static as_bool session_send_handshake (ASSession *session,
 	/* local ip */
 	as_packet_put_ip (packet, net_local_ip (session->c->fd, NULL));
 
+#ifdef AS_LOGIN_STRING
 	/* Append encrypted login string added in Ares 2951. */
-	if (strlen (AS_LOGIN_STRING) > 0)
 	{
 		as_uint8 *login_str, *login_hex;
 
@@ -460,6 +460,7 @@ static as_bool session_send_handshake (ASSession *session,
 
 		free (login_str);
 	}
+#endif
 
 	/* Send packet. */
 	if (!as_session_send (session, PACKET_HANDSHAKE, packet,
