@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.15 2004/09/13 13:40:04 mkern Exp $
+ * $Id: as_event.c,v 1.16 2004/09/16 16:21:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,6 +49,9 @@ typedef struct as_event_t
 	/* *sigh*, this is getting ugly */
 	as_bool in_callback;
 	as_bool in_callback_removed;
+
+	/* Pointer to next event with same fd. Used in fd hash table. */
+	struct as_event_t *next;
 
 	/* the libevent struct */
 	struct event ev;
@@ -144,6 +147,8 @@ static ASEvent *event_create (ASEventType type, void *udata)
 
 	ev->in_callback = FALSE;
 	ev->in_callback_removed = FALSE;
+	
+	ev->next = NULL;
 
 	/* zero libevent struct */
 	memset (&ev->ev, 0, sizeof (ev->ev));
@@ -331,10 +336,13 @@ input_id input_add (int fd, void *udata, InputState state,
 		return INVALID_INPUT;
 	}
 
-	/* add to hash table. this overwrites previous entries with the same fd
-	 * which is bad.
-	 */
-	as_hashtable_insert_int (input_table, (as_uint32) ev->input.fd, ev);
+	/* Add to hash table. If there already is an entry with this fd keep it. */
+	ev->next = as_hashtable_lookup_int (input_table, (as_uint32) fd);
+	if (!as_hashtable_insert_int (input_table, (as_uint32) ev->input.fd, ev))
+	{
+		AS_ERR_1 ("Failed to add fd 0x%X into hashtable", ev->input.fd);
+		assert (0);
+	}
 
 	return (input_id) ev;
 }
@@ -342,6 +350,7 @@ input_id input_add (int fd, void *udata, InputState state,
 void input_remove (input_id id)
 {
 	ASEvent *ev = (ASEvent *) id;
+	ASEvent *head_ev, *itr_ev;
 
 	if (id == INVALID_INPUT)
 		return;
@@ -356,8 +365,38 @@ void input_remove (input_id id)
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("input_remove: event_del() failed!");
 
-	/* remove from hash table */
-	as_hashtable_remove_int (input_table, (as_uint32) ev->input.fd);
+	/* Remove from hash table. */
+	if (!(head_ev = as_hashtable_remove_int (input_table, (as_uint32) ev->input.fd)))
+	{
+		AS_ERR_1 ("Failed to remove fd 0x%X from hashtable", ev->input.fd);
+		assert (0);
+	}
+	
+	/* Reinsert other events with same fd. */
+	if (head_ev == ev)
+	{
+		head_ev = head_ev->next;
+	}
+	else
+	{
+		for (itr_ev = head_ev; itr_ev->next; itr_ev = itr_ev->next)
+		{
+			if (itr_ev->next == ev)
+			{
+				itr_ev->next = itr_ev->next->next;
+				break;
+			}
+		}
+	}
+
+	if (head_ev)
+	{
+		if (!as_hashtable_insert_int (input_table, (as_uint32) head_ev->input.fd, head_ev))
+		{
+			AS_ERR_1 ("Failed to readd fd 0x%X into hashtable", head_ev->input.fd);
+			assert (0);
+		}	
+	}
 
 	event_free (ev);
 }
@@ -365,7 +404,7 @@ void input_remove (input_id id)
 /* remove all inputs of this fd */
 void input_remove_all (int fd)
 {
-	ASEvent *ev;
+	ASEvent *ev, *next_ev;
 
 	if (!(ev = as_hashtable_lookup_int (input_table, (as_uint32) fd)))
 	{
@@ -376,11 +415,13 @@ void input_remove_all (int fd)
 		return;
 	}
 
-	/* FIXME: only one entry per fd is removed since the hash table can not
-	 * hold multiple entries with the same key (on purpose). So this is
-	 * basically just a removal by fd for whichever input was added last.
-	 */
-	input_remove (ev);
+	/* Remove all events with this fd. */
+	while (ev)
+	{
+		next_ev = ev->next;
+		input_remove (ev);
+		ev = next_ev;
+	}
 }
 
 /* temporarily remove fd from event loop */
