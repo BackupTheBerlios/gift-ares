@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.h,v 1.3 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_download_man.h,v 1.4 2004/09/19 18:10:41 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,7 +20,7 @@ typedef struct as_downman_t ASDownMan;
 typedef as_bool (*ASDownManStateCb) (ASDownMan *man, ASDownload *dl,
                                      ASDownloadState state);
 
-typedef struct as_downman_t
+struct as_downman_t
 {
 	/* List of downloads */
 	List *downloads;
