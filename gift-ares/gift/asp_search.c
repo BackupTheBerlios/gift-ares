@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.7 2004/12/20 12:25:27 mkern Exp $
+ * $Id: asp_search.c,v 1.8 2004/12/24 11:40:31 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -82,10 +82,6 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 		PROTO->search_complete (PROTO, search->udata);
 		return;
 	}
-
-	/* Don't send duplicate results to giFT. */
-	if (duplicate)
-		return;
 
 	/* Create a share object for giFT. */
 	if (!(share = share_new (NULL)))
