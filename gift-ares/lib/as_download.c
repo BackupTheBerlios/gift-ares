@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.26 2004/10/28 14:00:39 mkern Exp $
+ * $Id: as_download.c,v 1.27 2004/10/30 00:45:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,10 +23,10 @@
 #define KEEP_FAILED
 
 /* Define to get very verbose chunk logging */
-#define CHUNK_DEBUG
+/* #define CHUNK_DEBUG */
 
 /* Define to verify that connection list is sorted correctly  */
-#define VERIFY_CONN_LIST
+/* #define VERIFY_CONN_LIST */
 
 /*****************************************************************************/
 
@@ -1657,6 +1657,8 @@ static as_bool download_finished (ASDownload *dl)
 	/* Truncate incomplete file to correct size removing the state data at
 	 * the end.
 	 */
+	assert (dl->size > 0);
+
 #ifndef WIN32
 	if (truncate (dl->path, dl->size) < 0)
 #else
