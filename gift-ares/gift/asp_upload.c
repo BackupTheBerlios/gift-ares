@@ -1,5 +1,5 @@
 /*
- * $Id: asp_upload.c,v 1.3 2004/12/04 18:24:22 hex Exp $
+ * $Id: asp_upload.c,v 1.4 2004/12/04 18:48:41 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -198,8 +198,8 @@ void asp_giftcb_upload_stop (Protocol *p, Transfer *transfer,
 
 	AS_HEAVY_DBG_1 ("Stopped upload to %s", net_ip_str (up->host));
 
-	as_upman_cancel (AS->upman, up);
 	as_upman_remove (AS->upman, up);
+	chunk->udata = NULL;
 }
 
 /*****************************************************************************/
