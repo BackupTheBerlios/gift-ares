@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.29 2004/09/19 17:53:43 mkern Exp $
+ * $Id: cmd.c,v 1.30 2004/09/19 18:40:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -452,16 +452,13 @@ as_bool downman_cb (ASDownMan *man, ASDownload *dl, ASDownloadState state)
 
 	switch (state)
 	{
+	case DOWNLOAD_INVALID:
+	case DOWNLOAD_NEW:
 	case DOWNLOAD_ACTIVE:
-		break;
 	case DOWNLOAD_QUEUED:
-		break;
 	case DOWNLOAD_PAUSED:
-		break;
 	case DOWNLOAD_VERIFYING:
-		break;
 	case DOWNLOAD_CANCELLED:
-		break;
 	case DOWNLOAD_COMPLETE:
 	case DOWNLOAD_FAILED:
 		/* remove download */
@@ -542,7 +539,7 @@ COMMAND_FUNC (dl_list)
 	for (l = AS->downman->downloads; l; l = l->next)
 	{
 		dl = l->data;
-		printf ("  [%08p] %-10s     %3d%%  %s\n", dl,
+		printf ("  [%p] %-10s     %3d%%  %s\n", dl,
 		        as_download_state_str (dl),
 		        dl->received * 100 / dl->size, dl->filename);
 		i++;
@@ -560,7 +557,7 @@ COMMAND_FUNC (dl_find_more)
 	if (argc < 2)
 		return FALSE;
 
-	if (sscanf (argv[1], "%X", &dl) != 1)
+	if (sscanf (argv[1], "%p", &dl) != 1)
 	{
 		printf ("Couldn't parse Id\n");
 		return TRUE;
@@ -584,7 +581,7 @@ COMMAND_FUNC (dl_pause)
 	if (argc < 2)
 		return FALSE;
 
-	if (sscanf (argv[1], "%X", &dl) != 1)
+	if (sscanf (argv[1], "%p", &dl) != 1)
 	{
 		printf ("Couldn't parse Id\n");
 		return TRUE;
@@ -608,7 +605,7 @@ COMMAND_FUNC (dl_unpause)
 	if (argc < 2)
 		return FALSE;
 
-	if (sscanf (argv[1], "%X", &dl) != 1)
+	if (sscanf (argv[1], "%p", &dl) != 1)
 	{
 		printf ("Couldn't parse Id\n");
 		return TRUE;
@@ -632,7 +629,7 @@ COMMAND_FUNC (dl_cancel)
 	if (argc < 2)
 		return FALSE;
 
-	if (sscanf (argv[1], "%X", &dl) != 1)
+	if (sscanf (argv[1], "%p", &dl) != 1)
 	{
 		printf ("Couldn't parse Id\n");
 		return TRUE;
