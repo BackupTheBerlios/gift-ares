@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.14 2004/09/06 18:55:17 mkern Exp $
+ * $Id: as_packet.c,v 1.15 2004/09/15 21:27:38 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,7 @@
  */
 
 #include "as_ares.h"
+#include <zlib.h>
 
 /*****************************************************************************/
 
@@ -348,6 +349,34 @@ as_bool as_packet_decrypt (ASPacket *packet, ASCipher *cipher)
 	/* decrypt packet using first seed */
 	as_cipher_decrypt (cipher, seed_a, packet->read_ptr,
 	                   as_packet_remaining (packet));
+
+	return TRUE;
+}
+
+as_bool as_packet_compress (ASPacket *packet)
+{
+	int ret;
+	unsigned long len;
+	as_uint8 *buf;
+
+	len = compressBound (packet->used);
+
+	buf = malloc (len);
+
+	if (!buf)
+		return FALSE;
+
+	ret = compress (buf, &len, packet->data, packet->used);
+
+	if (ret != Z_OK ||
+	    !packet_resize (packet, len))
+	{
+		free (buf);
+		return FALSE;
+	}
+
+	memcpy (packet->data, buf, len);
+	packet->used = len;
 
 	return TRUE;
 }

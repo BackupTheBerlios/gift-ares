@@ -1,6 +1,7 @@
 CFLAGS=-g -Wall -I../lib
+#CFLAGS=-O2 -Wall -I../lib
 
-LDFLAGS=-L../lib -lares -levent -lm
+LDFLAGS=-L../lib -lares -levent -lm -lz
 
 OBJECTS= \
 	main.o \
@@ -9,7 +10,7 @@ OBJECTS= \
 
 all: ares
 
-ares: $(OBJECTS)
+ares: $(OBJECTS) ../lib/libares.a
 	$(CC) $+ -o $@ $(LDFLAGS)
 
 clean:
