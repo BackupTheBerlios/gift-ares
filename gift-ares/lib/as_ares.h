@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_ares.h,v 1.2 2004/08/20 13:31:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,6 +12,23 @@
 
 /*****************************************************************************/
 
+#include <ctype.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#ifdef WIN32
+# include winsock.h
+#endif /* WIN32 */
+
+//#include "as_log.h"
+#include "as_packet.h"
+//#include "as_crypt.h"
+
+//#include "as_tcp.h"
+
+/*****************************************************************************/
+
 typedef signed char    as_int8;
 typedef unsigned char  as_uint8;
 typedef signed short   as_int16;
@@ -20,21 +37,19 @@ typedef signed int     as_int32;
 typedef unsigned int   as_uint32;
 typedef int            as_bool;
 
+/* TODO: get from autoconf later */
+#ifdef WIN32
+/* u_long and u_short are defined in winsock.h */
+# define in_addr_t u_long
+# define in_port_t u_short
+#else
+# define in_addr_t as_uint32
+# define in_port_t as_uint16
+#endif
+
+
 #define TRUE 1
 #define FALSE 0
-
-/*****************************************************************************/
-
-#include <ctype.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-//#include "as_log.h"
-#include "as_packet.h"
-//#include "as_crypt.h"
-
-//#include "as_tcp.h"
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_crypt.h,v 1.2 2004/08/20 13:31:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,6 +49,10 @@ void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
 /* encrypt/decrypt a block of data with handshake key */
 void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
 void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
+
+/*****************************************************************************/
+
+in_port_t as_ip2port (in_addr_t ip);
 
 /*****************************************************************************/
 
