@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.6 2004/09/16 18:24:46 mkern Exp $
+ * $Id: as_share.c,v 1.7 2004/09/16 22:29:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -30,7 +30,15 @@ ASShare *as_share_new (char *path, ASHash *hash, ASMeta *meta,
 		share->hash = hash;
 	else
 		share->hash = as_hash_file (path);
-	
+
+	if (!hash)
+	{
+		free (share->path);
+		free (share);
+
+		return NULL;
+	}
+
 	if (!meta)
 		meta = as_meta_create ();
 
