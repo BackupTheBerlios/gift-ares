@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.h,v 1.3 2004/09/01 18:05:55 HEx Exp $
+ * $Id: as_session_man.h,v 1.4 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,6 +11,9 @@
 #define __AS_SESSION_MAN_H_
 
 /*****************************************************************************/
+
+/* Session iterator. */
+typedef as_bool (*ASSessionForeachFunc) (ASSession *session, void *udata);
 
 typedef struct
 {
@@ -42,8 +45,14 @@ unsigned int as_sessman_established (ASSessMan *man);
  */
 void as_sessman_connect (ASSessMan *man, unsigned int connections);
 
-/* search all connected hosts, returns number of searches sent */
-int as_send_search (ASSessMan *man, unsigned char *query);
+/*****************************************************************************/
+
+/* Calls func for each established session. Do not remove or add sessions
+ * during iteration (e.g. don't call as_sessman_connect). Returns number of
+ * times func returned TRUE.
+ */
+int as_sessman_foreach (ASSessMan *man, ASSessionForeachFunc func,
+                        void *udata);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.3 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_ares.c,v 1.4 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,6 +49,16 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+	if (!(AS->searchman = as_searchman_create ()))
+	{
+		AS_ERR ("Failed to create search manager");
+		as_sessman_free (AS->sessman);
+		as_nodeman_free (AS->nodeman);
+		free (AS);
+		AS = NULL;
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -61,6 +71,7 @@ as_bool as_cleanup ()
 
 	AS_DBG ("Cleaning up Ares library...");
 
+	as_searchman_free (AS->sessman);
 	as_sessman_free (AS->sessman);
 	as_nodeman_free (AS->nodeman);
 

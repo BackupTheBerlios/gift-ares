@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.2 2004/09/06 17:27:55 HEx Exp $
+ * $Id: as_source.c,v 1.3 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -73,21 +73,19 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 	        gift_strcmp (a->username, b->username) == 0); 
 }
 
-#if 0
 /* returns TRUE if the source is firewalled */
 as_bool as_source_firewalled (ASSource *source)
 {
-	return (!as_utils_ip_routable (source->host)) || (source->port == 0);
+	return (!net_ip_routable (source->host)) || (source->port == 0);
 }
 
 /* returns TRUE if the source has enough info to send a push */
 as_bool as_source_has_push_info (ASSource *source)
 {
-	return (as_utils_ip_routable (source->shost) && source->sport != 0 &&
-	        as_utils_ip_routable (source->parent_host) &&
+	return (net_ip_routable (source->shost) && source->sport != 0 &&
+	        net_ip_routable (source->parent_host) &&
 			source->username && source->username[0] != '\0');
 }
-#endif
 
 /*****************************************************************************/
 

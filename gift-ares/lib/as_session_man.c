@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.18 2004/09/06 08:37:40 mkern Exp $
+ * $Id: as_session_man.c,v 1.19 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -70,6 +70,25 @@ void as_sessman_connect (ASSessMan *man, unsigned int connections)
 	          list_length (man->connecting));
 
 	sessman_maintain (man);
+}
+
+/*****************************************************************************/
+
+/* Calls func for each established session. Do not remove or add sessions
+ * during iteration (e.g. don't call as_sessman_connect). Returns number of
+ * times func returned TRUE.
+ */
+int as_sessman_foreach (ASSessMan *man, ASSessionForeachFunc func,
+                        void *udata)
+{
+	List *l;
+	int count = 0;
+	
+	for (l = man->connected; l; l = l->next)
+		if (func (l->data, udata))
+			count++;
+	
+	return count;
 }
 
 /*****************************************************************************/
@@ -242,7 +261,7 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 		/* remove from connecting list */
 		man->connecting = list_remove (man->connecting, session);
 
-		if (list_length (man->connected) < man->connections)
+		if (list_length (man->connected) < (int) man->connections)
 		{
 			/* add session to connected list */
 			man->connected = list_prepend (man->connected, session);
@@ -282,6 +301,10 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 static as_bool session_packet_cb (ASSession *session, ASPacketType type,
                                   ASPacket *packet)
 {
+	/* FIXME: passing this one level up to ASInstance and dispatch it there to
+	 * the different managers would make more sense.
+	 */
+
 	switch (type)
 	{
 	case PACKET_LOCALIP:
@@ -306,12 +329,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 	}
 	case PACKET_RESULT:
 	{
-		ASResult *result;
-		result = parse_search_result (packet);
-
-		/* FIXME: track id/query */
-		if (result)
-			(*AS->callback) (result);
+		as_searchman_result (AS->searchman, session, packet);
 		break;
 	}
 	case PACKET_NICKNAME:
@@ -333,37 +351,3 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 
 /*****************************************************************************/
 
-static as_bool send_search (ASSession *session, unsigned char *query)
-{
-	ASPacket *packet;
-	as_bool ret;
-
-	packet = search_request (query, session->search_id++);
-
-	if (!packet)
-		return FALSE;
-
-	ret = as_session_send (session, PACKET_SEARCH, packet, PACKET_ENCRYPTED);
-
-	as_packet_free (packet);
-
-	if (!ret)
-		return FALSE;
-
-	AS_HEAVY_DBG_2 ("sent query '%s' to %s", query, net_ip_str (session->host));
-	return TRUE;
-} 
-
-int as_send_search (ASSessMan *man, unsigned char *query)
-{
-	List *l;
-	int count = 0;
-	
-	for (l = man->connected; l; l = l->next)
-		if (send_search (l->data, query))
-			count++;
-	
-	return count;
-}
-
-/*****************************************************************************/

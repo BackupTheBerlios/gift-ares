@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.2 2004/09/06 18:55:17 mkern Exp $
+ * $Id: as_search_result.c,v 1.3 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,7 +31,7 @@ ASResult *as_result_create ()
 		return NULL;
 	}
 
-	result->meta = NULL;
+	result->meta     = NULL;
 	result->realm    = REALM_ANY;
 	result->hash     = NULL;
 	result->filesize = 0;
@@ -54,7 +54,7 @@ ASResult *as_result_parse (ASPacket *packet)
 	if (!result_parse (result, packet))
 	{
 		as_result_free (result);
-		return NULL
+		return NULL;
 	}
 
 	return result;
@@ -70,8 +70,8 @@ void as_result_free (ASResult *result)
 	as_meta_free (result->meta);
 	as_hash_free (result->hash);
 
-	free (r->filename);
-	free (r->fileext);
+	free (result->filename);
+	free (result->fileext);
 
 	free (result);
 }

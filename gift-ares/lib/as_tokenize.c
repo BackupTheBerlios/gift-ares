@@ -1,5 +1,5 @@
 /*
- * $Id: as_tokenize.c,v 1.3 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_tokenize.c,v 1.4 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,11 +7,9 @@
  * All rights reserved.
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
 #include "as_ares.h"
-#include "as_tokenize.h"
+
+/*****************************************************************************/
 
 #define DELIM " -.,!\"0123456789:()[]?\r\n\t"
 
@@ -24,6 +22,8 @@ struct token_list {
 	int type; /* which tag type this came from */
 	as_uint16 list[MAX_TOKENS];
 };
+
+/*****************************************************************************/
 
 static as_uint16 hash_token (unsigned char *str)
 {
@@ -49,7 +49,7 @@ static int add_token (ASPacket *packet, unsigned char *str, int len,
 
 	/* we don't want ludicrously-sized tokens anyway */
 	if (len > 30)
-		return FALSE;
+		return 0;
 
 	for (i=len; i--;)
 	{
@@ -86,14 +86,14 @@ static int add_token (ASPacket *packet, unsigned char *str, int len,
 
 		as_packet_put_ustr (packet, buf, len);
 
-		return TRUE;
+		return 1;
 	}
 
-	return FALSE;
+	return 0;
 }
 
 /* returns number of tokens added */
-int tokenize_string (ASPacket *packet, unsigned char *str, int type)
+static int tokenize_string (ASPacket *packet, unsigned char *str, int type)
 {
 	unsigned char *ptr=str;
 	size_t len;
@@ -118,7 +118,30 @@ int tokenize_string (ASPacket *packet, unsigned char *str, int type)
 	return count;
 }
 
+/*****************************************************************************/
+
+/* Tokenize str and add it to search packet. Returns number of added tokens */
+int as_tokenize_search (ASPacket *packet, unsigned char *str)
+{
+	/* 0x14 maybe means "everything" - this would imply we can
+	 * restrict searches to just a single field too */
+	return tokenize_string (packet, str, 0x14 | SEARCH_PACKET);
+}
+
+/* Tokenize str and add it to share packet. Returns number of added tokens */
+int as_tokenize_share (ASPacket *packet, unsigned char *str)
+{
+	return tokenize_string (packet, str, 1); /* FIXME: type */
+}
+
+/*****************************************************************************/
+
 #if 0
+
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
 int main(int argc, char *argv[])
 {
 	ASPacket *p;
@@ -139,3 +162,5 @@ int main(int argc, char *argv[])
 	return 0;
 }
 #endif
+
+/*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.11 2004/09/06 17:27:57 HEx Exp $
+ * $Id: cmd.c,v 1.12 2004/09/07 13:09:47 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -213,51 +213,60 @@ COMMAND_FUNC (connect_to)
 	return TRUE;
 }
 
+/*****************************************************************************/
+
 static const char *realm_chars="RA?S?VDI";
 
 /* warning: ludicrously inefficient list code ahead */
 static List *results = NULL;
+static ASSearch *test_search = NULL;
 
-static void search_callback (ASResult *r)
+static void search_callback (ASSearch *search, ASResult *r)
 {
+	assert (search == test_search);
+
 	printf ("%3d) %20s %10d %c [%s]\n", list_length (results),
-		r->user, r->size,
+		r->source->username, r->filesize,
 		realm_chars[r->realm], r->filename);
 
 	results = list_append (results, r);
 }
 
-static int clear_result (ASResult *result)
-{
-	as_result_free (result);
-
-	return TRUE;
-}
-
-static void clear_results (void)
-{
-	results = list_foreach_remove (results, (ListForeachFunc)clear_result, NULL);
-}
-
 COMMAND_FUNC (search)
 {
 	unsigned char *query;
-	int count;
 
 	if (argc < 2)
 		return FALSE;
 
+	if (test_search)
+	{
+		printf ("Only one search allowed at a time in this test app\n");
+		return TRUE;
+	}
+
+	assert (results == NULL);
+
 	query = argv[1];
+
+	test_search = as_searchman_search (AS->searchman,
+	                                   (ASSearchResultCb) search_callback,
+	                                   query, REALM_ANY);
+
+	if (!test_search)
+	{
+		printf ("Failed to start search for \"%s\"\n", query);
+		return TRUE;
+	}
 	
-	clear_results ();
+	printf ("Started search for \"%s\"\n", query);
 
-	/* FIXME */
-	AS->callback = (ASResultCallback)search_callback;
+	return TRUE;
+}
 
-	count = as_send_search (AS->sessman, query);
-
-	printf ("sent query '%s' to %d nodes\n", query, count);
-
+static as_bool meta_tag_itr (ASMetaTag *tag, void *udata)
+{
+	printf ("  %s: %s\n", tag->name, tag->value);
 	return TRUE;
 }
 
@@ -265,6 +274,7 @@ COMMAND_FUNC (info)
 {
 	int rnum;
 	int i;
+	char *str;
 	ASResult *r;
 
 	if (argc < 2)
@@ -275,50 +285,62 @@ COMMAND_FUNC (info)
 	r = list_nth_data (results, rnum);
 
 	if (!r)
-		return FALSE;
+	{
+		printf ("Invalid result number\n");
+		return TRUE;
+	}
 
-	printf ("Filename: %s (extension '%s')\n", r->filename, r->ext);
-	printf ("Filesize: %d bytes\n", r->size);
-	printf ("User: %s\n", r->user);
+	printf ("Filename: %s (extension '%s')\n", r->filename, r->fileext);
+	printf ("Filesize: %d bytes\n", r->filesize);
+	printf ("User: %s\n", r->source->username);
+
 	printf ("SHA1: ");
-	for (i=0; i<20; i++)
-		printf ("%02x", r->hash[i]);
-	printf ("\n");
-	if (r->meta[TAG_TITLE])
-		printf ("Title: %s\n", r->meta[TAG_TITLE]);
-	if (r->meta[TAG_ARTIST])
-		printf ("Artist: %s\n", r->meta[TAG_ARTIST]);
-	if (r->meta[TAG_ALBUM])
-		printf ("Album: %s\n", r->meta[TAG_ALBUM]);
-	if (r->meta[TAG_YEAR])
-		printf ("Year: %s\n", r->meta[TAG_YEAR]);
-	if (r->meta[TAG_CODEC])
-		printf ("Codec: %s\n", r->meta[TAG_CODEC]);
-	if (r->meta[TAG_KEYWORDS])
-		printf ("Keywords: %s\n", r->meta[TAG_KEYWORDS]);
+	for (i=0; i < AS_HASH_SIZE; i++)
+		printf ("%02x", r->hash->data[i]);
+	str = as_hash_encode (r->hash);
+	printf (" [%s]\n");
+	free (str);
+
+	printf ("Meta tags:\n");
+	i = as_meta_foreach_tag (r->meta, meta_tag_itr, NULL);
+	printf ("(%d tags total)\n", i);
 
 	return TRUE;
 }
 
 COMMAND_FUNC (clear)
 {
-	clear_results ();
+	if (!test_search)
+	{
+		printf ("No search to clear.\n");
+		return TRUE;
+	}
+	
+	results = list_free (results);
+
+	as_searchman_remove (AS->searchman, test_search);
+	test_search = NULL;
 
 	return TRUE;
 }
 
+/*****************************************************************************/
+
 COMMAND_FUNC (download)
 {
+	in_addr_t ip;
+	in_port_t port;
+	ASSource *source;
+	ASHash *hash;
+	unsigned char *filename;
+
 	if (argc < 5)
 		return FALSE;
 
-	in_addr_t ip = net_ip(argv[1]);
-	in_addr_t port = argv[2];
-	ASSource *source;
-
-	ASHash *hash = as_hash_decode (argv[3]);
-
-	unsigned char *filename = argv[4];
+	ip = net_ip (argv[1]);
+	port = (in_port_t) atoi (argv[2]);
+	hash = as_hash_decode (argv[3]);
+	filename = argv[4];
 
 	source = as_source_create ();
 

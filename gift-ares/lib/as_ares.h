@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.21 2004/09/06 17:27:55 HEx Exp $
+ * $Id: as_ares.h,v 1.22 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -63,34 +63,42 @@ typedef int            as_bool;
 
 /*****************************************************************************/
 
-#include "as_sha1.h"
-#include "as_hash.h"
-#include "as_encoding.h"
+/* beware the ordering of these */
 #include "as_list.h"
 #include "as_hashtable.h"
-#include "as_log.h"
-#include "as_event.h"
-#include "as_crypt.h"
-#include "as_tcp.h"
 #include "as_parse.h"
 #include "as_strobj.h"
+#include "as_log.h"
+#include "as_event.h"
+#include "as_tcp.h"
+
+#include "as_sha1.h"
+#include "as_encoding.h"
+#include "as_hash.h"
+#include "as_crypt.h"
 #include "as_packet.h"
-#include "as_http_header.h"
-#include "as_http_client.h"
-#include "as_http_server.h"
-#include "as_tokenize.h"
-#include "as_search.h"
 #include "as_node.h"
 #include "as_node_man.h"
 #include "as_session.h"
 #include "as_session_man.h"
 #include "as_source.h"
+#include "as_meta.h"
+#include "as_tokenize.h"
+#include "as_search_result.h"
+#include "as_search.h"
+#include "as_search_man.h"
+#include "as_http_header.h"
+#include "as_http_client.h"
+#include "as_http_server.h"
 #include "as_download.h"
 
 /*****************************************************************************/
 
 /* The client name we send to supernodes */
 #define AS_CLIENT_NAME "aREs"
+
+/* User name. TODO: get from config system. */
+#define AS_USER_NAME "antares"
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
@@ -104,6 +112,9 @@ typedef int            as_bool;
 /* Maximum number of nodes saved in node file */
 #define AS_MAX_NODEFILE_SIZE (400)
 
+/* Nubmer of supernodes each search is sent to */
+#define AS_SEARCH_SEND_COUNT (4)
+
 /*****************************************************************************/
 
 typedef struct
@@ -114,7 +125,9 @@ typedef struct
 	/* session manager */
 	ASSessMan *sessman;
 
-	ASResultCallback callback; /* MOVEME */
+	/* search manager */
+	ASSearchMan *searchman;
+
 } ASInstance;
 
 /*****************************************************************************/

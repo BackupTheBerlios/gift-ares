@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.3 2004/09/06 18:55:17 mkern Exp $
+ * $Id: as_meta.h,v 1.4 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,6 +50,8 @@ typedef struct
 
 } ASMeta;
 
+typedef as_bool (*ASMetaForeachFunc) (ASMetaTag *tag, void *udata);
+
 /*****************************************************************************/
 
 /* create meta data object */
@@ -71,6 +73,9 @@ const char *as_meta_get_tag (ASMeta *meta, const char *name);
 
 /* remove gift style meta tag */
 as_bool as_meta_remove_tag (ASMeta *meta, const char *name);
+
+/* Call func for each tag. Returns number of times func returned TRUE. */
+int as_meta_foreach_tag (ASMeta *meta, ASMetaForeachFunc func, void *udata);
 
 /*****************************************************************************/
 

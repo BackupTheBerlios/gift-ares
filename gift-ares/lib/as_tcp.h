@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.h,v 1.5 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_tcp.h,v 1.6 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -62,6 +62,11 @@ char *net_ip_str (in_addr_t ip);
 in_addr_t net_peer_ip (int fd, in_port_t *portret);
 
 in_addr_t net_local_ip (int fd, in_port_t *portret);
+
+/*****************************************************************************/
+
+/* returns TRUE if ip is routable on the internet */
+as_bool net_ip_routable (in_addr_t ip);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.1 2004/09/06 12:58:26 mkern Exp $
+ * $Id: as_meta.c,v 1.2 2004/09/07 13:05:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -91,7 +91,7 @@ as_bool as_meta_add_tag (ASMeta *meta, const char *name, const char *value)
 	}
 	else
 	{
-		if (!(tag = malloc (sizeof (ASMetaTag)))
+		if (!(tag = malloc (sizeof (ASMetaTag))))
 			return FALSE;
 
 		tag->name = gift_strdup (name);
@@ -117,16 +117,28 @@ const char *as_meta_get_tag (ASMeta *meta, const char *name)
 as_bool as_meta_remove_tag (ASMeta *meta, const char *name)
 {
 	List *link;
-	ASMetaTag *tag;
 
 	if (!(link = meta_find_tag (meta, name)))
-		return FALSe;
+		return FALSE;
 
 	tag_free_itr (link->data, NULL);
 	
 	meta->tags = list_remove_link (meta->tags, link);
 
 	return TRUE;
+}
+
+/* call func for each tag */
+int as_meta_foreach_tag (ASMeta *meta, ASMetaForeachFunc func, void *udata)
+{
+	List *link;
+	int count = 0;
+	
+	for (link = meta->tags; link; link = link->next)
+		if (func (link->data, udata))
+			count++;
+	
+	return count;
 }
 
 /*****************************************************************************/
@@ -176,51 +188,51 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 
 			case REALM_AUDIO:
 				/* bitrate */
-				i = as_packet_get_le16 (packet);
+				i = as_packet_get_le16 (p);
 				as_meta_add_tag (meta, "bitrate", itoa (i, buf, 10));
 				
 				/* duration */
-				i = as_packet_get_le32 (packet);
+				i = as_packet_get_le32 (p);
 				as_meta_add_tag (meta, "duration", itoa (i, buf, 10));
 				break;
 				
 			case REALM_SOFTWARE:
 			{
-				as_uint8 c = as_packet_get_8 (packet);
+				as_uint8 c = as_packet_get_8 (p);
 				if (c != 2)
 				{
 					AS_DBG_2 ("REALM_SOFTWARE: c=%d, offset %x",
-					          c, packet->read_ptr - packet->data);
+					          c, p->read_ptr - p->data);
 #ifdef DEBUG
-					as_packet_dump (packet);
+					as_packet_dump (p);
 #endif
 				}
 				
 				/* version */
-				free (as_packet_get_strnul (packet));
+				free (as_packet_get_strnul (p));
 				break;
 			}
 			case REALM_VIDEO:
 				/* width/height */
-				i = as_packet_get_le16 (packet);
+				i = as_packet_get_le16 (p);
 				as_meta_add_tag (meta, "width", itoa (i, buf, 10));
-				i = as_packet_get_le16 (packet);
+				i = as_packet_get_le16 (p);
 				as_meta_add_tag (meta, "height", itoa (i, buf, 10));
 				
 				/* duration? */
-				i = as_packet_get_le32 (packet);
+				i = as_packet_get_le32 (p);
 				as_meta_add_tag (meta, "video-duration?", itoa (i, buf, 10));
 				break;
 				
 			case REALM_IMAGE:
 				/* width/height */
-				i = as_packet_get_le16 (packet);
+				i = as_packet_get_le16 (p);
 				as_meta_add_tag (meta, "width", itoa (i, buf, 10));
-				i = as_packet_get_le16 (packet);
+				i = as_packet_get_le16 (p);
 				as_meta_add_tag (meta, "height", itoa (i, buf, 10));
 				
 				/* unknown (depth?) */
-				i = as_packet_get_le32 (packet);
+				i = as_packet_get_le32 (p);
 				as_meta_add_tag (meta, "bitdepth?", itoa (i, buf, 10));
 				break;
 
@@ -233,10 +245,10 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 				 * we have no choice but to bail when
 				 * an unknown tag type is encountered
 				 */
-				AS_DBG_2 ("Unknown realm %d, offset %x", r->realm,
-				          packet->read_ptr - packet->data);
+				AS_DBG_2 ("Unknown realm %d, offset %x", realm,
+				          p->read_ptr - p->data);
 #ifdef DEBUG
-				as_packet_dump (packet);
+				as_packet_dump (p);
 #endif
 				return FALSE;
 			}
@@ -245,9 +257,9 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 		default:
 			/* see above */
 			AS_DBG_2 ("Unknown tag type %d, offset %x", meta_type,
-			          packet->read_ptr - packet->data);
+			          p->read_ptr - p->data);
 #ifdef DEBUG
-			as_packet_dump (packet);
+			as_packet_dump (p);
 #endif
 			return FALSE;
 		}
