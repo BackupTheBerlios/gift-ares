@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.16 2004/09/10 17:27:10 HEx Exp $
+ * $Id: as_session.c,v 1.17 2004/09/13 00:04:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -39,18 +39,18 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 	if (!(session = malloc (sizeof (ASSession))))
 		return NULL;
 
-	session->host      = INADDR_NONE;
-	session->port      = 0;
-	session->c         = NULL;
-	session->input     = INVALID_INPUT;
-	session->cipher    = NULL;
-	session->packet    = NULL;
-	session->state     = SESSION_DISCONNECTED;
-	session->state_cb  = state_cb;
-	session->packet_cb = packet_cb;
-	session->udata     = NULL;
-	session->search_id = 0;
-	session->ping_timer= NULL;
+	session->host       = INADDR_NONE;
+	session->port       = 0;
+	session->c          = NULL;
+	session->input      = INVALID_INPUT;
+	session->cipher     = NULL;
+	session->packet     = NULL;
+	session->state      = SESSION_DISCONNECTED;
+	session->state_cb   = state_cb;
+	session->packet_cb  = packet_cb;
+	session->udata      = NULL;
+	session->search_id  = 0;
+	session->ping_timer = NULL;
 
 	return session;
 }
@@ -328,8 +328,10 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 	}
 	else
 	{
+#if 0
 		AS_HEAVY_DBG_2 ("Received packet type 0x%02x, length %d", (int)type,
 		                as_packet_remaining (packet));
+#endif
 
 		if (type == PACKET_SHARE)
 		{

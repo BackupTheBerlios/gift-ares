@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.23 2004/09/09 21:50:01 HEx Exp $
+ * $Id: as_session_man.c,v 1.24 2004/09/13 00:04:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -330,6 +330,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		break;
 	}
 	case PACKET_NODELIST:
+		AS_WARN ("FIXME: Got nodelist packet. Make me use it!");
 		/* FIXME */
 		break;
 	default:

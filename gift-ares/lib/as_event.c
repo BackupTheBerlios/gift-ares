@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.13 2004/09/05 11:54:25 mkern Exp $
+ * $Id: as_event.c,v 1.14 2004/09/13 00:04:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -368,7 +368,11 @@ void input_remove_all (int fd)
 	ASEvent *ev;
 
 	if (!(ev = as_hashtable_lookup_int (input_table, (as_uint32) fd)))
+	{
+		AS_WARN_1 ("input_remove_all: Didn't find events for fd 0x%X in hash table",
+		           fd);
 		return;
+	}
 
 	/* FIXME: only one entry per fd is removed since the hash table can not
 	 * hold multiple entries with the same key (on purpose). So this is
