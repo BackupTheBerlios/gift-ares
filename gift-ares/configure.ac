@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-# $Id: configure.ac,v 1.2 2004/12/18 22:25:54 hex Exp $
+# $Id: configure.ac,v 1.3 2004/12/19 00:01:43 mkern Exp $
 
 dnl ###########################################################################
 dnl Process this file with autoconf to produce a configure script.
@@ -8,8 +8,8 @@ dnl ###########################################################################
 
 AC_PREREQ(2.52)
 
-AC_INIT(giFT-Ares, 0.1.1)
-AC_REVISION($Revision: 1.2 $)
+AC_INIT(gift-ares, 0.1.1)
+AC_REVISION($Revision: 1.3 $)
 AC_CONFIG_SRCDIR([lib/as_ares.h])
 
 dnl Needed to build with libtoolize 1.4.3 on Debian woody
