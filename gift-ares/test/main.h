@@ -1,5 +1,5 @@
 /*
- * $Id: main.h,v 1.1 2004/08/21 12:59:57 mkern Exp $
+ * $Id: main.h,v 1.2 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>

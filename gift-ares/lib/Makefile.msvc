@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.1 2004/08/21 12:32:22 mkern Exp $
+# $Id: Makefile.msvc,v 1.2 2004/08/21 20:17:57 mkern Exp $
 
 
 !include ../Make.msvc
@@ -6,8 +6,6 @@
 MAKEOPTS=-nologo -C BUILD_ROOT=$(BUILD_ROOT)
 
 INCLUDES = -I. -Ilibevent $(INCLUDES)
-DEFS = $(DEFS) -DASLIB_EXPORT=__declspec(dllexport)
-
 
 OBJECTS = \
 	as_ares$(O) \

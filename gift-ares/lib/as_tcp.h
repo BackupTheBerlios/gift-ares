@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.h,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_tcp.h,v 1.2 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,6 +50,8 @@ int tcp_recv (TCPC *c, unsigned char *buf, size_t len);
 int tcp_peek (TCPC *c, unsigned char *buf, size_t len);
 
 /*****************************************************************************/
+
+void net_close (int fd);
 
 in_addr_t net_ip (const char *ip_str);
 

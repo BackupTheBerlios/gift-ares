@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_tcp.c,v 1.3 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,20 +23,6 @@
 #endif
 
 /*****************************************************************************/
-
-static void socket_close (int fd)
-{
-	if (fd < 0)
-		return;
-
-#ifndef WIN32
-	shutdown (fd, SHUT_RDWR);
-	close (fd);
-#else 
-	shutdown (fd, SD_BOTH);
-	closesocket (fd);
-#endif
-}
 
 int socket_set_blocking (int fd, as_bool blocking)
 {
@@ -146,13 +132,13 @@ TCPC *tcp_open (in_addr_t host, in_port_t port, int block)
 	    if (WSAGetLastError () != WSAEWOULDBLOCK)
 #endif
 		{
-			socket_close (fd);
+			net_close (fd);
 			return NULL;
 		}
 	}
 		
 	if (!(c = tcp_new (host, port, fd)))
-		socket_close (fd);
+		net_close (fd);
 
 	return c;
 }
@@ -174,7 +160,7 @@ TCPC *tcp_accept (TCPC *listening, int block)
 
 	if (!(c = tcp_new (addr.sin_addr.s_addr, addr.sin_port, fd)))
 	{
-		socket_close (fd);
+		net_close (fd);
 		return NULL;
 	}
 
@@ -205,18 +191,18 @@ TCPC *tcp_bind (in_port_t port, int block)
 
 	if (bind (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr)) < 0)
 	{
-		socket_close (fd);
+		net_close (fd);
 		return NULL;
 	}
 
 	if (listen (fd, 5) < 0)
 	{
-		socket_close (fd);
+		net_close (fd);
 		return NULL;
 	}
 
 	if (!(c = tcp_new (0, port, fd)))
-		socket_close (fd);
+		net_close (fd);
 
 	return c;
 }
@@ -228,7 +214,7 @@ void tcp_close (TCPC *c)
 
 	input_remove_all (c->fd);
 
-	socket_close (c->fd);
+	net_close (c->fd);
 	tcp_free (c);
 }
 
@@ -277,6 +263,20 @@ int tcp_peek (TCPC *c, unsigned char *buf, size_t len)
 }
 
 /*****************************************************************************/
+
+void net_close (int fd)
+{
+	if (fd < 0)
+		return;
+
+#ifndef WIN32
+	shutdown (fd, SHUT_RDWR);
+	close (fd);
+#else 
+	shutdown (fd, SD_BOTH);
+	closesocket (fd);
+#endif
+}
 
 in_addr_t net_ip (const char *ip_str)
 {

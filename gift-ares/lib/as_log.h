@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.h,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_log.h,v 1.2 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -59,12 +59,12 @@ as_bool as_logger_del_output (ASLogger *logger, const char *name);
 #define AS_LOG_HEAVY_DEBUG 0x04
 
 /* Primary logging function. */
-void as_logger_logv (ASLogger *logger,int level, const char *file,
-                     const char *line, const char *fmt, va_list args);
+void as_logger_logv (ASLogger *logger, int level, const char *file,
+                     int line, const char *fmt, va_list args);
 
 /* Wrapper for as_logger_logv. */
 void as_logger_log (ASLogger *logger, int level, const char *file,
-                    const char *line, const char *fmt, ...);
+                    int line, const char *fmt, ...);
 
 /*****************************************************************************/
 
@@ -72,7 +72,7 @@ void as_logger_log (ASLogger *logger, int level, const char *file,
 extern ASLogger *g_logger;
 
 /* oh well */
-#define AS_LOG(l) as_logger_log (g_logger, l, __FILE__, __LINE__)
+#define AS_LOG(l) as_logger_log (g_logger, l, __FILE__, __LINE__
 
 #ifdef DEBUG
 #define AS_DBG(fmt)             AS_LOG (AS_LOG_DEBUG), fmt)
@@ -113,12 +113,12 @@ extern ASLogger *g_logger;
 #define AS_WARN_4(fmt,a,b,c,d)   AS_LOG (AS_LOG_WARNING), fmt,a,b,c,d)
 #define AS_WARN_5(fmt,a,b,c,d,e) AS_LOG (AS_LOG_WARNING), fmt,a,b,c,d,e)
 
-#define AS_ERR(fmt)              AS_LOG (AS_LOG_WARNING), fmt)
-#define AS_ERR_1(fmt,a)          AS_LOG (AS_LOG_WARNING), fmt,a)
-#define AS_ERR_2(fmt,a,b)        AS_LOG (AS_LOG_WARNING), fmt,a,b)
-#define AS_ERR_3(fmt,a,b,c)      AS_LOG (AS_LOG_WARNING), fmt,a,b,c)
-#define AS_ERR_4(fmt,a,b,c,d)    AS_LOG (AS_LOG_WARNING), fmt,a,b,c,d)
-#define AS_ERR_5(fmt,a,b,c,d, e) AS_LOG (AS_LOG_WARNING), fmt,a,b,c,d,e)
+#define AS_ERR(fmt)              AS_LOG (AS_LOG_ERROR), fmt)
+#define AS_ERR_1(fmt,a)          AS_LOG (AS_LOG_ERROR), fmt,a)
+#define AS_ERR_2(fmt,a,b)        AS_LOG (AS_LOG_ERROR), fmt,a,b)
+#define AS_ERR_3(fmt,a,b,c)      AS_LOG (AS_LOG_ERROR), fmt,a,b,c)
+#define AS_ERR_4(fmt,a,b,c,d)    AS_LOG (AS_LOG_ERROR), fmt,a,b,c,d)
+#define AS_ERR_5(fmt,a,b,c,d, e) AS_LOG (AS_LOG_ERROR), fmt,a,b,c,d,e)
 
 /*****************************************************************************/
 

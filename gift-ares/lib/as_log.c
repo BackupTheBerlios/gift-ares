@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_log.c,v 1.3 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -135,7 +135,7 @@ as_bool as_logger_del_output (ASLogger *logger, const char *name)
 
 /*****************************************************************************/
 
-static void get_timestamp (char buf[16])
+static char *get_timestamp (char buf[16])
 {
 	time_t     now;
 	struct tm *local;
@@ -143,7 +143,9 @@ static void get_timestamp (char buf[16])
 	now = time (NULL);
 	local = localtime (&now);
 
-	strftime (buf, sizeof (buf), "[%H:%M:%S]", local);
+	strftime (buf, 16, "[%H:%M:%S]", local);
+
+	return buf;
 }
 
 static const char *get_loglevel_str (int level)
@@ -153,7 +155,7 @@ static const char *get_loglevel_str (int level)
 	case AS_LOG_ERROR:       return "ERROR";
 	case AS_LOG_WARNING:     return "WARNING";
 	case AS_LOG_DEBUG:       return "DBG";
-	case AS_LOG_HEAVY_DEBUG: return "HVYDBG";
+	case AS_LOG_HEAVY_DEBUG: return "HEAVYDBG";
 	}
 
 	assert (0);
@@ -163,17 +165,19 @@ static const char *get_loglevel_str (int level)
 
 /* Primary logging function. */
 void as_logger_logv (ASLogger *logger,int level, const char *file,
-                     const char *line, const char *fmt, va_list args)
+                     int line, const char *fmt, va_list args)
 {
 	char buf[1024 * 4]; /* do we need more? */
 	char time_buf[16];
 	int written, i;
 
-	get_timestamp (time_buf);
+	if (!logger)
+		return;
 
-	written = snprintf (buf, sizeof (buf), "%s %s:%s %s: ",
-	                    time_buf, file, line, get_loglevel_str (level));
-	
+	written = snprintf (buf, sizeof (buf), "%s (%s:%d) %s: ",
+	                    get_timestamp (time_buf), file, line,
+	                    get_loglevel_str (level));
+
 	if (written < 0 || written >= sizeof (buf))
 		return;
 
@@ -194,7 +198,7 @@ void as_logger_logv (ASLogger *logger,int level, const char *file,
 
 /* Wrapper for as_logger_logv. */
 void as_logger_log (ASLogger *logger, int level, const char *file,
-                    const char *line, const char *fmt, ...)
+                     int line, const char *fmt, ...)
 {
 	va_list args;
 

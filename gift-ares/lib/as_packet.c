@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.3 2004/08/21 12:52:14 mkern Exp $
+ * $Id: as_packet.c,v 1.4 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>

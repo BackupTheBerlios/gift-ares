@@ -1,13 +1,15 @@
-# $Id: Make.msvc,v 1.2 2004/08/21 12:59:57 mkern Exp $
+# $Id: Make.msvc,v 1.3 2004/08/21 20:17:57 mkern Exp $
 
 
 VERSION = 0.0.1
-O = .obj
+HEAVY_DEBUG = 1
 
 ASLIB_ROOT  = $(BUILD_ROOT)\lib
 TEST_ROOT   = $(BUILD_ROOT)\test
 DELPHI_ROOT = $(BUILD_ROOT)\delphi
 BIN_ROOT    = $(BUILD_ROOT)\bin
+
+O = .obj
 
 ##########################
 # release / debug
@@ -37,6 +39,11 @@ DEXT=d
 CFLAGS  = $(CFLAGS)  -Od -Gm -GZ -W3 -Zi
 DEFS    = $(DEFS)    -D_DEBUG -DDEBUG -UNDEBUG -D_WALL
 LDFLAGS = $(LDFLAGS) -debug
+
+!if defined(HEAVY_DEBUG)
+DEFS = $(DEFS) -DHEAVY_DEBUG
+!endif
+
 
 !endif # defined(release) || defined(RELEASE)
 

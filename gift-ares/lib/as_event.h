@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.h,v 1.2 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_event.h,v 1.3 2004/08/21 20:17:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,8 +27,9 @@
 
 #define TIMEOUT_DEF  (60*SECONDS)
 
-typedef unsigned int input_id;
-typedef unsigned int timer_id;
+/* our ids are pointers */
+typedef void * input_id;
+typedef void * timer_id;
 
 /*****************************************************************************/
 
@@ -50,27 +51,19 @@ typedef as_bool (*TimerCallback) (void *udata);
 
 /*****************************************************************************/
 
-typedef struct
-{
-	int foo;
-} ASEventSys;
+/* init event system */
+as_bool as_event_init ();
 
-/* the evil global from as_event.c */
-extern ASEventSys *g_event;
+/* shutdown event system. do not call while loop is still running */
+void as_event_shutdown ();
 
-/*****************************************************************************/
+/* event loop, blocks until the loop is quit. returns FALSE if there was an
+ * error.
+ */
+as_bool as_event_loop ();
 
-/* create event system */
-ASEventSys *as_event_create ();
-
-/* free event system. do not call while loop is still running */
-void as_event_free (ASEventSys *event);
-
-/* event loop, blocks until the loop is quit */
-void as_event_run (ASEventSys *event);
-
-/* stops event loop and makes as_event_run return */
-void as_event_quit (ASEventSys *event);
+/* stops event loop and makes as_event_loop return */
+void as_event_quit ();
 
 /*****************************************************************************/
 
