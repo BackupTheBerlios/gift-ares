@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.10 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_search_man.c,v 1.11 2004/12/31 22:42:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -114,7 +114,8 @@ static as_bool new_session_itr (ASHashTableEntry *entry, void *args[2])
 	ASSession *session = args[0];
 	int *count = args[1];
 
-	if (as_search_sent_count (search) >= AS_SEARCH_SEND_COUNT)
+	if (AS_SEARCH_SEND_COUNT != 0 &&
+	    as_search_sent_count (search) >= AS_SEARCH_SEND_COUNT)
 		return FALSE;
 
 	if (as_search_sent_to (search, session))
@@ -144,7 +145,8 @@ void as_searchman_new_session (ASSearchMan *man, ASSession *session)
 
 static as_bool send_search_itr (ASSession *session, ASSearch *search)
 {
-	if (as_search_sent_count (search) >= AS_SEARCH_SEND_COUNT)
+	if (AS_SEARCH_SEND_COUNT != 0 &&
+	    as_search_sent_count (search) >= AS_SEARCH_SEND_COUNT)
 		return FALSE;
 
 	if (as_search_sent_to (search, session))

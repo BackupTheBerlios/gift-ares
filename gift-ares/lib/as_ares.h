@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.61 2004/12/31 22:16:16 hex Exp $
+ * $Id: as_ares.h,v 1.62 2004/12/31 22:42:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -201,8 +201,11 @@ extern Protocol *gift_proto;
 /* Maximum number of nodes saved in node file */
 #define AS_MAX_NODEFILE_SIZE (400)
 
-/* Nubmer of supernodes each search is sent to */
-#define AS_SEARCH_SEND_COUNT (4)
+/* Number of supernodes each search is sent to. If zero the search will be
+ * sent to all available sessions and all new ones becoming available while
+ * the search is running.
+ */
+#define AS_SEARCH_SEND_COUNT (0)
 
 /* Minimum chunk size in bytes */
 #define AS_DOWNLOAD_MIN_CHUNK_SIZE (128*1024)
