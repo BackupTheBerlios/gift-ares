@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.6 2004/12/12 16:19:32 hex Exp $
+ * $Id: asp_download.c,v 1.7 2004/12/30 00:40:52 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -125,7 +125,6 @@ BOOL asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 	    !(hash = asp_hash_decode (hashstr_data (source->hash))))
 	{
 		AS_WARN_1 ("Malformed source hash '%s'.", source->hash);
-		PROTO->source_abort (PROTO, source->chunk->transfer, source);
 		return FALSE;
 	}
 
