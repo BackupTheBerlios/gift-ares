@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.9 2004/09/01 15:51:36 HEx Exp $
+ * $Id: as_session.c,v 1.10 2004/09/01 16:55:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -129,6 +129,53 @@ void as_session_disconnect (ASSession *session, as_bool raise_callback)
 
 /*****************************************************************************/
 
+/* Send packet to supernode. flag specifies if the packet should be encrypted
+ * or compressed. The body packet will be modified.
+ */
+as_bool as_session_send (ASSession *session, ASPacketType type,
+                         ASPacket *body, ASPacketFlag flag)
+{
+	/* encrypt or compress packet body */
+	switch (flag)
+	{
+	case PACKET_PLAIN:
+		break;
+
+	case PACKET_ENCRYPTED:
+		if (!as_packet_encrypt (body, session->cipher))
+		{
+			AS_ERR ("Encrypt failed");
+			return FALSE;
+		}
+		break;
+
+	case PACKET_COMPRESSED:
+		/* TODO */
+		AS_ERR ("Packet compression not implemented");
+		assert (0);
+		return FALSE;
+		break;
+	}
+
+	/* added packet header  */
+	if (!as_packet_header (body, type))
+	{
+		AS_ERR ("Insufficient memory");
+		return FALSE;
+	}
+
+	/* send it off */
+	if (!as_packet_send (body, session->c))
+	{
+		AS_ERR ("Send failed");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/*****************************************************************************/
+
 static void session_connected (int fd, input_id input, ASSession *session)
 {
 	ASPacket *packet;
@@ -162,23 +209,26 @@ static void session_connected (int fd, input_id input, ASSession *session)
 		session_error (session);
 		return;
 	}
-	
+
+	/* packet body */
 	as_packet_put_8 (packet, 0x04);
 	as_packet_put_8 (packet, 0x03);
 	as_packet_put_8 (packet, 0x05);
-	as_packet_header (packet, PACKET_SYN);
 
-	if (!as_packet_send (packet, session->c))
+	if (!as_session_send (session, PACKET_SYN, packet, PACKET_PLAIN))
 	{
 		AS_ERR ("Send failed");
+		as_packet_free (packet);
 		session_error (session);
 		return;
 	}
 
+	as_packet_free (packet);
+
 	if (!session_set_state (session, SESSION_HANDSHAKING, TRUE))
 		return; /* session was freed */
 
-	/* wait for ack packet */
+	/* wait for supernode handshake packet */
 	session->input = input_add (session->c->fd, session, INPUT_READ, 
 	                            (InputCallback)session_get_packet,
 	                            AS_SESSION_HANDSHAKE_TIMEOUT);
@@ -287,10 +337,6 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 			}
 		}
 
-#if 0
-		as_packet_dump (packet);
-#endif
-
 		/* raise callback for this packet */
 		if (session->packet_cb)
 			return session->packet_cb (session, type, packet);
@@ -330,7 +376,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	as_cipher_decrypt_handshake (session->cipher, packet->read_ptr,
 	                             as_packet_remaining (packet));
 
-#if 1
+#if 0
 	as_packet_dump (packet);
 #endif
 
@@ -370,9 +416,10 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 		return FALSE;
 	}
 
-	/* Finish handshake. */
+	/* Set up cipher. */
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
 
+	/* Handshake is complete now. */
 	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x%04X and 0x%02X",
 		      net_ip_str (session->host), session->port,
 			  (int)seed_16, (int)seed_8);

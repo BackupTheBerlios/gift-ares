@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.11 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_ares.h,v 1.12 2004/09/01 16:55:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -76,6 +76,9 @@ typedef int            as_bool;
 #include "as_session_man.h"
 
 /*****************************************************************************/
+
+/* The client name we send to supernodes */
+#define AS_CLIENT_NAME "aREs"
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)

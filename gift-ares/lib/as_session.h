@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.6 2004/09/01 15:51:36 HEx Exp $
+ * $Id: as_session.h,v 1.7 2004/09/01 16:55:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -77,6 +77,14 @@ as_bool as_session_connect (ASSession *session, in_addr_t host,
  * specified.
  */
 void as_session_disconnect (ASSession *session, as_bool raise_callback);
+
+/*****************************************************************************/
+
+/* Send packet to supernode. flag specifies if the packet should be encrypted
+ * or compressed. The body packet will be modified.
+ */
+as_bool as_session_send (ASSession *session, ASPacketType type,
+                         ASPacket *body, ASPacketFlag flag);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.6 2004/09/01 15:51:36 HEx Exp $
+ * $Id: as_packet.h,v 1.7 2004/09/01 16:55:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -37,6 +37,13 @@ typedef enum
 	PACKET_RESULT   = 0x12,  /* search result */
 	PACKET_NODELIST = 0x36,  /* list of index nodes? */
 } ASPacketType;
+
+typedef enum
+{
+	PACKET_PLAIN      = 0x00, /* Packet is neighter compressed nor encrypted */
+	PACKET_ENCRYPTED  = 0x01, /* Packet it encrypted */
+	PACKET_COMPRESSED = 0x02  /* Packet is compressed */
+} ASPacketFlag;
 
 /*****************************************************************************/
 
@@ -121,16 +128,15 @@ ASPacket *as_packet_slurp (void);
 /* Encrypt entire packet using cipher. This will add the two bytes of seed
  * to the beginning of the packet.
  */
-as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher);
+as_bool as_packet_encrypt (ASPacket *packet, ASCipher *cipher);
 
 /* Decrypt entire packet using cipher. This will remove the two bytes of seed
  * at the beginning of the packet.
  */
-as_bool as_packet_decrypt(ASPacket *packet, ASCipher *cipher);
+as_bool as_packet_decrypt (ASPacket *packet, ASCipher *cipher);
 
-/* Prepend the three-byte header (type and length). 
- */
-as_bool as_packet_header(ASPacket *packet, ASPacketType type);
+/* Prepend the three-byte header (type and length). */
+as_bool as_packet_header (ASPacket *packet, ASPacketType type);
 
 /*****************************************************************************/
 

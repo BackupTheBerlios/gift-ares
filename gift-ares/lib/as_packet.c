@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.10 2004/09/01 15:51:36 HEx Exp $
+ * $Id: as_packet.c,v 1.11 2004/09/01 16:55:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -269,7 +269,7 @@ char *as_packet_get_strnul (ASPacket *packet)
 /* Encrypt entire packet using cipher. This will add the two bytes of seed
  * to the beginning of the packet.
  */
-as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
+as_bool as_packet_encrypt (ASPacket *packet, ASCipher *cipher)
 {
 	as_uint8 seed_a = 0x00; /* always use zero for out packet seeds */
 	as_uint8 seed_b = 0x00;
@@ -292,35 +292,10 @@ as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
 	return TRUE;
 }
 
-/* Encrypt entire packet using cipher. This will add the two bytes of seed
- * to the beginning of the packet.
- */
-as_bool as_packet_header(ASPacket *packet, ASPacketType type)
-{
-	int len;
-
-	/* make enough room for seeds */
-	if (!packet_resize (packet, as_packet_size (packet) + 3))
-		return FALSE;
-
-	/* move data towards end by two bytes */
-	memmove (packet->data + 3, packet->data, as_packet_size (packet));
-
-	len = packet->used;
-	packet->used += 3;
-
-	/* add seeds at front */
-	packet->data[0] = len & 255;
-	packet->data[1] = len >> 8;
-	packet->data[2] = type;
-
-	return TRUE;
-}
-
 /* Decrypt entire packet using cipher. This will remove the two bytes of seed
  * at the beginning of the packet.
  */
-as_bool as_packet_decrypt(ASPacket *packet, ASCipher *cipher)
+as_bool as_packet_decrypt (ASPacket *packet, ASCipher *cipher)
 {
 	as_uint8 seed_a, seed_b;
 
@@ -335,6 +310,29 @@ as_bool as_packet_decrypt(ASPacket *packet, ASCipher *cipher)
 	/* decrypt packet using first seed */
 	as_cipher_decrypt (cipher, seed_a, packet->read_ptr,
 	                   as_packet_remaining (packet));
+
+	return TRUE;
+}
+
+/* Prepend the three-byte header (type and length). */
+as_bool as_packet_header (ASPacket *packet, ASPacketType type)
+{
+	int len;
+
+	/* make enough room for length and type */
+	if (!packet_resize (packet, as_packet_size (packet) + 3))
+		return FALSE;
+
+	/* move data towards end by three bytes */
+	memmove (packet->data + 3, packet->data, as_packet_size (packet));
+
+	len = packet->used;
+	packet->used += 3;
+
+	/* add length and type at front */
+	packet->data[0] = len & 255;
+	packet->data[1] = len >> 8;
+	packet->data[2] = type;
 
 	return TRUE;
 }

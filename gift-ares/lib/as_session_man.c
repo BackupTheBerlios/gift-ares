@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.7 2004/09/01 15:51:36 HEx Exp $
+ * $Id: as_session_man.c,v 1.8 2004/09/01 16:55:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,6 +17,8 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state);
 
 static as_bool session_packet_cb (ASSession *session, ASPacketType type,
                                   ASPacket *packet);
+
+static as_bool send_nodeinfo (ASSession *session);
 
 /*****************************************************************************/
 
@@ -240,38 +242,17 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 	              man->connections, list_length (man->connected), 
 	              list_length (man->connecting));
 
-		send_nodeinfo (session);
+		/* send supernode info about us */
+		if (!send_nodeinfo (session))
+		{
+			AS_ERR_2 ("Failed to send our node info to %s:%d",
+			          net_ip_str (session->host), session->port);
+			as_session_disconnect (session, TRUE); /* raises callback */
+			return FALSE;
+		}
 
-		return FALSE;
+		return TRUE;
 	}
-
-	return TRUE;
-}
-
-#define CLIENT_NAME "aREs"
-
-static as_bool send_nodeinfo (ASSession *session)
-{
-	ASPacket *packet;
-
-	if (!(packet = as_packet_create ()))
-	{
-		AS_ERR ("Insufficient memory");
-		return FALSE;
-	}
-	
-	as_packet_put_8 (packet, 0x00);
-	as_packet_put_ustr (packet, "\x7c\xa7\x86\x36\x18\x54\xb7\xaa\xcc\xfd\xf4"
-			    "\xbe\x0f\x20\x6a\x5a\x6d\xe8\xd3\x08\x20\x92", 22); /* no idea */
-	as_packet_put_ustr (packet, "\x00\x00\x00\x04\x00\x00\xd6\x83\x00", 9); /* still no idea */
-	as_packet_put_ustr (packet, "0123456789abcdef", 16); /* GUID */
-	as_packet_put_le16 (packet, 0x00);
-	as_packet_put_ustr (packet, CLIENT_NAME, sizeof (CLIENT_NAME));
-	as_packet_put_be32 (packet, 0xc0a80080); /* our local IP */
-
-	as_packet_encrypt (packet, session->cipher);
-	as_packet_header (packet, PACKET_NODEINFO);
-	as_packet_send (packet, session->c);
 
 	return TRUE;
 }
@@ -285,7 +266,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 	{
 		in_addr_t ip;
 		ip = as_packet_get_be32 (packet);
-		AS_DBG_1 ("got local IP: %s", net_ip_str (ip)); 
+		AS_DBG_1 ("Got local IP: %s", net_ip_str (ip)); 
 		break;
 	}
 
@@ -296,14 +277,61 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		files = as_packet_get_le32 (packet);
 		size = as_packet_get_le32 (packet);
 		
-		printf ("got network stats: %d users, %d files, %d Gb\n",
-			users, files, size);
+		AS_DBG_3 ("Got network stats: %d users, %d files, %d Gb\n",
+		          users, files, size);
 		break;
 	}
 	default:
-		AS_WARN_1 ("got unknown packet 0x%x:", type);
+		AS_WARN_1 ("Got unknown packet 0x%02x:", type);
 		as_packet_dump (packet);
 	}
+
+	return TRUE;
+}
+
+/*****************************************************************************/
+
+static as_bool send_nodeinfo (ASSession *session)
+{
+	ASPacket *packet;
+
+	AS_HEAVY_DBG_2 ("Sending node info to %s:%d", net_ip_str (session->host),
+	                session->port);
+
+	if (!(packet = as_packet_create ()))
+	{
+		AS_ERR ("Insufficient memory");
+		return FALSE;
+	}
+
+	/* unknown, always zero */
+	as_packet_put_8 (packet, 0x00);
+	/* unknown, changes */
+	as_packet_put_ustr (packet, "\x7c\xa7\x86\x36\x18\x54\xb7\xaa\xcc\xfd\xf4"
+	                            "\xbe\x0f\x20\x6a\x5a\x6d\xe8\xd3\x08\x20\x92",
+	                    22);
+	/* unknown, stays the same */
+	as_packet_put_ustr (packet, "\x00\x00\x00\x04\x00\x00\x00\xd6\x83\x00", 9);
+	/* client GUID */
+	as_packet_put_ustr (packet, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+	                            "\x00\x00\x00\x00\x00", 16);
+	/* unknown, always zero */
+	as_packet_put_le16 (packet, 0x0000);
+	/* client name, zero terminated */
+	as_packet_put_ustr (packet, AS_CLIENT_NAME, strlen (AS_CLIENT_NAME) + 1);
+	
+	/* local ip, FIXME */
+	as_packet_put_be32 (packet, (as_uint32) net_ip ("192.168.0.1"));
+
+	if (!as_session_send (session, PACKET_NODEINFO, packet,
+	                      PACKET_ENCRYPTED))
+	{
+		AS_ERR ("Send failed");
+		as_packet_free (packet);
+		return FALSE;
+	}
+
+	as_packet_free (packet);
 
 	return TRUE;
 }
