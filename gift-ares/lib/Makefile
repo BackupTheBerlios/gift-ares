@@ -60,4 +60,4 @@ libaresgift.a:
 clean:
 	rm -f libares.a libaresgift.a $(OBJECTS) $(GIFT_OBJECTS)
 
-.PHONY: libares libaresgift libaresgift-temp
+.PHONY: libares libaresgift.a libaresgift-temp
