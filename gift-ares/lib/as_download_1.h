@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.h,v 1.5 2004/09/13 01:01:18 mkern Exp $
+ * $Id: as_download_1.h,v 1.6 2004/09/13 19:50:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,6 +45,9 @@ struct as_download_t
 
 	List *chunks;      /* List of chunks sorted by chunk->start and always
 	                    * kept without holes and overlap */
+
+	timer_id maintenance_timer; /* regular timer running while download is
+	                             * active to check the queued sources */
 
 	/* download state */
 	ASDownloadState state;

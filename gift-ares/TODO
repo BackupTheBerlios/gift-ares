@@ -7,9 +7,6 @@ lib
 - notify search manager of new sessions and resend searches until
   AS_SEARCH_SEND_COUNT is reached.
 
-- Add timer to download which regularly calls download_maintain in order to
-  check the status of remotely queued sources.
-
 - Calculate average bandwidth for sources and use faster ones during end game.
   Generally sort connection list by b/w so faster ones are always used first.
 
@@ -29,3 +26,6 @@ lib
 - Optimize chunking by only allocating new chunk after the tcp connection to a
   new source has been established. Requires major rewrites, maybe we can do
   this once we use binary requests.
+
+- Determine when to look for more sources for a download and start hash 
+  search. Make use of pushes resulting from said search.

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.c,v 1.6 2004/09/13 17:09:13 mkern Exp $
+ * $Id: as_download_1.c,v 1.7 2004/09/13 19:50:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,6 +14,9 @@
 #endif
 
 /*****************************************************************************/
+
+/* Interval of maintenance timer used to check in queued sources */
+#define MAINTENANCE_TIMER_INTERVAL (30 * SECONDS)
 
 /* Filename prefix for incomplete files */
 #define INCOMPLETE_PREFIX "_ARESTRA_"
@@ -32,6 +35,7 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
                              unsigned int len);
 
 static void download_maintain (ASDownload *dl);
+static as_bool maintenance_timer_func (ASDownload *dl);
 
 static as_bool download_failed (ASDownload *dl);
 static as_bool download_complete (ASDownload *dl);
@@ -44,6 +48,19 @@ static as_bool download_set_state (ASDownload *dl, ASDownloadState state,
 {
 	dl->state = state;
 
+	/* start maintenance timer if active, remove otherwise */
+	if (dl->state == DOWNLOAD_ACTIVE)
+	{
+		assert (dl->maintenance_timer == INVALID_TIMER);
+		dl->maintenance_timer = timer_add (MAINTENANCE_TIMER_INTERVAL,
+		                           (TimerCallback)maintenance_timer_func, dl);
+	}
+	else if (dl->maintenance_timer != INVALID_TIMER)
+	{
+		timer_remove_zero (&dl->maintenance_timer);
+	}
+
+	/* raise callback if specified */
 	if (raise_callback && dl->state_cb)
 		return dl->state_cb (dl, dl->state);
 
@@ -68,6 +85,8 @@ ASDownload *as_download_create (ASDownloadStateCb state_cb)
 
 	dl->conns  = NULL;
 	dl->chunks = NULL;
+
+	dl->maintenance_timer = INVALID_TIMER;
 
 	dl->state    = DOWNLOAD_NEW;
 	dl->state_cb = state_cb;
@@ -99,6 +118,8 @@ void as_download_free (ASDownload *dl)
 	for (l = dl->chunks; l; l = l->next)
 		as_downchunk_free (l->data);
 	list_free (dl->chunks);
+
+	timer_remove (dl->maintenance_timer);
 
 	free (dl);
 }
@@ -955,6 +976,17 @@ static void download_maintain (ASDownload *dl)
 		AS_ERR_1 ("FIXME: No more sources for \"%s\". Make me find more.",
 		          dl->filename);
 	}
+}
+
+/* Called by a regular timer while download is active */
+static as_bool maintenance_timer_func (ASDownload *dl)
+{
+	AS_HEAVY_DBG ("Download maintenace timer invoked");
+
+	/* Check on queued connections */
+	download_maintain (dl);
+
+	return TRUE; /* invoke again */
 }
 
 /*****************************************************************************/
