@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.5 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_crypt.h,v 1.6 2004/09/08 17:15:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -58,6 +58,18 @@ as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16]);
 
 /* Index nodes have their port derived from ip. Use this to calculate it. */
 in_port_t as_ip2port (in_addr_t ip);
+
+/*****************************************************************************/
+
+/* encrypt/decrypt http download header b6st */
+void as_encrypt_b6st (as_uint8 *data, int len);
+
+void as_decrypt_b6st (as_uint8 *data, int len);
+
+/* encrypt/decrypt http download header b6mi */
+void as_encrypt_b6mi (as_uint8 *data, int len);
+
+void as_decrypt_b6mi (as_uint8 *data, int len);
 
 /*****************************************************************************/
 

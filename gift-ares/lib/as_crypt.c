@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.9 2004/09/02 19:53:01 mkern Exp $
+ * $Id: as_crypt.c,v 1.10 2004/09/08 17:15:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -216,6 +216,34 @@ unsigned char table_7[256] =
 
 /*****************************************************************************/
 
+static void munge (as_uint8 *data, int len, as_uint16 key,
+                   as_uint16 mul, as_uint16 add)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		data[i] = data[i] ^ (key >> 8);
+		key = (key + data[i]) * mul + add;
+	}
+}
+
+static void unmunge (as_uint8 *data, int len, as_uint16 key,
+                     as_uint16 mul, as_uint16 add)
+{
+	as_uint8 c;
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		c = data[i] ^ (key >> 8);
+		key = (key + data[i]) * mul + add;
+		data[i] = c;
+	}
+}
+
+/*****************************************************************************/
+
 static as_uint16 calc_packet_key (as_uint8 packet_seed, as_uint16 seed_16,
                                   as_uint8 seed_8)
 {
@@ -299,61 +327,33 @@ void as_cipher_encrypt (ASCipher *cipher, as_uint8 packet_seed,
                         as_uint8 *data, int len)
 {
 	as_uint16 key;
-	int i;
 	
 	key = calc_packet_key (packet_seed, cipher->session_seed_16,
 	                       cipher->session_seed_8);
 
-	for (i = 0; i < len; i++)
-	{
-		data[i] = data[i] ^ (key >> 8);
-		key = (key + data[i]) * 0xCE6D + 0x58BF;
-	}
+	munge (data, len, key, 0xCE6D, 0x58BF);
 }
 
 void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
                         as_uint8 *data, int len)
 {
 	as_uint16 key;
-	as_uint8 c;
-	int i;
 	
 	key = calc_packet_key (packet_seed, cipher->session_seed_16,
 	                       cipher->session_seed_8);
 
-	for (i = 0; i < len; i++)
-	{
-		c = data[i] ^ (key >> 8);
-		key = (key + data[i]) * 0xCE6D + 0x58BF;
-		data[i] = c;
-	}
+	unmunge (data, len, key, 0xCE6D, 0x58BF);
 }
 
 /* encrypt/decrypt a block of data with handshake key */
 void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
 {
-	as_uint16 key = cipher->handshake_key;
-	int i;
-
-	for (i = 0; i < len; i++)
-	{
-		data[i] = data[i] ^ (key >> 8);
-		key = (key + data[i]) * 0x5CA0 + 0x15EC;
-	}
+	munge (data, len, cipher->handshake_key, 0x5CA0, 0x15EC);
 }
 
 void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
 {
-	as_uint8 c;
-	as_uint16 key = cipher->handshake_key;
-	int i;
-
-	for (i = 0; i < len; i++)
-	{
-		c = data[i] ^ (key >> 8);
-		key = (key + data[i]) * 0x5CA0 + 0x15EC;
-		data[i] = c;
-	}
+	unmunge (data, len, cipher->handshake_key, 0x5CA0, 0x15EC);
 }
 
 /* Calculate 20 byte nonce used in handshake from supernode GUID and session
@@ -468,3 +468,26 @@ in_port_t as_ip2port (in_addr_t ip)
 
 /*****************************************************************************/
 
+/* encrypt/decrypt http download header b6st */
+void as_encrypt_b6st (as_uint8 *data, int len)
+{
+	munge (data, len, 0xB334, 0xCE6D, 0x58BF);
+}
+
+void as_decrypt_b6st (as_uint8 *data, int len)
+{
+	unmunge (data, len, 0xB334, 0xCE6D, 0x58BF);
+}
+
+/* encrypt/decrypt http download header b6mi */
+void as_encrypt_b6mi (as_uint8 *data, int len)
+{
+	munge (data, len, 0x0E21, 0xCB6F, 0x41BA);
+}
+
+void as_decrypt_b6mi (as_uint8 *data, int len)
+{
+	unmunge (data, len, 0x0E21, 0xCB6F, 0x41BA);
+}
+
+/*****************************************************************************/
