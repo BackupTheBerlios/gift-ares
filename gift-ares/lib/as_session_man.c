@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.15 2004/09/05 02:54:44 HEx Exp $
+ * $Id: as_session_man.c,v 1.16 2004/09/05 12:31:02 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -236,9 +236,14 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 		/* and add to connected list... */
 		man->connected = list_prepend (man->connected, session);
 
+		/* We may already have too many connections. Remove them if so. */
+		sessman_maintain (man);
+
+#if 0
 		AS_DBG_3 ("Session status: requested %d, connected: %d, connecting: %d",
 	              man->connections, list_length (man->connected), 
 	              list_length (man->connecting));
+#endif
 
 		return TRUE;
 	}

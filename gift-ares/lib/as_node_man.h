@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.h,v 1.2 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_node_man.h,v 1.3 2004/09/05 12:31:02 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -16,6 +16,12 @@ typedef struct
 {
 	List *nodes;         /* Sorted list of all nodes */
 	ASHashTable *index;  /* Index of list links keyed by ip */
+
+	time_t oldest_first_seen; /* The earliest we firts saw any node. Used in
+	                           * node weight calculation. */
+
+	time_t oldest_last_seen;  /* The earliest we last saw any node. Used in
+	                           * node weight calculation. */
 
 } ASNodeMan;
 

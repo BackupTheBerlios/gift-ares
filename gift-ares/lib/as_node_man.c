@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.8 2004/09/03 20:33:18 HEx Exp $
+ * $Id: as_node_man.c,v 1.9 2004/09/05 12:31:02 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,7 +19,7 @@ static as_bool node_useless (ASNode *node)
 }
 
 /* Calculate weight for a node. Used for sorting. */
-static float node_weight (ASNode *node)
+static float node_weight (ASNodeMan *man, ASNode *node)
 {
 	double weight;
 
@@ -27,7 +27,8 @@ static float node_weight (ASNode *node)
 	weight = + node->connects * 5.0
 	         + node->reports * 2.0
 			 + ((node->connects + 1) / (node->attempts + 1)) * 1.0
-			 + ((node->last_seen - node->first_seen) / (24*EHOURS)) * 10.0;
+			 + ((node->last_seen - node->first_seen) / (24*EHOURS)) * 10.0
+			 + ((node->last_seen - man->oldest_last_seen) / (10*EMINUTES)) * 1.0;
 
 	return (float) weight;
 }
@@ -42,7 +43,7 @@ static int node_connect_cmp (ASNode *a, ASNode *b)
 		return a->in_use ? 1 : -1;
 
 	/* Compare rest by weight */
-	return (a->weight == b->weight) ? 0 : ((a->weight > b->weight) ? 1 : -1);
+	return (a->weight == b->weight) ? 0 : ((a->weight < b->weight) ? 1 : -1);
 }
 
 /* Used to sort list for saving in node file. The first AS_MAX_NODEFILE_SIZE
@@ -51,7 +52,7 @@ static int node_connect_cmp (ASNode *a, ASNode *b)
 static int node_save_cmp (ASNode *a, ASNode *b)
 {
 	/* Compare by weight. Use doesn't matter for saving */
-	return (a->weight == b->weight) ? 0 : ((a->weight > b->weight) ? 1 : -1);
+	return (a->weight == b->weight) ? 0 : ((a->weight < b->weight) ? 1 : -1);
 }
 
 /*****************************************************************************/
@@ -71,6 +72,9 @@ ASNodeMan *as_nodeman_create ()
 		free (man);
 		return NULL;
 	}
+
+	man->oldest_first_seen = time (NULL);
+	man->oldest_last_seen = time (NULL);
 
 	return man;
 }
@@ -184,7 +188,7 @@ as_bool as_nodeman_update_connected (ASNodeMan *man, in_addr_t host)
 	node->last_seen = time (NULL);
 	node->connects++;
 	/* Recalculate node weight */
-	node->weight = node_weight (node);
+	node->weight = node_weight (man, node);
 
 	/* Reinsert at correct position */
 	man->nodes = list_insert_link_sorted (man->nodes,
@@ -220,7 +224,7 @@ as_bool as_nodeman_update_failed (ASNodeMan *man, in_addr_t host)
 	node = (ASNode *)link->data;
 	node->in_use = FALSE;
 	/* Recalculate node weight */
-	node->weight = node_weight (node);
+	node->weight = node_weight (man, node);
 
 	AS_HEAVY_DBG_5 ("Node failed: %s:%d, connects: %d, attempts: %d, weigth: %.02f",
 	                net_ip_str (node->host), node->port, node->connects,
@@ -271,7 +275,7 @@ as_bool as_nodeman_update_disconnected (ASNodeMan *man, in_addr_t host)
 	node->last_seen = time (NULL);
 	node->in_use = FALSE;
 	/* Recalculate node weight */
-	node->weight = node_weight (node);
+	node->weight = node_weight (man, node);
 
 	AS_HEAVY_DBG_5 ("Node disconnected: %s:%d, connects: %d, attempts: %d, weigth: %.02f",
 	                net_ip_str (node->host), node->port, node->connects,
@@ -347,7 +351,7 @@ void as_nodeman_update_reported (ASNodeMan *man, in_addr_t host,
 	node->reports++;
 	node->port = port;
 	/* Recalculate node weight */
-	node->weight = node_weight (node);
+	node->weight = node_weight (man, node);
 
 	/* (Re)insert at correct position */
 	man->nodes = list_insert_link_sorted (man->nodes,
@@ -419,8 +423,16 @@ as_bool as_nodeman_load (ASNodeMan *man, const char *file)
 		if (node->first_seen == 0 || node->last_seen == 0)
 			node->first_seen = node->last_seen = now - 72 * EHOURS;
 
+		/* maintain earliest first seen for weighting */
+		if (node->first_seen < man->oldest_first_seen)
+			man->oldest_first_seen = node->first_seen;
+
+		/* maintain earliest last seen for weighting */
+		if (node->last_seen < man->oldest_last_seen)
+			man->oldest_last_seen = node->last_seen;
+
 		/* Calculate node weight */
-		node->weight = node_weight (node);
+		node->weight = node_weight (man, node);
 		
 		/* Add node to list and index */
 		man->nodes = list_insert_sorted (man->nodes,
