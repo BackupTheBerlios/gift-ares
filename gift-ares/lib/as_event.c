@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.11 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_event.c,v 1.12 2004/09/05 03:23:25 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -206,7 +206,9 @@ static void libevent_cb (int fd, short event, void *arg)
 			udata = ev->udata;
 
 			/* event is presistent so remove it now */
+#if 0
 			input_remove (ev);
+#endif
 
 			/* raise callback with bad fd and no input_id */
 			cb (-1, 0, udata);
