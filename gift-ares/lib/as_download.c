@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.16 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_download.c,v 1.17 2004/09/19 18:33:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -620,6 +620,7 @@ const char *as_download_state_str (ASDownload *dl)
 {
 	switch (dl->state)
 	{
+	case DOWNLOAD_INVALID:   return "Invalid";
 	case DOWNLOAD_NEW:       return "New";
 	case DOWNLOAD_ACTIVE:    return "Active";
 	case DOWNLOAD_QUEUED:    return "Queued";
