@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.c,v 1.4 2004/09/06 17:27:55 HEx Exp $
+ * $Id: as_hash.c,v 1.5 2004/09/06 18:55:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -16,16 +16,25 @@ ASHash *as_hash_create (const as_uint8 *src, unsigned int src_len)
 {
 	ASHash *hash;
 
-	if (src_len != AS_HASH_SIZE)
-	{
-		assert (0); /* we currently only know about one hash (size) */
-		return NULL;
-	}
-
 	if (!(hash = malloc (sizeof (ASHash))))
 		return NULL;
 
-	memcpy (hash->data, src, src_len);
+	if (!src || src_len == 0)
+	{
+		memset (hash->data, 0, AS_HASH_SIZE);
+	}
+	else
+	{
+		if (src_len != AS_HASH_SIZE)
+		{
+			/* we currently only know about one hash (size) */
+			assert (src_len == AS_HASH_SIZE);
+			free (hash);
+			return NULL;
+		}
+
+		memcpy (hash->data, src, src_len);
+	}
 
 	return hash;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.13 2004/09/04 18:21:51 mkern Exp $
+ * $Id: as_packet.c,v 1.14 2004/09/06 18:55:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -149,19 +149,18 @@ as_bool as_packet_put_be32 (ASPacket *packet, as_uint32 data)
 
 as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip)
 {
-	if (!packet_resize (packet, packet->used + sizeof (in_addr_t)))
-		return FALSE;
-
 	/* in_addr_t is always big endian */
-	memcpy (packet->data + packet->used, &ip, sizeof (in_addr_t));
-	packet->used += sizeof (in_addr_t);
-
-	return TRUE;
+	return packet_write (packet, &ip, sizeof (in_addr_t));
 }
 
 as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len)
 {
-	return packet_write(packet, str, len);
+	return packet_write (packet, str, len);
+}
+
+as_bool as_packet_put_hash (ASPacket *packet, ASHash *hash)
+{
+	return packet_write (packet, hash->data, AS_HASH_SIZE);
 }
 
 /*****************************************************************************/
@@ -232,11 +231,8 @@ in_addr_t as_packet_get_ip (ASPacket *packet)
 {
 	in_addr_t ip;
 
-	if(as_packet_remaining(packet) < sizeof (in_addr_t))
+	if (!packet_read (packet, &ip, sizeof (in_addr_t)))
 		return 0;
-
-	memcpy (&ip, packet->read_ptr, sizeof (in_addr_t));
-	packet->read_ptr += sizeof (in_addr_t);
 
 	return ip;
 }
@@ -288,6 +284,22 @@ char *as_packet_get_strnul (ASPacket *packet)
 		return NULL;
 	
 	return as_packet_get_ustr (packet, len+1);
+}
+
+ASHash *as_packet_get_hash (ASPacket *packet)
+{
+	ASHash *hash;
+
+	if (!(hash = as_hash_create (NULL, 0)))
+		return NULL;
+
+	if (!packet_read (packet, hash->data, AS_HASH_SIZE))
+	{
+		as_hash_free (hash);
+		return NULL;
+	}
+
+	return hash;
 }
 
 /*****************************************************************************/

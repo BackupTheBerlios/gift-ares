@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.9 2004/09/02 20:22:19 HEx Exp $
+ * $Id: as_packet.h,v 1.10 2004/09/06 18:55:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,7 +21,7 @@ typedef struct
 	as_uint8 *read_ptr; /* pointer to current read position */
 	size_t used;        /* used number of bytes relative to data */
 	size_t allocated;   /* allocated number of bytes */
-}ASPacket;
+} ASPacket;
 
 typedef enum
 {
@@ -93,6 +93,9 @@ as_bool as_packet_put_ip (ASPacket *packet, in_addr_t ip);
 /* append string of length len to packet */
 as_bool as_packet_put_ustr (ASPacket *packet, as_uint8 *str, size_t len);
 
+/* append 20 byte sha1 hash */
+as_bool as_packet_put_hash (ASPacket *packet, ASHash *hash);
+
 /*****************************************************************************/
 
 /* return uint8 and move read_ptr */
@@ -122,6 +125,9 @@ int as_packet_strlen (ASPacket *packet, as_uint8 termbyte);
 
 /* wrapper around as_packet_strlen and as_packet_get_str */
 char *as_packet_get_strnul (ASPacket *packet);
+
+/* get 20 byte sha1 hash */
+ASHash *as_packet_get_hash (ASPacket *packet);
 
 /*****************************************************************************/
 

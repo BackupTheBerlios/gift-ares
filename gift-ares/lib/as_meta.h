@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.2 2004/09/06 13:12:28 mkern Exp $
+ * $Id: as_meta.h,v 1.3 2004/09/06 18:55:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,7 +20,8 @@ typedef enum
 	REALM_VIDEO    = 5,
 	REALM_DOCUMENT = 6,
 	REALM_IMAGE    = 7,
-	REALM_ANY      = 0x14
+
+	REALM_ANY      = 0xFFFF /* FIXME: find network representation */
 } ASRealm;
 
 typedef enum

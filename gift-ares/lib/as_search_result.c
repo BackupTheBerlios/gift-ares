@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.1 2004/09/06 13:21:12 mkern Exp $
+ * $Id: as_search_result.c,v 1.2 2004/09/06 18:55:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -110,7 +110,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 
 		r->realm = (ASRealm) as_packet_get_8 (packet);
 		r->filesize = as_packet_get_le32 (packet);
-		r->hash = as_packet_get_ustr (packet, 20);
+		r->hash = as_packet_get_hash (packet);
 		r->fileext = as_packet_get_strnul (packet);
 
 		/* parse meta data */
@@ -130,7 +130,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		r->unknown = as_packet_get_8 (packet);
 
 		r->source->username = as_packet_get_strnul (packet);
-		r->hash = as_packet_get_ustr (packet, 20);
+		r->hash = as_packet_get_hash (packet);
 		r->fileext = as_packet_get_strnul (packet);
 		break;
 
