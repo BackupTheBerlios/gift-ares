@@ -1,5 +1,5 @@
 /*
- * $Id: asp_hash.c,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ * $Id: asp_hash.c,v 1.2 2004/12/05 00:37:00 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -32,7 +32,7 @@ unsigned char *asp_giftcb_hash (const char *path, size_t *len)
 	}
 
 	/* Make copy of hash data for giFT. */
-	if (!(data = malloc (sizeof (AS_HASH_SIZE))))
+	if (!(data = malloc (AS_HASH_SIZE)))
 	{
 		as_hash_free (hash);
 		return NULL;
