@@ -1,6 +1,6 @@
-# $Id: Makefile.am,v 1.1 2004/11/28 21:10:02 mkern Exp $
+# $Id: Makefile.am,v 1.2 2005/03/06 20:33:51 mkern Exp $
 
-SUBDIRS = lib gift data m4
+SUBDIRS = lib gift data m4 win32
 
 EXTRA_DIST = \
 	Make.msvc \
