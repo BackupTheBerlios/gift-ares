@@ -2,30 +2,34 @@
 lib
 ---
 
+Essential stuff:
+
 - timeout searches (use periodic timer and start date for each search)
 
 - notify search manager of new sessions and resend searches until
   AS_SEARCH_SEND_COUNT is reached.
 
-- Calculate average bandwidth for sources and use faster ones during end game.
-  Generally sort connection list by b/w so faster ones are always used first.
-
 - Make file hashing non-blocking.
-
-- Create sources from X-Alt headers and add them
 
 - Check how Ares handles same file names for downloads and do the same.
   Reverse _ARESTRA_ file appendix.
 
-- Parse node list packet
+- Determine when to look for more sources for a download and start hash 
+  search. Make use of pushes resulting from said search.
 
-- Does persisten http actually work? It seems remote closes connection on
-  second request.
-  Update: Saw it working a few times. So is it a remote problem?
+
+Optimizations:
 
 - Optimize chunking by only allocating new chunk after the tcp connection to a
   new source has been established. Requires major rewrites, maybe we can do
   this once we use binary requests.
 
-- Determine when to look for more sources for a download and start hash 
-  search. Make use of pushes resulting from said search.
+- Create sources from X-Alt headers and add them
+
+- Calculate average bandwidth for sources and use faster ones during end game.
+  Generally sort connection list by b/w so faster ones are always used first.
+
+- Parse index node list packet
+
+- Figure out how to detected firewalled search results.
+  Update: There seems to be nothing in the search results.
