@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.13 2004/10/22 12:11:20 mkern Exp $
+ * $Id: as_share.c,v 1.14 2004/10/24 03:45:24 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,7 +27,8 @@ ASShare *as_share_create (char *path, ASHash *hash, ASMeta *meta,
 	share->ext   = strrchr (filename, '.');
 	share->size  = size;
 	share->realm = realm;
-	
+	share->fake  = FALSE;
+
 	if (hash)
 	{
 		share->hash = hash;
@@ -185,13 +186,26 @@ ASPacket *as_share_packet (ASShare *share)
 	tokens = share_add_tokens (share->meta);
 
 	if (!tokens)
+	{
+		as_packet_free (p);
 		return NULL;
+	}
 	
 	if (!tokens->used)
 	{
-		as_packet_free (p);
-		as_packet_free (tokens);
-		return NULL;
+		assert (!share->fake);
+
+		as_meta_set_fake (share->meta);
+		share->fake = TRUE;
+		tokens = share_add_tokens (share->meta);
+		AS_DBG_1 ("faked metadata for '%s'", share->path);
+
+		if (!tokens->used)
+		{
+			as_packet_free (p);
+			as_packet_free (tokens);
+			return NULL;
+		}
 	}
 
 	as_packet_put_le16 (p, (as_uint16) tokens->used);
@@ -204,7 +218,7 @@ ASPacket *as_share_packet (ASShare *share)
 	as_packet_put_8 (p, (as_uint8) share->realm); /* realm */
 	as_packet_put_le32 (p, share->size); /* filesize */
 	as_packet_put_hash (p, share->hash);
-	as_packet_put_strnul (p, share->ext);
+	as_packet_put_strnul (p, share->ext ? share->ext : "");
 
 #if 0
 	/* appears not to work */

@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.8 2004/10/23 09:23:50 mkern Exp $
+ * $Id: as_meta.h,v 1.9 2004/10/24 03:45:24 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -123,6 +123,11 @@ const ASTagMapping *as_meta_tag_type (ASTagType type);
 
 /* Returns realm based on file extension exactly as Ares does. */
 ASRealm as_meta_realm_from_filename (const char *path);
+
+/*****************************************************************************/
+
+/* invents some metadata */
+as_bool as_meta_set_fake (ASMeta *meta);
 
 /*****************************************************************************/
 

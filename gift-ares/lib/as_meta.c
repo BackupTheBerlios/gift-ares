@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.12 2004/10/23 09:23:50 mkern Exp $
+ * $Id: as_meta.c,v 1.13 2004/10/24 03:45:24 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -414,3 +414,32 @@ ASRealm as_meta_realm_from_filename (const char *path)
 }
 
 /*****************************************************************************/
+
+/* Ares only tokenizes (and thus searches) metadata, not
+   filenames. This brain-dead decision is responsible for the
+   following ugly hack. */
+as_bool as_meta_set_fake (ASMeta *meta)
+{
+	char *filename = strdup (as_meta_get_tag (meta, "filename")), *ext;
+	
+	assert (filename);
+
+	ext = strrchr (filename, '.');
+
+	if (ext)
+		*ext = '\0';
+
+	/* Ares painstakingly splits the filename up into
+	 * hyphen-separated parts, but I think this code is
+	 * sufficiently ugly and broken as it is, so we don't
+	 * bother. */
+	as_meta_add_tag (meta, "title", filename);
+
+	/* Don't submit filename with fake shares - this may have been
+	 * intended as an optimization, but is useful for
+	 * distinguishing fake results from real ones, so we emulate
+	 * this behaviour. */
+	as_meta_remove_tag (meta, "filename");
+
+	return TRUE;
+}
