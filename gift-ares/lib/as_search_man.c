@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.5 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_search_man.c,v 1.6 2004/09/19 19:34:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -78,9 +78,9 @@ as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
 		/* hash search, look search up by hash */
 		if (!(search = as_searchman_lookup_hash (man, result->hash)))
 		{
-			AS_DBG_3 ("No search found for result with hash %s from %s:%d",
-			          as_hash_str (result->hash), net_ip_str (session->host),
-			          session->port);
+			AS_HEAVY_DBG_3 ("No search found for result with hash %s from %s:%d",
+			                as_hash_str (result->hash),
+			                net_ip_str (session->host), session->port);
 			as_result_free (result);
 			return FALSE;
 		}
@@ -90,9 +90,9 @@ as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
 		/* normal search, look search up by id */
 		if (!(search = as_searchman_lookup (man, result->search_id)))
 		{
-			AS_DBG_3 ("No search found for result with id %d from %s:%d",
-			          result->search_id, net_ip_str (session->host),
-			          session->port);
+			AS_HEAVY_DBG_3 ("No search found for result with id %d from %s:%d",
+			                result->search_id, net_ip_str (session->host),
+			                session->port);
 			as_result_free (result);
 			return FALSE;
 		}
