@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.11 2004/10/17 18:27:41 mkern Exp $
+ * $Id: as_meta.c,v 1.12 2004/10/23 09:23:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,6 +25,33 @@ static const ASTagMapping tag_types[] = {
 };
 
 #define NUM_TYPES (sizeof(tag_types) / sizeof(ASTagMapping))
+
+/*****************************************************************************/
+
+static const struct file_realms_t
+{
+	ASRealm realm;
+	const char *extensions;
+}
+file_realms[] = 
+{
+	{ REALM_AUDIO,    ".mp3.vqf.wma.wav.voc.mod.ra.ram.mid.au.ogg.mp2.mpc"
+	                  ".flac.shn.ape" },
+
+	{ REALM_VIDEO,    ".avi.mpeg.asf.mov.fli.flc.lsf.wm.qt.viv.vivo.mpg.mpe"
+	                  ".mpa.rm.wmv.divx.m1v.mkv.ogm" },
+
+	{ REALM_IMAGE,    ".gif.jpg.jpeg.bmp.psd.psp.tga.tif.tiff.png" },
+
+	{ REALM_DOCUMENT, ".doc.rtf.pdf.ppt.wri.txt.hlp.lit.book.pps.ps" },
+
+	{ REALM_SOFTWARE, ".exe.msi.vbs.pif.bat.com.scr" },
+
+	{ REALM_ARCHIVE,  ".zip.tar.gz.rar.cab.sit.msi.ace.hqx.iso.nrg.rmp.rv"
+	                  ".cif.img.rip.cue.bin.fla.swf.dwg.dxf.wsz.nes.md5" }
+};
+
+#define NUM_REALMS (sizeof(file_realms) / sizeof(struct file_realms_t))
 
 /*****************************************************************************/
 
@@ -356,6 +383,34 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 	}
 
 	return TRUE;
+}
+
+/*****************************************************************************/
+
+/* Returns realm based on file extension exactly as Ares does. */
+ASRealm as_meta_realm_from_filename (const char *path)
+{
+	char *ext, *p;
+	int i, ext_len;
+
+	if (!path)
+		return REALM_UNKNOWN;
+
+	if (!(ext = strrchr (path, '.')))
+		return REALM_UNKNOWN;
+
+	ext_len = strlen (ext);
+
+	for (i = 0; i < NUM_REALMS; i++)
+	{
+		if ((p = strstr (file_realms[i].extensions, ext)) && 
+		    (p[ext_len] == '.' || p[ext_len] == '\0'))
+		{
+			return file_realms[i].realm;
+		}	
+	}
+	
+	return REALM_UNKNOWN;
 }
 
 /*****************************************************************************/

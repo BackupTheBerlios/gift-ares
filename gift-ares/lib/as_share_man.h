@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.h,v 1.3 2004/10/22 12:11:20 mkern Exp $
+ * $Id: as_share_man.h,v 1.4 2004/10/23 09:23:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,6 +45,11 @@ ASShare *as_shareman_lookup (ASShareMan *man, ASHash *hash);
 
 /* Submit all shares to specified supernode. */
 as_bool as_shareman_submit (ASShareMan *man, ASSession *session);
+
+/* Submit list of shares to all connected supernodes and add shares to
+ * manager. Takes ownership of list values (shares).
+ */
+as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares);
 
 /*****************************************************************************/
 

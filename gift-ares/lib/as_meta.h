@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.7 2004/10/17 17:43:03 mkern Exp $
+ * $Id: as_meta.h,v 1.8 2004/10/23 09:23:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,6 +12,32 @@
 
 /*****************************************************************************/
 
+/* Note that there is no realm 'unknown'. Ares does not share files which
+ * don't fall into the below categories. The file extension used by
+ * Ares Lite 1.8.1.2944 are:
+ *
+ * Archive:  .zip .tar .gz .rar .cab .sit .msi .ace .hqx .iso .nrg .rmp .rv
+ *           .cif .img .rip .cue .bin .fla .swf .dwg .dxf .wsz .nes .md5
+ *
+ * Audio:    .mp3 .vqf .wma .wav .voc .mod .ra .ram .mid .au .ogg .mp2 .mpc
+ *           .flac .shn .ape
+ *
+ * Software: .exe .msi .vbs .pif .bat .com .scr
+ *
+ * Video:    .avi .mpeg .asf .mov .fli .flc .lsf .wm .qt .viv .vivo .mpg
+ *           .mpe .mpa .rm .wmv .divx .m1v .mkv .ogm
+ *
+ * Document: .doc .rtf .pdf .ppt .wri .txt .hlp .lit .book .pps .ps
+ *
+ * Image:    .gif .jpg .jpeg .bmp .psd .psp .tga .tif .tiff .png
+ *
+ * Due to a bug in Ares files with truncated extensions of the above are also
+ * categorized under the same realm given that the total extension length
+ * inluding the leading dot is at least 3 chars. E.g. ".ex" will be
+ * categorized as software an ".mp" will be categorized as audio sonce ".mp3"
+ * is checked before ".mpeg".
+ */
+
 typedef enum
 {
 	REALM_ARCHIVE  = 0,
@@ -21,7 +47,7 @@ typedef enum
 	REALM_DOCUMENT = 6,
 	REALM_IMAGE    = 7,
 
-	REALM_ANY      = 0xFFFF /* FIXME: find network representation */
+	REALM_UNKNOWN  = 0xFFFF /* not used on the ares network */
 } ASRealm;
 
 typedef enum
@@ -95,9 +121,8 @@ const ASTagMapping *as_meta_tag_type (ASTagType type);
 
 /*****************************************************************************/
 
-#if 0
-ASMediaType as_meta_mediatype_from_mime (const char *mime);
-#endif
+/* Returns realm based on file extension exactly as Ares does. */
+ASRealm as_meta_realm_from_filename (const char *path);
 
 /*****************************************************************************/
 

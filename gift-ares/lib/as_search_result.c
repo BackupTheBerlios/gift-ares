@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.7 2004/09/24 22:27:20 mkern Exp $
+ * $Id: as_search_result.c,v 1.8 2004/10/23 09:23:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -32,7 +32,7 @@ ASResult *as_result_create ()
 	}
 
 	result->meta     = NULL;
-	result->realm    = REALM_ANY;
+	result->realm    = REALM_UNKNOWN;
 	result->hash     = NULL;
 	result->filesize = 0;
 	result->filename = NULL;

@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.8 2004/10/22 12:11:20 mkern Exp $
+ * $Id: as_share_man.c,v 1.9 2004/10/23 09:23:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -185,15 +185,53 @@ static int share_send (ASShare *share, Conglobulator *glob)
 	return conglobulator_assimilate (glob, p);
 }
 
-/* Submit all shares to specified supernode. */
-as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
+static as_bool submit_share_list (ASSession *session, List *shares)
 {
 	Conglobulator glob = { session, NULL };
 
 	/* dammit, WTF does this return void?! */
-	list_foreach (man->shares, (ListForeachFunc)share_send, &glob);
+	list_foreach (shares, (ListForeachFunc)share_send, &glob);
 
 	conglobulator_flush (&glob);
 		
 	return TRUE;
 }
+
+/* Submit all shares to specified supernode. */
+as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
+{
+	return submit_share_list (session, man->shares);
+}
+
+/* Submit list of shares to all connected supernodes and add shares to
+ * manager. Takes ownership of list values (shares).
+ */
+as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares)
+{
+	int sessions, ok = 0, total = 0;
+	List *link;
+
+	/* Add shares to manager. */
+	for (link = shares; link; link = link->next)
+	{
+		/* FIXME: If this fails the share will still be added below.
+		 * Cannot easily fix this without modifying passed list.
+		 */
+		if (as_shareman_add (man, link->data))
+			ok++;
+		total++;
+	}
+
+	/* Sent shares to all connected sesssions. */
+	sessions = as_sessman_foreach (AS->sessman, 
+	                               (ASSessionForeachFunc)submit_share_list,
+	                               shares);
+
+	AS_DBG_3 ("Submitted %d of %d shares to %d supernodes.", ok, total,
+	          sessions);
+		
+	return TRUE;
+}
+
+/***********************************************************************/
+
