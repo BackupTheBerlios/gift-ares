@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.8 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_packet.h,v 1.9 2004/09/02 20:22:19 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -28,7 +28,8 @@ typedef enum
 	PACKET_SYN       = 0x5A,  /* first packet sent by connecting party */
 	PACKET_ACK       = 0x33,  /* first packet sent back by supernode */
 	PACKET_HANDSHAKE = 0x00,  /* info about our node */
-	PACKET_STATS     = 0x07,  /* network stats */
+	PACKET_STATS     = 0x01,  /* network stats 1 */
+	PACKET_STATS2    = 0x07,  /* network stats 2 */
 	PACKET_LOCALIP   = 0x25,  /* local (external) IP */
 	PACKET_NICKNAME  = 0x05,  /* your nickname */
 	PACKET_SHARE     = 0x32,  /* used to send shares to supernode, compressed! */

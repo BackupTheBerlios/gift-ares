@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.13 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_session_man.c,v 1.14 2004/09/02 20:22:20 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -260,6 +260,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 	}
 
 	case PACKET_STATS:
+	case PACKET_STATS2:
 	{
 		unsigned int users, files, size;
 		users = as_packet_get_le32 (packet);
@@ -274,6 +275,15 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		parse_search_result (packet);
 		break;
 
+	case PACKET_NICKNAME:
+	{
+		unsigned char *nick;
+
+		nick = as_packet_get_strnul (packet);
+		AS_DBG_1 ("Got nickname: '%s'", nick);
+		free (nick);
+		break;
+	}
 	default:
 		AS_WARN_1 ("Got unknown packet 0x%02x:", type);
 		as_packet_dump (packet);
