@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.4 2004/09/09 15:10:33 HEx Exp $
+ * $Id: as_meta.c,v 1.5 2004/09/09 16:15:15 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -204,7 +204,7 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 			case REALM_SOFTWARE:
 			{
 				as_uint8 c = as_packet_get_8 (p);
-				if (c != 2)
+				if (c != 2 && c != 6)
 				{
 					AS_DBG_2 ("REALM_SOFTWARE: c=%d, offset %x",
 					          c, p->read_ptr - p->data);
