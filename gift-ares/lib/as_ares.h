@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.55 2004/12/04 11:54:15 mkern Exp $
+ * $Id: as_ares.h,v 1.56 2004/12/04 16:38:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -223,7 +223,7 @@ extern Protocol *gift_proto;
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)
 
 /* Timeout for push after request was sent */
-#define AS_PUSH_TIMEOUT (20 * SECONDS)
+#define AS_PUSH_TIMEOUT (30 * SECONDS)
 
 /* Uncomment to compress arbitrary sufficiently-large packets, just
    because we can (it's unlikely to improve efficiency).  This might
