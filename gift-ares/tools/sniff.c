@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.2 2004/09/01 14:22:22 HEx Exp $
+ * $Id: sniff.c,v 1.3 2004/09/06 15:06:20 HEx Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -383,15 +383,13 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				if (!memcmp(data, "GET ",4) ||
 				     !memcmp(data, "HEAD ",5)) {
 					/* ignore HTTP stuff on port 80 */
-#if 0
 					if (tcp->addr.dest==80)
 						c->state=STATE_UNSUPPORTED;
 					else
-#endif
 						c->state=STATE_HTTP;
 					break;
 				}
-				if (!memcmp(data, "GIVE ",5)) {
+				if (!memcmp(data, "PUSH ",5)) {
 					c->state=STATE_PUSH;
 					break;
 				}
@@ -418,7 +416,7 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 						read=plen+3;
 						c->state++;
 						fprintf(stderr, "%s got 0x33, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
-							buf, len, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
+							buf, plen, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
 						print_bin_data (data+3, plen);
 					} else {
 						c->state=STATE_UNSUPPORTED;
