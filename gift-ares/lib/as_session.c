@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.21 2004/09/13 19:50:53 HEx Exp $
+ * $Id: as_session.c,v 1.22 2004/09/13 20:25:21 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -548,7 +548,7 @@ static as_bool session_ping (ASSession *session)
 	as_packet_free (p);
 
 	assert (!session->pong_timer);
-	session->pong_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
+	session->pong_timer = timer_add (AS_SESSION_PING_TIMEOUT,
 	                                 (TimerCallback)session_ping_timeout,
 	                                 session);
 
@@ -560,7 +560,8 @@ static as_bool session_ping_timeout (ASSession *session)
 {
 	AS_ERR_2 ("Ping timeout for %s:%d",
 	          net_ip_str (session->host), session->port);
-	session_error (session);
+
+	session_error (session); /* callback may free us */
 
 	return FALSE;
 }
