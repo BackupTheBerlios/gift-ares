@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.6 2004/09/18 19:26:38 HEx Exp $
+ * $Id: as_share_man.c,v 1.7 2004/09/18 19:28:00 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -98,11 +98,16 @@ typedef struct
 
 static as_bool conglobulator_flush (Conglobulator *glob)
 {
-	int ret = as_session_send (glob->session, PACKET_COMPRESSED,
-				   glob->data, PACKET_COMPRESS);
+	int ret = TRUE;
 
-	as_packet_free (glob->data);
-	glob->data = NULL;
+	if (glob->data)
+	{
+		ret = as_session_send (glob->session, PACKET_COMPRESSED,
+				       glob->data, PACKET_COMPRESS);
+
+		as_packet_free (glob->data);
+		glob->data = NULL;
+	}
 
 	return ret;
 }
@@ -142,8 +147,7 @@ as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 	/* dammit, WTF does this return void?! */
 	list_foreach (man->shares, (ListForeachFunc)share_send, &glob);
 
-	if (glob.data)
-		conglobulator_flush (&glob);
+	conglobulator_flush (&glob);
 		
 	return TRUE;
 }
