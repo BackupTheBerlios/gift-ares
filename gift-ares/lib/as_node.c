@@ -1,5 +1,5 @@
 /*
- * $Id: as_node.c,v 1.1 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_node.c,v 1.2 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,6 +31,8 @@ ASNode *as_node_create (in_addr_t host, in_port_t port)
 	node->reports  = 0;
 
 	node->in_use = FALSE;
+
+	node->weight = 0.0;
 
 	return node;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.2 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_session_man.c,v 1.3 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,15 +92,15 @@ static as_bool sessman_maintain (ASSessMan *man)
 	if (man->connections == 0)
 	{
 		/* disconnect everything */
-		list_foreach_remove (man->connecting,
+		man->connecting = list_foreach_remove (man->connecting,
 		                     (ListForeachFunc)sessman_disconnect_itr, man);
-		list_foreach_remove (man->connected,
+		man->connected = list_foreach_remove (man->connected,
 		                     (ListForeachFunc)sessman_disconnect_itr, man);
 	}
 	else if (man->connections < connected)
 	{
 		/* We have more connections than needed. First stop all discovery. */
-		list_foreach_remove (man->connecting,
+		man->connecting = list_foreach_remove (man->connecting,
 		                     (ListForeachFunc)sessman_disconnect_itr, man);
 
 		/* Now remove superfluous connections.
@@ -148,6 +148,11 @@ static as_bool sessman_maintain (ASSessMan *man)
 
 			session->udata = man;
 
+#if 1
+			AS_HEAVY_DBG_3 ("SessMan: Trying node %s:%d, weight: %.02f",
+			                net_ip_str (node->host), node->port, node->weight);
+#endif
+
 			/* Connect to node */
 			if (!(as_session_connect (session, node->host, node->port)))
 			{
@@ -157,10 +162,14 @@ static as_bool sessman_maintain (ASSessMan *man)
 			}
 
 			/* Add session to connecting list */
-			list_prepend (man->connecting, session);
+			man->connecting = list_prepend (man->connecting, session);
 			len--;
 		}
 	}
+
+	AS_HEAVY_DBG_3 ("session_maintain: requested: %d, connected: %d, connecting: %d",
+	                man->connections, list_length (man->connected), 
+	                list_length (man->connecting));
 
 	return TRUE;
 }

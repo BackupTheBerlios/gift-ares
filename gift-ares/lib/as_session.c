@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.5 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_session.c,v 1.6 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,6 +22,8 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 
 static as_bool session_set_state (ASSession *session, ASSessionState state,
                                   as_bool raise_callback);
+
+static as_bool session_error (ASSession *session);
 
 /*****************************************************************************/
 
@@ -85,7 +87,10 @@ as_bool as_session_connect (ASSession *session, in_addr_t host,
 	assert (session);
 
 	if (!(session->c = tcp_open (host, port, FALSE)))
+	{
+		AS_ERR_2 ("tcp_open failed for %s:%d", net_ip_str (host), port);
 		return FALSE;
+	}
 
 	/* wait for connect result */
 	session->input = input_add (session->c->fd, session, INPUT_WRITE,
@@ -127,8 +132,7 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	{
 		AS_HEAVY_DBG_2 ("Connect to %s:%d failed",
 		                net_ip_str (session->c->host), session->c->port);
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return;
 	}
 
@@ -139,8 +143,7 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	if (!(session->packet = as_packet_create ()))
 	{
 		AS_ERR ("Insufficient memory");
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return;
 	}
 
@@ -148,8 +151,7 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	if (!(packet = as_packet_create ()))
 	{
 		AS_ERR ("Insufficient memory");
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return;
 	}
 	
@@ -162,12 +164,12 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	if (!as_packet_send (packet, session->c))
 	{
 		AS_ERR ("Send failed");
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return;
 	}
 
-	session_set_state (session, SESSION_HANDSHAKING, TRUE);
+	if (!session_set_state (session, SESSION_HANDSHAKING, TRUE))
+		return; /* session was freed */
 
 	/* wait for ack packet */
 	session->input = input_add (session->c->fd, session, INPUT_READ, 
@@ -187,8 +189,7 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 	{
 		AS_HEAVY_DBG_2 ("Connection with %s:%d closed remotely",
 		                net_ip_str (session->c->host), session->c->port);
-		session_set_state (session, SESSION_DISCONNECTED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return;
 	}
 
@@ -196,8 +197,7 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 	{
 		AS_WARN_2 ("Recv failed from %s:%d", net_ip_str (session->c->host),
 		           session->c->port);
-		session_set_state (session, SESSION_DISCONNECTED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return;
 	}
 
@@ -218,8 +218,7 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 		if (!(packet = as_packet_create_copy (session->packet, packet_len)))
 		{
 			AS_ERR ("Insufficient memory");
-			session_set_state (session, SESSION_DISCONNECTED, TRUE);
-			session_cleanup (session);
+			session_error (session);
 			return;
 		}
 
@@ -252,8 +251,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 		{
 			AS_ERR_2 ("Handshake with %s:%d failed. Got something else than ACK.",
 			          net_ip_str (session->c->host), session->c->port);
-			session_set_state (session, SESSION_DISCONNECTED, TRUE);
-			session_cleanup (session);
+			session_error (session);
 			return FALSE;
 		}
 
@@ -277,8 +275,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 				AS_ERR_3 ("Packet decrypt failed for type 0x%02X from %s:%d",
 				          (int)type, net_ip_str (session->c->host),
 				          session->c->port);
-				session_set_state (session, SESSION_DISCONNECTED, TRUE);
-				session_cleanup (session);
+				session_error (session);
 				return FALSE;
 			}
 		}
@@ -310,8 +307,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	{
 		AS_ERR_2 ("Handshake with %s:%d failed. ACK packet too short.",
 		          net_ip_str (session->c->host), session->c->port);
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return FALSE;
 	}
 
@@ -319,8 +315,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	if (!(session->cipher = as_cipher_create (session->c->port)))
 	{
 		AS_ERR ("Insufficient memory");
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return FALSE;
 	}
 
@@ -343,8 +338,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 		 */
 		AS_ERR_2 ("FIXME: Handshake with %s:%d failed. kind > 0x15E.",
 		          net_ip_str (session->c->host), session->c->port);
-		session_set_state (session, SESSION_FAILED, TRUE);
-		session_cleanup (session);
+		session_error (session);
 		return FALSE;
 	}
 
@@ -378,6 +372,22 @@ static as_bool session_set_state (ASSession *session, ASSessionState state,
 		return session->state_cb (session, session->state);
 
 	return TRUE;
+}
+
+static as_bool session_error (ASSession *session)
+{
+	as_bool ret;
+
+	if (session->state == SESSION_HANDSHAKING ||
+	    session->state == SESSION_CONNECTING)
+		ret = session_set_state (session, SESSION_FAILED, TRUE);
+	else
+		ret = session_set_state (session, SESSION_DISCONNECTED, TRUE);
+
+	if (ret)
+		session_cleanup (session);
+
+	return ret;
 }
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.10 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_ares.h,v 1.11 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -84,7 +84,7 @@ typedef int            as_bool;
 #define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
 
 /* Number of simultaneous connection attemps when connecting to supernodes */
-#define AS_SESSION_PARALLEL_ATTEMPTS (20)
+#define AS_SESSION_PARALLEL_ATTEMPTS (3)
 
 /* Maximum number of nodes saved in node file */
 #define AS_MAX_NODEFILE_SIZE (400)

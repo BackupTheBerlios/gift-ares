@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.h,v 1.1 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_node_man.h,v 1.2 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,9 @@ void as_nodeman_free (ASNodeMan *man);
 
 /* Free all nodes. */
 void as_nodeman_empty (ASNodeMan *man);
+
+/* Print all nodes to log. */
+void as_nodeman_dump (ASNodeMan *man);
 
 /*****************************************************************************/
 

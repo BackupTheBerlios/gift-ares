@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.1 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_node_man.c,v 1.2 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -102,6 +102,22 @@ void as_nodeman_empty (ASNodeMan *man)
 	list_foreach_remove (man->nodes, (ListForeachFunc)node_free_itr, NULL);
 }
 
+/* Print all nodes to log. */
+void as_nodeman_dump (ASNodeMan *man)
+{
+	List *link;
+	ASNode *node;
+
+	AS_DBG ("Dumping node cache:");
+	for (link = man->nodes; link; link = link->next)
+	{
+		node = (ASNode *)link->data;
+		AS_DBG_5 ("%s:%d, reports: %u, attempts: %u, connects: %u",
+		          net_ip_str (node->host), node->port,
+		          node->reports, node->attempts, node->connects);
+	}
+}
+
 /*****************************************************************************/
 
 /* Get next best node for connecting. Sets node->last_attempt to now and
@@ -119,7 +135,7 @@ ASNode *as_nodeman_next (ASNodeMan *man)
 	/* Find first unused node which hasn't been tried recently. */
 	for (link = man->nodes; link; link = link->next)
 	{
-		node = (ASNode *) link->data;
+		node = (ASNode *)link->data;
 
 		if (!node->in_use && (now - node->last_attempt) > 15*EMINUTES)
 			break;
@@ -132,7 +148,7 @@ ASNode *as_nodeman_next (ASNodeMan *man)
 	man->nodes = list_unlink_link (man->nodes, link);
 
 	/* Update data */
-	node = (ASNode *) link;
+	node = (ASNode *)link->data;
 
 	node->last_attempt = time (NULL);
 	node->attempts++;
@@ -155,13 +171,16 @@ as_bool as_nodeman_update_connected (ASNodeMan *man, in_addr_t host)
 
 	/* Find node */
 	if (!(link = as_hashtable_lookup_int (man->index, (as_uint32)host)))
+	{
+		AS_ERR ("NodeMan: Tried to update nonexistent node.");
 		return FALSE;
+	}
 
 	/* Unlink from current position */
 	man->nodes = list_unlink_link (man->nodes, link);
 
 	/* Update node */
-	node = (ASNode *)link;
+	node = (ASNode *)link->data;
 	node->last_seen = time (NULL);
 	node->connects++;
 	/* Recalculate node weight */
@@ -189,13 +208,16 @@ as_bool as_nodeman_update_failed (ASNodeMan *man, in_addr_t host)
 
 	/* Find node */
 	if (!(link = as_hashtable_lookup_int (man->index, (as_uint32)host)))
+	{
+		AS_ERR ("NodeMan: Tried to update nonexistent node.");
 		return FALSE;
+	}
 
 	/* Unlink from current position */
 	man->nodes = list_unlink_link (man->nodes, link);
 
 	/* Update node */
-	node = (ASNode *)link;
+	node = (ASNode *)link->data;
 	node->in_use = FALSE;
 	/* Recalculate node weight */
 	node->weight = node_weight (node);
@@ -236,13 +258,16 @@ as_bool as_nodeman_update_disconnected (ASNodeMan *man, in_addr_t host)
 
 	/* Find node */
 	if (!(link = as_hashtable_lookup_int (man->index, (as_uint32)host)))
+	{
+		AS_ERR ("NodeMan: Tried to update nonexistent node.");
 		return FALSE;
+	}
 
 	/* Unlink from current position */
 	man->nodes = list_unlink_link (man->nodes, link);
 
 	/* Update node */
-	node = (ASNode *)link;
+	node = (ASNode *)link->data;
 	node->last_seen = time (NULL);
 	node->in_use = FALSE;
 	/* Recalculate node weight */
@@ -288,7 +313,7 @@ void as_nodeman_update_reported (ASNodeMan *man, in_addr_t host,
 	{
 		/* Unlink from current position */
 		man->nodes = list_unlink_link (man->nodes, link);	
-		node = (ASNode *)link;
+		node = (ASNode *)link->data;
 	}
 	else
 	{
@@ -374,6 +399,11 @@ as_bool as_nodeman_load (ASNodeMan *man, const char *file)
 
 		if (host == 0 || host == INADDR_NONE)
 			continue;
+
+#if 0
+		AS_HEAVY_DBG_5 ("Loaded node: %s %u %d %d %d",
+		                net_ip_str (host), port, reports, attempts, connects);
+#endif
 
 		if (!(node = as_node_create (host, (in_port_t)port)))
 			continue;

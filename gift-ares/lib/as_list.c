@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.4 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_list.c,v 1.5 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,6 +19,8 @@ static List *insert_new_link (List *prev, List *next, void *data)
 	new_link = malloc (sizeof (List));
 	assert (new_link != NULL);
 
+	new_link->prev = NULL;
+	new_link->next= NULL;
 	new_link->data = data;
 
 	if (prev == NULL && next == NULL)
@@ -44,7 +46,8 @@ static List *insert_new_link (List *prev, List *next, void *data)
 	}
 	else
 	{
-		assert (prev->next == next->prev);
+		assert (prev->next == next);
+		assert (next->prev == prev);
 
 		new_link->prev = prev;
 		new_link->next = next;
@@ -459,7 +462,8 @@ static List *insert_link (List *prev, List *next, List *new_link)
 	}
 	else
 	{
-		assert (prev->next == next->prev);
+		assert (prev->next == next);
+		assert (next->prev == prev);
 
 		new_link->prev = prev;
 		new_link->next = next;
@@ -481,7 +485,7 @@ List *list_insert_link_sorted (List *head, CompareFunc func, List *new_link)
 	assert (new_link);
 
 	if (!head)
-		return insert_link (NULL, head, new_link);
+		return insert_link (NULL, NULL, new_link);
 
 	if (func (head->data, new_link->data) >= 0)
 		return insert_link (NULL, head, new_link);

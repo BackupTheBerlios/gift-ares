@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.3 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_session.h,v 1.4 2004/08/31 22:05:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,7 +14,7 @@
 
 typedef enum
 {
-	SESSION_DISCONNECTED, /* tcp disconnected*/
+	SESSION_DISCONNECTED, /* tcp disconnected */
 	SESSION_CONNECTING,   /* tcp connecting */
 	SESSION_FAILED,       /* tcp connect failed */
 	SESSION_HANDSHAKING,  /* tcp connected, working out crypto */
