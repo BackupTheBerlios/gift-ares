@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.13 2004/10/24 03:45:24 HEx Exp $
+ * $Id: as_meta.c,v 1.14 2004/11/05 01:43:40 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -335,7 +335,7 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 				/* duration? */
 				i = as_packet_get_le32 (p);
 				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "video-duration?", buf);
+				as_meta_add_tag (meta, "duration", buf);
 				break;
 				
 			case REALM_IMAGE:
