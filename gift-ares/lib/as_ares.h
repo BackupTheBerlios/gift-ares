@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.7 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_ares.h,v 1.8 2004/08/26 22:50:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,14 +20,15 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
 #include <time.h>
 #include <assert.h>
 
-#ifdef WIN32
+#ifndef WIN32
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
+# include <unistd.h>
+#else /* WIN32 */
 # include <winsock.h>
 #endif /* WIN32 */
 
@@ -62,6 +63,8 @@ typedef int            as_bool;
 /*****************************************************************************/
 
 #include "as_log.h"
+#include "as_list.h"
+#include "as_hashtable.h"
 #include "as_event.h"
 #include "as_crypt.h"
 #include "as_tcp.h"

@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.3 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_packet.h,v 1.4 2004/08/26 22:50:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -103,10 +103,10 @@ ASPacket *as_packet_slurp (void);
 
 /*****************************************************************************/
 
-// encrypt entire packet using cipher
+/* encrypt entire packet using cipher */
 void as_packet_encrypt(ASPacket *packet, ASCipher *cipher);
 
-// decrypt entire packet using cipher
+/* decrypt entire packet using cipher */
 void as_packet_decrypt(ASPacket *packet, ASCipher *cipher);
 
 /*****************************************************************************/

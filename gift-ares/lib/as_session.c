@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.2 2004/08/26 16:20:37 HEx Exp $
+ * $Id: as_session.c,v 1.3 2004/08/26 22:50:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -99,7 +99,7 @@ static void session_handshake (int fd, input_id input, ASSession *sess)
 		return;
 
 	printf ("sent handshake\n");
-	sess->timer = input_add (sess->c->fd, sess, INPUT_WRITE, 
+	sess->timer = input_add (sess->c->fd, sess, INPUT_READ, 
 				 (InputCallback)session_get_packet, 30*SECONDS);
 	
 }

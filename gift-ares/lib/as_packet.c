@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.6 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_packet.c,v 1.7 2004/08/26 22:50:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -292,7 +292,6 @@ as_bool as_packet_send (ASPacket *packet, TCPC *tcpcon)
 	if (sent < packet->used)
 	{
 		/* FIXME: short send */
-#warning "FIXME: short send"
 		return FALSE;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.6 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_event.c,v 1.7 2004/08/26 22:50:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,9 +56,19 @@ typedef struct
 
 /*****************************************************************************/
 
+/* We keep a table of all input events in order to look them up by fd */
+static ASHashTable *input_table = NULL;
+
+/*****************************************************************************/
+
 /* init event system */
 as_bool as_event_init ()
 {
+	assert (input_table == NULL);
+
+	if (!(input_table = as_hashtable_create_int ()))
+		return FALSE;
+	
 	/* initialize libevent */
 	event_init ();
 
@@ -68,6 +78,11 @@ as_bool as_event_init ()
 /* shutdown event system. do not call while loop is still running */
 void as_event_shutdown ()
 {
+	/* FIXME: free remaining events? */
+
+	as_hashtable_free (input_table);
+	input_table = NULL;
+
 	return;
 }
 
@@ -164,6 +179,13 @@ static void libevent_cb (int fd, short event, void *arg)
 			 */
 			timer_reset (ev);	
 		}
+		else
+		{
+			/* This will crash if the callback removed the timer itself using
+			 * timer_remove(). Just don't do that.
+			 */
+			timer_remove (ev);
+		}	
 	}
 	else if (ev->type == AS_EVINPUT)
 	{
@@ -177,17 +199,16 @@ static void libevent_cb (int fd, short event, void *arg)
 
 			/* libgift closes fd and removes all inputs */
 			net_close (ev->input.fd);
+#if 0
 			input_remove_all (ev->input.fd);
-	
+#endif
+			
 			/* copy things we need for callback */
 			cb = ev->input.cb;
 			udata = ev->udata;
 
 			/* event is presistent so remove it now */
-			if (event_del (&ev->ev) != 0)
-				AS_ERR ("libevent_cb: event_del() failed for timed out input!");
-
-			event_free (ev);
+			input_remove (ev);
 
 			/* raise callback with bad fd and no input_id */
 			cb (-1, 0, udata);
@@ -255,6 +276,11 @@ input_id input_add (int fd, void *udata, InputState state,
 		return NULL;
 	}
 
+	/* add to hash table. this overwrites previous entries with the same fd
+	 * which is bad.
+	 */
+	as_hashtable_insert_int (input_table, (as_uint32) ev->input.fd, ev);
+
 	return (input_id *) ev;
 }
 
@@ -268,15 +294,25 @@ void input_remove (input_id id)
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("input_remove: event_del() failed!");
 
+	/* remove from hash table */
+	as_hashtable_remove_int (input_table, (as_uint32) ev->input.fd);
+
 	event_free (ev);
 }
 
 /* remove all inputs of this fd */
 void input_remove_all (int fd)
 {
-#if 0
-	assert (0);
-#endif
+	ASEvent *ev;
+
+	if (!(ev = as_hashtable_lookup_int (input_table, (as_uint32) fd)))
+		return NULL;
+
+	/* FIXME: only one entry per fd is removed since the hash table can not
+	 * hold multiple entries with the same key (on purpose). So this is
+	 * basically just a removal by fd for whichever input was added last.
+	 */
+	input_remove (ev);
 }
 
 /* temporarily remove fd from event loop */

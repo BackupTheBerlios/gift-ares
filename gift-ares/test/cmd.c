@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.4 2004/08/26 16:00:40 HEx Exp $
+ * $Id: cmd.c,v 1.5 2004/08/26 22:50:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,7 +12,7 @@
 
 /*****************************************************************************/
 
-#define COMMAND_FUNC(func) static void command_##func (int argc, char *argv[])
+#define COMMAND_FUNC(func) static as_bool command_##func (int argc, char *argv[])
 #define COMMAND(func,param_str,descr) { #func, param_str, descr, command_##func },
 #define COMMAND_NULL { NULL, NULL, NULL, NULL }
 
@@ -29,7 +29,7 @@ static struct command_t
 	char *name;
 	char *param_str;
 	char *descr;
-	void (*func)(int argc, char *argv[]);
+	as_bool (*func)(int argc, char *argv[]);
 }
 commands[] =
 {
@@ -55,6 +55,12 @@ commands[] =
 
 /*****************************************************************************/
 
+void print_cmd_usage (struct command_t *cmd)
+{
+	printf ("Command \"%s\" failed. Usage:\n", cmd->name);
+	printf ("  %s %s\n", cmd->name, cmd->param_str);
+}
+
 as_bool dispatch_cmd (int argc, char *argv[])
 {
 	struct command_t *cmd;
@@ -66,8 +72,11 @@ as_bool dispatch_cmd (int argc, char *argv[])
 	for (cmd = commands; cmd->name; cmd++)
 		if (!strcmp (cmd->name, argv[0]))
 		{
-			cmd->func (argc, argv);
-			return TRUE;
+			if (cmd->func (argc, argv))
+				return TRUE;
+
+			print_cmd_usage (cmd);
+			return FALSE;
 		}
 
 	printf ("Unknown command \"%s\", try \"help\"\n", argv[0]);
@@ -88,6 +97,8 @@ COMMAND_FUNC (help)
 			printf ("* %s %s\n", cmd->name, cmd->param_str);
 			printf ("      %s\n", cmd->descr);
 	}	
+
+	return TRUE;
 }
 
 /*****************************************************************************/
@@ -95,20 +106,26 @@ COMMAND_FUNC (help)
 COMMAND_FUNC (event_test)
 {
 	test_event_system ();
+	return TRUE;
 }
 
 /*****************************************************************************/
 
 COMMAND_FUNC (connect)
 {
-	if (argc < 3)
-		return;
+	in_addr_t ip;
+	in_port_t port;
 
-	in_addr_t ip = net_ip (argv[1]);
-	in_port_t port = atoi (argv[2]);
+	if (argc < 3)
+		return FALSE;
+
+	ip = net_ip (argv[1]);
+	port = atoi (argv[2]);
 
 	printf ("connecting to %s (%08x), port %d\n", argv[1], ip, port);
 	as_session_new (ip, port);
+
+	return TRUE;
 }
 
 /*****************************************************************************/
@@ -119,6 +136,7 @@ COMMAND_FUNC (quit)
 	
 	printf ("Terminating event loop...\n");
 	as_event_quit ();
+	return TRUE;
 }
 
 /*****************************************************************************/
