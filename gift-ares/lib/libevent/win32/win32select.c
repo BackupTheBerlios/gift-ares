@@ -96,15 +96,19 @@ win32select_recalc(void *arg, int max)
 	return 0;
 }
 
+int net_sock_error (int fd);
+
 int
 win32select_dispatch(void *arg, struct timeval *tv)
 {
 	int res;
 	struct event *ev, *next;
 	struct win32selectop *sop = arg;
+	int i = 0;
 
 	FD_ZERO(&sop->event_readset);
 	FD_ZERO(&sop->event_writeset);
+	FD_ZERO(&sop->event_exceptset);
 
 	/* Add fds to sets */
 	TAILQ_FOREACH(ev, &eventqueue, ev_next) {
@@ -112,7 +116,12 @@ win32select_dispatch(void *arg, struct timeval *tv)
 			FD_SET((SOCKET)ev->ev_fd, &sop->event_writeset);
 		if (ev->ev_events & EV_READ)
 			FD_SET((SOCKET)ev->ev_fd, &sop->event_readset);
-		if (ev->ev_events & EV_EXCEPT)
+
+		/* POSIX specifies that a failed non-blocking connect should signal a
+		 * writable socket. Windows only signals this case through the except
+		 * set so we add the fd there as well if a write signal is requested. 
+		 */
+		if (ev->ev_events & (EV_EXCEPT | EV_WRITE))
 			FD_SET((SOCKET)ev->ev_fd, &sop->event_exceptset);
 	}
 
@@ -125,10 +134,26 @@ win32select_dispatch(void *arg, struct timeval *tv)
 		return (0);
 	}
 
-	res = select(0, &sop->event_readset, &sop->event_writeset,
-	             &sop->event_exceptset, tv);
+	res = select (0, &sop->event_readset, &sop->event_writeset,
+	              &sop->event_exceptset, tv);
 
-	if (res == -1) {
+	if (res == SOCKET_ERROR) {
+		switch (WSAGetLastError ())
+		{
+		case WSAENOTSOCK:
+			log_error ("win32 select called with invalid fd");
+			break;
+		case WSAEINVAL:
+			log_error ("win32 select called with invalid parameters");
+			break;
+		default:
+			log_error ("win32 select error");
+			break;
+		}
+		
+		return (-1);
+
+/*
 		if (errno != EINTR) {
 			log_error("select");
 			assert (0);
@@ -136,9 +161,15 @@ win32select_dispatch(void *arg, struct timeval *tv)
 		}
 
 		return (0);
+*/
 	}
 
 	LOG_DBG((LOG_MISC, 80, "%s: select reports %d", __func__, res));
+
+	if (res == 0) {
+		/* timeout, no need to check fds */
+		return (0);
+	}
 
 	for (ev = TAILQ_FIRST(&eventqueue); ev != NULL; ev = next) {
 		next = TAILQ_NEXT(ev, ev_next);
@@ -148,8 +179,13 @@ win32select_dispatch(void *arg, struct timeval *tv)
 			res |= EV_READ;
 		if (FD_ISSET(ev->ev_fd, &sop->event_writeset))
 			res |= EV_WRITE;
-		if (FD_ISSET(ev->ev_fd, &sop->event_exceptset))
+		if (FD_ISSET(ev->ev_fd, &sop->event_exceptset))	{
 			res |= EV_EXCEPT;
+
+			/* POSIX compatibility hack, see above. */
+			if (ev->ev_events & EV_WRITE)
+				res |= EV_WRITE;
+		}
 		res &= ev->ev_events;
 
 		if (res) {

@@ -84,6 +84,7 @@ struct event {
 #else
 	int ev_fd;
 #endif
+
 	short ev_events;
 	short ev_ncalls;
 	short *ev_pncalls;	/* Allows deletes in callback */

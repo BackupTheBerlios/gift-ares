@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.4 2004/08/24 20:56:26 mkern Exp $
+ * $Id: as_tcp.c,v 1.5 2004/08/25 19:46:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,7 +14,7 @@
 
 #ifdef WIN32
 
-#define optval_t const char *
+#define optval_t char *
 
 #ifndef SD_BOTH
 # define SD_BOTH 2
@@ -278,6 +278,21 @@ void net_close (int fd)
 	closesocket (fd);
 #endif
 }
+
+int net_sock_error (int fd)
+{
+	int err, ret;
+	int len = sizeof (err);
+
+	ret = getsockopt (fd, SOL_SOCKET, SO_ERROR, (optval_t) &err, &len);
+
+	if (ret < 0)
+		return ret;
+
+	return err;
+}
+
+/*****************************************************************************/
 
 in_addr_t net_ip (const char *ip_str)
 {

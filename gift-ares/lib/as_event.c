@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.4 2004/08/24 20:56:26 mkern Exp $
+ * $Id: as_event.c,v 1.5 2004/08/25 19:46:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -258,7 +258,8 @@ void input_remove (input_id id)
 {
 	ASEvent *ev = (ASEvent *) id;
 
-	assert (ev);
+	if (id == (input_id) 0)
+		return;
 
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("input_remove: event_del() failed!");

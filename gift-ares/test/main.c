@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.3 2004/08/24 20:56:26 mkern Exp $
+ * $Id: main.c,v 1.4 2004/08/25 19:46:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,23 +7,19 @@
  * All rights reserved.
  */
 
-#include <ctype.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-
 #ifdef WIN32
 #include <process.h> /* _beginthreadex */
 #endif
 
 #include "as_ares.h"
 #include "main.h"
-#include "cmd.h"
+
+/*****************************************************************************/
 
 /* see end of file */
 static int parse_argv(char *cmdline, int *argc, char ***argv);
 
+/*****************************************************************************/
 
 #ifdef WIN32
 
@@ -47,7 +43,7 @@ unsigned int __stdcall console_input_func (void *data)
 		
 		written = send (event_fd, buf, read, 0);
 
-		if (written < 0 || written != read)
+		if (written < 0 || written != (int)read)
 		{
 			/* FIXME: handle error */
 		}
@@ -63,7 +59,7 @@ unsigned int __stdcall console_input_func (void *data)
 void stdin_cb (int fd, input_id id, void *udata)
 {
 	static char buf[1024*16];
-	static unsigned int buf_pos = 0;
+	static int buf_pos = 0;
 	int read, len;
 	int argc;
 	char **argv;
@@ -91,21 +87,29 @@ void stdin_cb (int fd, input_id id, void *udata)
 	parse_argv (buf, &argc, &argv);
 
 	/* dispatch	command */
-	dispatch_cmd (argc, argv);
+	if (argc >  0)
+		dispatch_cmd (argc, argv);
 
 	free (argv);
 
 	/* remove used data */
 	memmove (buf, buf + len, buf_pos - len);
 	buf_pos -= len;
+
+	/* print prompt */
+	printf ("> ");
 }
 
-
+/*****************************************************************************/
 
 int main (int argc, char *argv[])
 {
 	ASLogger *logger;
 	int stdin_handle;
+#ifdef WIN32
+	HANDLE hThread;
+	int fds[2];
+#endif
 
 	/* winsock init */
 	tcp_startup ();
@@ -119,44 +123,44 @@ int main (int argc, char *argv[])
 	/* setup event system */
 	as_event_init ();
 
-	/* add callback for command handling */
 #ifdef WIN32
+	/* create console reading thread on windows */
+	if (socketpair (0, 0, 0, fds) < 0)
 	{
-		HANDLE hThread;
-		int fds[2];
+		printf ("FATAL: socketpair() failed\n");
+		exit (1);
+	}
 
-		if (socketpair (0, 0, 0, fds) < 0)
-		{
-			printf ("FATAL: socketpair() failed\n");
-			exit (1);
-		}
+	stdin_handle = fds[1];
+	hThread = (HANDLE) _beginthreadex (NULL, 0, console_input_func,
+	                                   (void *)fds[0], 0, NULL);
 
-		stdin_handle = fds[1];
-
-		hThread = (HANDLE) _beginthreadex (NULL, 0, console_input_func, (void *)fds[0], 0, NULL);
-
-		if (hThread == (HANDLE) -1 || hThread == (HANDLE) 0)
-		{
-			printf ("FATAL: couldn't start input thread\n");
-			exit (1);
-		}
-
-		/* we don't use the thread handle past this point */
-		CloseHandle (hThread);
+	if (hThread == (HANDLE) -1 || hThread == (HANDLE) 0)
+	{
+		printf ("FATAL: couldn't start input thread\n");
+		exit (1);
 	}
 #else
 	/* FIXME: *unix console input */
 	stdin_handle = -1;
 #endif
 
+	/* add callback for command handling */
 	input_add (stdin_handle, NULL, INPUT_READ, stdin_cb, 0);
 
+	/* print prompt */
+	printf ("> ");
 
+	/* run event loop */
 	AS_DBG ("Entering event loop");
-	
 	as_event_loop ();
-
 	AS_DBG ("Left event loop");
+
+#if WIN32
+	/* terminate thread if it is still running and close thread handle */
+	TerminateThread (hThread, 0);
+	CloseHandle (hThread);
+#endif
 
 	/* shutdown */
 	as_event_shutdown ();
@@ -166,6 +170,7 @@ int main (int argc, char *argv[])
 	tcp_cleanup ();
 }
 
+/*****************************************************************************/
 
 /* modifies cmdline */
 static int parse_argv(char *cmdline, int *argc, char ***argv)
@@ -238,3 +243,4 @@ static int parse_argv(char *cmdline, int *argc, char ***argv)
 	return 0;
 }
 
+/*****************************************************************************/
