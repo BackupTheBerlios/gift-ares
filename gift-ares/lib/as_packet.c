@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.21 2004/10/20 17:47:28 HEx Exp $
+ * $Id: as_packet.c,v 1.22 2005/01/01 03:09:29 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -373,7 +373,11 @@ as_bool as_packet_compress (ASPacket *packet)
 	unsigned long len;
 	as_uint8 *buf;
 
+#if defined (ZLIB_VERNUM) && (ZLIB_VERNUM >= 0x1200)
 	len = compressBound (packet->used);
+#else
+	len = packet->used + (packet->used >> 2) + 16;
+#endif
 
 	buf = malloc (len);
 

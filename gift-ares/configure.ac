@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-# $Id: configure.ac,v 1.5 2004/12/19 01:26:36 mkern Exp $
+# $Id: configure.ac,v 1.6 2005/01/01 03:09:26 hex Exp $
 
 dnl ###########################################################################
 dnl Process this file with autoconf to produce a configure script.
@@ -8,8 +8,8 @@ dnl ###########################################################################
 
 AC_PREREQ(2.52)
 
-AC_INIT(gift-ares, 0.1.1)
-AC_REVISION($Revision: 1.5 $)
+AC_INIT(gift-ares, 0.2)
+AC_REVISION($Revision: 1.6 $)
 AC_CONFIG_SRCDIR([lib/as_ares.h])
 
 AM_INIT_AUTOMAKE
@@ -99,7 +99,7 @@ dnl Check for zlib...
 dnl ###########################################################################
 
 # set the minimum ZLIB_VER we're willing to link against...
-ZLIB_VER=1.2.1
+ZLIB_VER=1.1.3
 
 dnl Default to compiler & linker defaults for files & libraries.
 OPT_ZLIB=
