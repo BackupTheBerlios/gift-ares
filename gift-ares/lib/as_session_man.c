@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.27 2004/10/10 15:22:48 mkern Exp $
+ * $Id: as_session_man.c,v 1.28 2004/10/10 18:44:11 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -111,9 +111,6 @@ static as_bool sessman_maintain (ASSessMan *man)
 	unsigned int connecting = list_length (man->connecting);
 	int len;
 		
-	/* Let NetInfo know what's going on */
-	as_netinfo_handle_connect (AS->netinfo, man->connections, connected);
-
 	if (man->connections == 0)
 	{
 		/* disconnect everything */
@@ -196,9 +193,14 @@ static as_bool sessman_maintain (ASSessMan *man)
 		}
 	}
 
+	connected = list_length (man->connected);
+	connecting = list_length (man->connecting);
+
 	AS_HEAVY_DBG_3 ("session_maintain: requested: %d, connected: %d, connecting: %d",
-	                man->connections, list_length (man->connected), 
-	                list_length (man->connecting));
+	                man->connections, connected, connecting);
+
+	/* Let NetInfo know what's going on */
+	as_netinfo_handle_connect (AS->netinfo, man->connections, connected);
 
 	return TRUE;
 }
