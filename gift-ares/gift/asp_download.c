@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.2 2004/12/04 15:30:46 mkern Exp $
+ * $Id: asp_download.c,v 1.3 2004/12/04 15:43:53 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -60,7 +60,7 @@ static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
 		abort ();
 	}
 
-#if 1
+#if 0
 	AS_HEAVY_DBG_3 ("Downconn state callback: %p (%s) '%s'", conn,
 	                source->url, status_str);
 #endif
