@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.h,v 1.6 2004/11/20 03:02:40 HEx Exp $
+ * $Id: as_source.h,v 1.7 2004/12/24 12:06:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,8 +25,9 @@ typedef struct
 	in_addr_t shost;
 	in_port_t sport;
 
-	/* source's username */
+	/* source's user and network name*/
 	unsigned char *username;
+	unsigned char *netname;
 
 	/* supernode we got this source from */
 	in_addr_t parent_host;

@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.8 2004/12/19 01:26:38 mkern Exp $
+ * $Id: asp_plugin.c,v 1.9 2004/12/24 12:06:25 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -70,6 +70,9 @@ static int asp_giftcb_user_cmp (Protocol *p, const char *a, const char *b)
 {
 	const char *aa = strrchr (a, '@'), *bb = strrchr (b, '@');
 
+	/* Only compare the user's ip after the '@' to prevent upload queue
+	 * circumvention by spoofing user name.
+	 */
 	return strcmp ((aa ? aa+1 : a), (bb ? bb+1 : b));
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.8 2004/12/24 11:40:31 mkern Exp $
+ * $Id: asp_search.c,v 1.9 2004/12/24 12:06:25 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -70,7 +70,7 @@ static as_bool meta_to_gift (ASMetaTag *tag, Share *share)
 static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 {
 	Share *share;
-	char *url, *filename;
+	char *url, *filename, *user;
 
 	if (!r)
 	{
@@ -133,10 +133,17 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 		return;
 	}
 
-	/* Send the result to giFT. */
-	PROTO->search_result (PROTO, search->udata, r->source->username,
-	                      NULL, url, 1, share);
+	/* Assemble username@ip string. */
+	if (!STRING_NULL(r->source->username))
+		user = stringf_dup ("%s@%s", r->source->username, 
+		                    net_ip_str (r->source->host));
+	else
+		user = gift_strdup (net_ip_str (r->source->host));
 
+	/* Send the result to giFT. */
+	PROTO->search_result (PROTO, search->udata, user, NULL, url, 1, share);
+
+	free (user);
 	free (url);
 	share_free (share);
 }

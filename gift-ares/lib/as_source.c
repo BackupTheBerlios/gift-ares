@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.15 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_source.c,v 1.16 2004/12/24 12:06:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,6 +25,7 @@ ASSource *as_source_create ()
 	source->shost = INADDR_NONE;
 	source->sport = 0;
 	source->username = NULL;
+	source->netname = NULL;
 	source->parent_host = INADDR_NONE;
 	source->parent_port = 0;
 
@@ -44,6 +45,7 @@ ASSource *as_source_copy (ASSource *source)
 	cpy->shost = source->shost;
 	cpy->sport = source->sport;
 	cpy->username = gift_strdup (source->username);
+	cpy->netname = gift_strdup (source->netname);
 	cpy->parent_host = source->parent_host;
 	cpy->parent_port = source->parent_port;
 
@@ -57,6 +59,7 @@ void as_source_free (ASSource *source)
 		return;
 
 	free (source->username);
+	free (source->netname);
 	free (source);
 }
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.9 2004/11/20 10:22:52 mkern Exp $
+ * $Id: as_search_result.c,v 1.10 2004/12/24 12:06:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -79,6 +79,19 @@ void as_result_free (ASResult *result)
 
 /*****************************************************************************/
 
+static void parse_username (ASResult *r, char *username)
+{
+	char *netname;
+
+	r->source->username = username;
+
+	if ((netname = strchr (username, '@')))
+	{
+		*netname = 0;
+		r->source->netname = gift_strdup (netname + 1);
+	}
+}
+
 static as_bool result_parse (ASResult *r, ASPacket *packet)
 {
 	int reply_type;
@@ -103,7 +116,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		r->unknown = as_packet_get_8 (packet);
 
 		/* username */
-		r->source->username = as_packet_get_strnul (packet);
+		parse_username (r, as_packet_get_strnul (packet));
 
 		/* unknown, may be split differently */
 		r->unk[0] = as_packet_get_8 (packet);
@@ -161,7 +174,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		/* bandwidth? */
 		r->unknown = as_packet_get_8 (packet);
 
-		r->source->username = as_packet_get_strnul (packet);
+		parse_username (r, as_packet_get_strnul (packet));
 		r->hash = as_packet_get_hash (packet);
 		r->source->inside_ip = as_packet_get_ip (packet);
 		break;

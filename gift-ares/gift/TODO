@@ -10,8 +10,6 @@
 
 - Why do we get so many push requests for unknown shares? A bug somwhere?
 
-- Use Username@ip instead of Username@network for search results
-
 - Source searching
 
 - Search timeouts (in ares lib). Don't start the timeout before we have sent the search
