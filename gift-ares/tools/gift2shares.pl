@@ -17,7 +17,7 @@ while ($_) {
     my $mime=strnul $rec;
     my $root=strnul $rec;
     my $path=strnul $rec;
-    next REC if $path=~/\"\n/s;
+    next REC if $path=~/\"|\n/s;
     
     while (my $key=strnul $rec) {
 	my $hlen=rint $rec;
@@ -25,6 +25,7 @@ while ($_) {
 	die unless $key=~s/^H-//;
 	$hash{$key}=$val;
     }
+    next REC unless $hash{SHA1}; # should be unnecessary
     while (my $key=strnul $rec) {
 	my $val=strnul $rec;
 	next REC if ($key.$val)=~/\"|\n/;
