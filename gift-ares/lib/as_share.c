@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.11 2004/10/20 00:55:42 HEx Exp $
+ * $Id: as_share.c,v 1.12 2004/10/20 17:26:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -102,7 +102,7 @@ static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
 	return TRUE;
 }
 
-as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
+static as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 {
 	as_packet_put_8 (p, TAG_XXX);
 
@@ -145,7 +145,7 @@ as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 	return TRUE;
 }
 
-void add_meta_tags (ASPacket *p, ASShare *share)
+static void add_meta_tags (ASPacket *p, ASShare *share)
 {
 	ASMeta *meta = share->meta;
 	const ASTagMapping *map;
