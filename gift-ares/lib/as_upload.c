@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.5 2004/10/25 14:17:22 HEx Exp $
+ * $Id: as_upload.c,v 1.6 2004/10/26 21:25:52 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,19 +19,52 @@
 
 static as_bool send_reply (ASUpload *up);
 static as_bool send_reply_queued (ASUpload *up, int pos);
+static as_bool send_reply_error (ASUpload *up);
 static void send_file (int fd, input_id input, ASUpload *up);
 
-ASUpload *as_upload_new (TCPC *c, ASShare *share, ASHttpHeader *req,
+ASUpload *as_upload_new (TCPC *c, ASHttpHeader *req,
 			 ASUploadStateCb callback)
 {
 	ASUpload *up = malloc (sizeof(ASUpload));
 	FILE *file;
 	const char *range;
+	ASHash *hash;
+	ASShare *share;
 
 	if (!up)
 		return NULL;
 
 	up->c = c;
+
+	if ((strncmp (req->uri, "sha1:", 5) &&
+	     strncmp (req->uri, "/hack", 5)) || /* for debugging */
+	    !(hash = as_hash_decode (req->uri + 5)))
+	{
+		AS_DBG_2 ("Malformed uri '%s' from %s",
+			  req->uri, net_ip_str (c->host));
+		free (up);
+
+		return NULL;
+	}
+
+	share = as_shareman_lookup (AS->shareman, hash);
+
+	if (!share)
+	{
+		AS_DBG_2 ("Unknown share request '%s' from %s",
+			  as_hash_str (hash), net_ip_str (c->host));
+		send_reply_error (up);
+		free (up);
+		as_hash_free (hash);
+
+		return NULL;
+	}
+
+	AS_DBG_2 ("Upload request: '%s' from %s",
+		  share->path, net_ip_str (c->host));
+
+	as_hash_free (hash);
+
 	up->share = share;
 	up->cb = callback;
 
@@ -242,6 +275,26 @@ static as_bool send_reply_queued (ASUpload *up, int pos)
 	}
 
 	tcp_write (up->c, str->str, str->len);
+	string_free (str);
+	as_http_header_free (reply);
+
+	return TRUE;
+}
+
+static as_bool send_reply_error (ASUpload *up)
+{
+	ASHttpHeader *reply;
+	String *str;
+
+	reply = as_http_header_reply (HTHD_VER_11,
+				      404);
+
+	set_common_headers (up, reply);
+
+	str = as_http_header_compile (reply);
+
+	tcp_write (up->c, str->str, str->len);
+
 	string_free (str);
 	as_http_header_free (reply);
 

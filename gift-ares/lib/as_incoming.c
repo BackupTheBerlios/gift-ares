@@ -1,5 +1,5 @@
 /*
- * $Id: as_incoming.c,v 1.7 2004/10/24 03:45:59 HEx Exp $
+ * $Id: as_incoming.c,v 1.8 2004/10/26 21:25:52 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,35 +14,8 @@
 int as_incoming_http (ASHttpServer *server, TCPC *tcpcon,
                       ASHttpHeader *request)
 {
-	ASHash *hash;
-	ASShare *share;
-
-	if ((strncmp (request->uri, "sha1:", 5) &&
-	     strncmp (request->uri, "/hack", 5)) || /* for debugging */
-	    !(hash = as_hash_decode (request->uri + 5)))
-	{
-		AS_DBG_2 ("Malformed uri '%s' from %s",
-			  request->uri, net_ip_str (tcpcon->host));
-		return FALSE;
-	}
-
-	share = as_shareman_lookup (AS->shareman, hash);
-
-	if (!share)
-	{
-		AS_DBG_2 ("Unknown share request '%s' from %s",
-			  as_hash_str (hash), net_ip_str (tcpcon->host));
-		as_hash_free (hash);
-		return FALSE;
-	}
-
-	AS_DBG_2 ("Upload request: '%s' from %s",
-		  share->path, net_ip_str (tcpcon->host));
-
-	as_hash_free (hash);
-
 	assert (AS->upman);
-	return !!as_upman_start (AS->upman, tcpcon, share, request);
+	return !!as_upman_start (AS->upman, tcpcon, request);
 }
 
 /*****************************************************************************/

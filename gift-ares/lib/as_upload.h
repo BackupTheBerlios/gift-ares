@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.2 2004/10/24 03:45:59 HEx Exp $
+ * $Id: as_upload.h,v 1.3 2004/10/26 21:25:52 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,7 +31,7 @@ struct as_upload_t {
 
 /*****************************************************************************/
 
-ASUpload *as_upload_new (TCPC *c, ASShare *share, ASHttpHeader *req,
+ASUpload *as_upload_new (TCPC *c, ASHttpHeader *req,
 			 ASUploadStateCb callback);
 void as_upload_free (ASUpload *up);
 

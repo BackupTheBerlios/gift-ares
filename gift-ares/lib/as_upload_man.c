@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.3 2004/10/25 14:17:22 HEx Exp $
+ * $Id: as_upload_man.c,v 1.4 2004/10/26 21:25:52 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -182,10 +182,10 @@ static as_bool upload_callback (ASUpload *up, ASUploadState state)
 	return TRUE;
 }
 
-ASUpload *as_upman_start (ASUploadMan *man, TCPC *c, ASShare *share, 
+ASUpload *as_upman_start (ASUploadMan *man, TCPC *c, 
 			  ASHttpHeader *req)
 {
-	ASUpload *up = as_upload_new (c, share, req,
+	ASUpload *up = as_upload_new (c, req,
 				      (ASUploadStateCb)upload_callback);
 
 	if (!up)
