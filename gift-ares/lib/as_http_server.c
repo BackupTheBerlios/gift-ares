@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.8 2004/12/14 22:21:19 hex Exp $
+ * $Id: as_http_server.c,v 1.9 2004/12/16 23:27:44 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -93,6 +93,7 @@ ASHttpServer *as_http_server_create (in_port_t port,
 	server->request_cb = request_cb;
 	server->push_cb = push_cb;
 	server->binary_cb = binary_cb;
+	server->list = NULL;
 
 #if 0
 	server->banlist_filter = config_get_int (AS_PLUGIN->conf,
@@ -106,7 +107,7 @@ ASHttpServer *as_http_server_create (in_port_t port,
 	return server;
 }
 
-static void servcon_free_itr (ServCon *servcon, void *udata)
+static int servcon_free_itr (ServCon *servcon, void *udata)
 {
 	servcon_free (servcon, TRUE);
 
