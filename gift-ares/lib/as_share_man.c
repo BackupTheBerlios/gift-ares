@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.5 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_share_man.c,v 1.6 2004/09/18 19:26:38 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -75,6 +75,12 @@ as_bool as_shareman_remove (ASShareMan *man, ASShare *share)
 	as_share_free (share);
 
 	return TRUE;
+}
+
+ASShare *as_shareman_lookup (ASShareMan *man, ASHash *hash)
+{
+	return as_hashtable_lookup (man->table, hash->data,
+				    sizeof (hash->data));
 }
 
 /***********************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.11 2004/09/18 19:11:45 mkern Exp $
+ * $Id: as_ares.c,v 1.12 2004/09/18 19:26:38 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -53,7 +53,7 @@ as_bool as_init ()
 	{
 		if (!(AS->server = as_http_server_create (
 			      AS_LISTEN_PORT,
-			      (ASHttpServerRequestCb)NULL,
+			      (ASHttpServerRequestCb)as_incoming_http,
 			      (ASHttpServerPushCb)as_incoming_push,
 			      (ASHttpServerBinaryCb)NULL
 			      )))
