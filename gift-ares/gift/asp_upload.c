@@ -1,5 +1,5 @@
 /*
- * $Id: asp_upload.c,v 1.5 2004/12/04 19:17:11 mkern Exp $
+ * $Id: asp_upload.c,v 1.6 2004/12/18 01:12:34 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -25,9 +25,9 @@ static const char *upload_to_user (ASUpload *up)
 	char *user = NULL;
 
 	if (STRING_NULL (up->username))
-		user = net_ip_str (up->host);
-	else
 		user = stringf ("%s@%s", up->username, net_ip_str (up->host));
+	else
+		user = net_ip_str (up->host);
 
 	return user;
 }
