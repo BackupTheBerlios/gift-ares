@@ -9,6 +9,8 @@ Essential stuff:
 - notify search manager of new sessions and resend searches until
   AS_SEARCH_SEND_COUNT is reached.
 
+- Filter multiple results from same user.
+
 - Make file hashing non-blocking.
 
 - Check how Ares handles same file names for downloads and do the same.

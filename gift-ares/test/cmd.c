@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.20 2004/09/14 09:36:08 mkern Exp $
+ * $Id: cmd.c,v 1.21 2004/09/15 13:04:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -257,7 +257,7 @@ static void search_callback (ASSearch *search, ASResult *r)
 {
 	assert (search == test_search);
 
-	printf ("%3d) %20s %10d %c [%s]\n", list_length (results),
+	printf ("%3d) %25s %10d %c [%s]\n", list_length (results),
 		r->source->username, r->filesize,
 		realm_chars[r->realm], r->filename);
 
