@@ -8,7 +8,6 @@ OBJECTS = \
 	as_log.o \
 	as_event.o \
 	as_tcp.o \
-
 	as_ares.o \
 	as_crypt.o \
 	as_packet.o \

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.3 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_search.h,v 1.4 2004/09/09 15:06:29 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,7 +27,7 @@ typedef struct as_search_t ASSearch;
  */
 typedef void (*ASSearchResultCb) (ASSearch *search, ASResult *result);
 
-typedef struct as_search_t
+struct as_search_t
 {
 	ASSearchType type;     /* normal or hash search */
 
