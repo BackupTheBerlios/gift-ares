@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.2 2004/09/16 17:47:31 HEx Exp $
+ * $Id: as_share_man.c,v 1.3 2004/09/16 23:36:14 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -79,18 +79,21 @@ as_bool as_shareman_remove (ASShareMan *man, ASShare *share)
 static int share_send (ASShare *share, ASSession *session)
 {
 	ASPacket *p = as_share_packet (share);
-	
+	int ret;
 	if (!p)
 		return FALSE;
 
 #if 0
-	return as_session_send (session, PACKET_SHARE, p, PACKET_ENCRYPT);
+	ret =  as_session_send (session, PACKET_SHARE, p, PACKET_ENCRYPT);
 #else
 	as_packet_header (p, PACKET_SHARE);
 
 	/* FIXME: chunk these */
-	return as_session_send (session, PACKET_COMPRESSED, p, PACKET_COMPRESS);
+	ret = as_session_send (session, PACKET_COMPRESSED, p, PACKET_COMPRESS);
 #endif
+	as_packet_free (p);
+
+	return ret;
 }
 
 as_bool as_shareman_submit (ASShareMan *man, ASSession *session)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.7 2004/09/16 22:29:55 HEx Exp $
+ * $Id: as_share.c,v 1.8 2004/09/16 23:36:14 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,8 +20,8 @@ ASShare *as_share_new (char *path, ASHash *hash, ASMeta *meta,
 	if (!share)
 		return NULL;
 	
-	filename = as_get_filename (path);
 	share->path  = strdup (path);
+	filename = as_get_filename (share->path);
 	share->ext   = strrchr (filename, '.');
 	share->size  = size;
 	share->realm = realm;
@@ -114,6 +114,13 @@ ASPacket *as_share_packet (ASShare *share)
 	if (!tokens)
 		return NULL;
 	
+	if (!tokens->used)
+	{
+		as_packet_free (p);
+		as_packet_free (tokens);
+		return NULL;
+	}
+
 	as_packet_put_le16 (p, tokens->used);
 	as_packet_append (p, tokens);
 	as_packet_free (tokens);

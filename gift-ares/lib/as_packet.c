@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.18 2004/09/16 16:24:07 mkern Exp $
+ * $Id: as_packet.c,v 1.19 2004/09/16 23:36:14 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -391,6 +391,7 @@ as_bool as_packet_compress (ASPacket *packet)
 
 	memcpy (packet->data, buf, len);
 	packet->used = len;
+	free (buf);
 
 	return TRUE;
 }
