@@ -270,6 +270,8 @@ int asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 	as_downconn_start (dc, hash, chunk->start + chunk->transmit,
 			   chunk->stop - chunk->start - chunk->transmit);
 
+	as_hash_free (hash);
+
 	gift_proto->source_status (gift_proto, source, SOURCE_WAITING, "Connecting");
 
 	return TRUE;
