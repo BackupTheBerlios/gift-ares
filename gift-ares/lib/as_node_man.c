@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.2 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_node_man.c,v 1.3 2004/08/31 23:25:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -172,7 +172,7 @@ as_bool as_nodeman_update_connected (ASNodeMan *man, in_addr_t host)
 	/* Find node */
 	if (!(link = as_hashtable_lookup_int (man->index, (as_uint32)host)))
 	{
-		AS_ERR ("NodeMan: Tried to update nonexistent node.");
+		AS_ERR ("Tried to update nonexistent node.");
 		return FALSE;
 	}
 
@@ -209,7 +209,7 @@ as_bool as_nodeman_update_failed (ASNodeMan *man, in_addr_t host)
 	/* Find node */
 	if (!(link = as_hashtable_lookup_int (man->index, (as_uint32)host)))
 	{
-		AS_ERR ("NodeMan: Tried to update nonexistent node.");
+		AS_ERR ("Tried to update nonexistent node.");
 		return FALSE;
 	}
 
@@ -259,7 +259,7 @@ as_bool as_nodeman_update_disconnected (ASNodeMan *man, in_addr_t host)
 	/* Find node */
 	if (!(link = as_hashtable_lookup_int (man->index, (as_uint32)host)))
 	{
-		AS_ERR ("NodeMan: Tried to update nonexistent node.");
+		AS_ERR ("Tried to update nonexistent node.");
 		return FALSE;
 	}
 

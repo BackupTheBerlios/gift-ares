@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.1 2004/08/26 22:50:23 mkern Exp $
+ * $Id: as_hashtable.c,v 1.2 2004/08/31 23:25:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -83,9 +83,9 @@ static unsigned int default_hash_func_int (ASHashTableEntry *entry)
 
 	/* is this good? */
 	hash = ((hash << 5) + hash) + (entry->int_key & 0xFF);
-	hash = ((hash << 5) + hash) + (entry->int_key >> 8 & 0xFF);
-	hash = ((hash << 5) + hash) + (entry->int_key >> 16 & 0xFF);
-	hash = ((hash << 5) + hash) + (entry->int_key >> 24 & 0xFF);
+	hash = ((hash << 5) + hash) + ((entry->int_key >> 8) & 0xFF);
+	hash = ((hash << 5) + hash) + ((entry->int_key >> 16) & 0xFF);
+	hash = ((hash << 5) + hash) + ((entry->int_key >> 24) & 0xFF);
 
 	return hash;
 }
@@ -316,7 +316,7 @@ static void hashtable_insert (ASHashTable *h, ASHashTableEntry *in)
     while (NULL != e)
     {
         /* Check hash value to short circuit heavier comparison */
-        if ((in->h == e->h) && (h->eqfn(in, e)))
+        if ((in->h == e->h) && (h->eqfn(in, e) == 0))
         {
 			/* found key, replace value pointer */
 			e->val = in->val;
@@ -351,7 +351,7 @@ void *hashtable_remove (ASHashTable *h, ASHashTableEntry *rm)
     while (NULL != e)
     {
         /* Check hash value to short circuit heavier comparison */
-        if ((hashvalue == e->h) && (h->eqfn(rm, e)))
+        if ((hashvalue == e->h) && (h->eqfn(rm, e) == 0))
         {
             *pE = e->next;
             h->entrycount--;
@@ -377,7 +377,7 @@ void *hashtable_search (ASHashTable *h, ASHashTableEntry *sr)
     while (NULL != e)
     {
         /* Check hash value to short circuit heavier comparison */
-        if ((hashvalue == e->h) && (h->eqfn(sr, e)))
+        if ((hashvalue == e->h) && (h->eqfn(sr, e) == 0))
 			return e->val;
         e = e->next;
     }

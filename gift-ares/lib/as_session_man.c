@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.3 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_session_man.c,v 1.4 2004/08/31 23:25:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -65,7 +65,7 @@ void as_sessman_connect (ASSessMan *man, unsigned int connections)
 {
 	man->connections = connections;
 
-	AS_DBG_3 ("SessMan: requested: %d, connected: %d, connecting: %d",
+	AS_DBG_3 ("Requested: %d, connected: %d, connecting: %d",
 	          man->connections, list_length (man->connected), 
 	          list_length (man->connecting));
 
@@ -149,7 +149,7 @@ static as_bool sessman_maintain (ASSessMan *man)
 			session->udata = man;
 
 #if 1
-			AS_HEAVY_DBG_3 ("SessMan: Trying node %s:%d, weight: %.02f",
+			AS_HEAVY_DBG_3 ("Trying node %s:%d, weight: %.02f",
 			                net_ip_str (node->host), node->port, node->weight);
 #endif
 
@@ -183,7 +183,7 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 	switch (state)
 	{
 	case SESSION_DISCONNECTED:
-		AS_DBG_2 ("SessMan: DISCONNECTED %s:%d",
+		AS_DBG_2 ("DISCONNECTED %s:%d",
 		          net_ip_str (session->c->host), session->c->port);
 
 		/* notify node manager */
@@ -199,7 +199,7 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 		return FALSE;
 
 	case SESSION_FAILED:
-		AS_HEAVY_DBG_2 ("SessMan: FAILED %s:%d",
+		AS_HEAVY_DBG_2 ("FAILED %s:%d",
 		                net_ip_str (session->c->host), session->c->port);
 
 		/* notify node manager */
@@ -215,17 +215,17 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 		return FALSE;
 
 	case SESSION_CONNECTING:
-		AS_HEAVY_DBG_2 ("SessMan: CONNECTING %s:%d",
+		AS_HEAVY_DBG_2 ("CONNECTING %s:%d",
 		                net_ip_str (session->c->host), session->c->port);
 		break;
 
 	case SESSION_HANDSHAKING:
-		AS_HEAVY_DBG_2 ("SessMan: HANDSHAKING %s:%d",
+		AS_HEAVY_DBG_2 ("HANDSHAKING %s:%d",
 		                net_ip_str (session->c->host), session->c->port);
 		break;
 
 	case SESSION_CONNECTED:
-		AS_DBG_2 ("SessMan: CONNECTED %s:%d",
+		AS_DBG_2 ("CONNECTED %s:%d",
 		          net_ip_str (session->c->host), session->c->port);
 		
 		/* notify node manager */

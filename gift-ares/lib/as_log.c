@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.c,v 1.5 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_log.c,v 1.6 2004/08/31 23:25:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -155,7 +155,7 @@ static const char *get_loglevel_str (int level)
 	case AS_LOG_ERROR:       return "ERROR";
 	case AS_LOG_WARNING:     return "WARNING";
 	case AS_LOG_DEBUG:       return "DBG";
-	case AS_LOG_HEAVY_DEBUG: return "HEAVYDBG";
+	case AS_LOG_HEAVY_DEBUG: return "HVY";
 	}
 
 	assert (0);
@@ -174,7 +174,7 @@ void as_logger_logv (ASLogger *logger,int level, const char *file,
 	if (!logger)
 		return;
 
-	written = snprintf (buf, sizeof (buf), "%s (%s:%d) %s: ",
+	written = snprintf (buf, sizeof (buf), "%s (%-16s %d) %s: ",
 	                    get_timestamp (time_buf), file, line,
 	                    get_loglevel_str (level));
 
