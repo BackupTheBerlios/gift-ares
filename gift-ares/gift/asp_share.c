@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.5 2004/12/04 21:30:53 hex Exp $
+ * $Id: asp_share.c,v 1.6 2004/12/18 23:04:56 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -16,6 +16,29 @@
  */
 
 #include "asp_plugin.h"
+
+/*****************************************************************************/
+
+/*
+ * WARNING: The following hacks are used wrt share management:
+ *
+ *   - To optimize share addition we keep a static list of shares to which
+ *     each giFT call to asp_giftcb_share_add adds a share. The list is
+ *     commited to out shares manager using a timer. Since giFT calls
+ *     asp_giftcb_share_add in a tight loop we set the timer interval to zero
+ *     so it is immediately called after all shares are added to our list. We
+ *     assume (and assert) that giFT does not remove any shares before the
+ *     timer has been triggered.
+ *
+ *   - giFT allows multiple shares with same hashes while our share manager
+ *     does not. The list mentioned above may contain such duplicates and
+ *     they are silently freed when the timer commits the list to the shares
+ *     manager. However this does not remove the reference to them from the
+ *     giFT share object so that it still points to random memory. We never
+ *     rectify this and simply look up our shares by hash in
+ *     asp_giftcb_share_remove and then compare the pointers to identify
+ *     already freed objects.
+ */
 
 /*****************************************************************************/
 
@@ -74,6 +97,9 @@ void *asp_giftcb_share_new (Protocol *p, Share *share)
 /* Called be giFT for us to free custom data. */
 void asp_giftcb_share_free (Protocol *p, Share *share, void *data)
 {
+	/* FIXME: Shouldn't this be triggered for duplicate hashes as mentioned
+	 * at the beginning of the file?
+	 */
 	assert (!share_get_udata (share, PROTO->name));
 }
 
