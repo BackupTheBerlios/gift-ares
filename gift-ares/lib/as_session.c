@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.31 2004/10/30 01:08:52 mkern Exp $
+ * $Id: as_session.c,v 1.32 2004/10/30 23:51:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -207,8 +207,10 @@ static void session_connected (int fd, input_id input, ASSession *session)
 
 	if (net_sock_error (fd))
 	{
+#if 0
 		AS_HEAVY_DBG_2 ("Connect to %s:%d failed",
 		                net_ip_str (session->host), session->port);
+#endif
 		session_error (session);
 		return;
 	}

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.30 2004/10/21 17:11:26 mkern Exp $
+ * $Id: as_session_man.c,v 1.31 2004/10/30 23:51:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -174,7 +174,7 @@ static as_bool sessman_maintain (ASSessMan *man)
 
 			session->udata = man;
 
-#if 1
+#if 0
 			AS_HEAVY_DBG_3 ("Trying node %s:%d, weight: %.02f",
 			                net_ip_str (node->host), node->port, node->weight);
 #endif

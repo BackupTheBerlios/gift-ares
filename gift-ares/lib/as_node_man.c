@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.13 2004/09/15 13:04:49 mkern Exp $
+ * $Id: as_node_man.c,v 1.14 2004/10/30 23:51:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,11 @@
  */
 
 #include "as_ares.h"
+
+/*****************************************************************************/
+
+/* Log node updates. */
+/* #define NODE_DEBUG */
 
 /*****************************************************************************/
 
@@ -201,9 +206,11 @@ as_bool as_nodeman_update_connected (ASNodeMan *man, in_addr_t host)
 	man->nodes = list_insert_link_sorted (man->nodes,
 	                                      (CompareFunc)node_connect_cmp, link);
 
+#if NODE_DEBUG
 	AS_HEAVY_DBG_5 ("Node connected: %s:%d, connects: %d, attempts: %d, weigth: %.02f",
 	                net_ip_str (node->host), node->port, node->connects,
 	                node->attempts, node->weight);
+#endif
 
 	return TRUE;
 }
@@ -233,9 +240,11 @@ as_bool as_nodeman_update_failed (ASNodeMan *man, in_addr_t host)
 	/* Recalculate node weight */
 	node->weight = node_weight (man, node);
 
+#if NODE_DEBUG
 	AS_HEAVY_DBG_5 ("Node failed: %s:%d, connects: %d, attempts: %d, weigth: %.02f",
 	                net_ip_str (node->host), node->port, node->connects,
 	                node->attempts, node->weight);
+#endif
 
 	/* Remove node if has become useless */
 	if (node_useless (node))
@@ -284,9 +293,11 @@ as_bool as_nodeman_update_disconnected (ASNodeMan *man, in_addr_t host)
 	/* Recalculate node weight */
 	node->weight = node_weight (man, node);
 
+#if NODE_DEBUG
 	AS_HEAVY_DBG_5 ("Node disconnected: %s:%d, connects: %d, attempts: %d, weigth: %.02f",
 	                net_ip_str (node->host), node->port, node->connects,
 	                node->attempts, node->weight);
+#endif
 
 	/* Remove node if has become useless */
 	if (node_useless (node))
@@ -364,9 +375,11 @@ void as_nodeman_update_reported (ASNodeMan *man, in_addr_t host,
 	man->nodes = list_insert_link_sorted (man->nodes,
 	                                      (CompareFunc)node_connect_cmp, link);
 
+#if NODE_DEBUG
 	AS_HEAVY_DBG_4 ("Node reported: %s:%d, reports: %d, weigth: %.02f",
 	                net_ip_str (node->host), node->port, node->reports,
 	                node->weight);
+#endif
 
 	return;
 }

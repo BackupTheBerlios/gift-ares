@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.4 2004/10/03 17:37:49 HEx Exp $
+ * $Id: as_http_server.c,v 1.5 2004/10/30 23:51:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,9 +9,9 @@
 
 #include "as_ares.h"
 
-
+/*
 #define LOG_HTTP_HEADERS
-
+*/
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.7 2004/10/29 16:27:51 HEx Exp $
+ * $Id: as_netinfo.c,v 1.8 2004/10/30 23:51:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -125,7 +125,7 @@ as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
 
 /* handle nickname packet */
 as_bool as_netinfo_handle_nick (ASNetInfo *info, ASSession *session,
-                              ASPacket *packet)
+                                ASPacket *packet)
 {
 	unsigned char *nick;
 	
