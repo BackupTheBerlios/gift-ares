@@ -1,13 +1,15 @@
 
-- if queue pos > len don't show it
-
-- why do so many source go into 'timed out' state and are not removed? should they be?
+- Why do so many source go into 'timed out' state and are not removed? should they be?
+  Update: I think it is giFT which times out the sources. Not sure what to do about it.
 
 - Disabled sharing makes other nodes ask us for pushes
 
 - Don't send shares if shares are hidden
 
 - A lot of successfuly pushes hit the 'first packet needs 4 byte' limit in http server
+
+- Recheck if download queueing works correctly (if we advance in the queue).
+  Better yet move from HTTP to binary protocol.
 
 - Source searching
 

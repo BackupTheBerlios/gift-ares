@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.9 2005/01/04 22:16:19 hex Exp $
+ * $Id: asp_download.c,v 1.10 2005/01/08 13:36:59 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -49,9 +49,17 @@ static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
 	case DOWNCONN_QUEUED:
 	{
 		status = SOURCE_QUEUED_REMOTE;
-		if (conn->queue_pos && conn->queue_len)
+
+		/* Ares sometimes returns a higher queue position than length.
+		 * Apparently this is supposed to tell us we a SOL so don't show the
+		 * position in this case.
+		 */
+		if (conn->queue_pos != 0 && conn->queue_len != 0 &&
+		    conn->queue_pos <= conn->queue_len)
+		{
 			status_str = stringf ("Queued (%d of %d)", conn->queue_pos,
 			                      conn->queue_len);
+		}
 		else
 			status_str = "Queued";
 		break;
