@@ -32,7 +32,10 @@ static void asp_giftcb_destroy (Protocol *proto)
 
 static as_bool add_meta (ASMetaTag *tag, Share *share)
 {
-	share_set_meta (share, tag->name, tag->value);
+	if (!STRCASECMP (tag->name, "bitrate") && tag->value)
+		share_set_meta (share, tag->name, stringf ("%s000", tag->value));
+	else
+		share_set_meta (share, tag->name, tag->value);
 
 	return TRUE;
 }
@@ -80,10 +83,35 @@ int asp_giftcb_search (Protocol *p, IFEvent *event, char *query, char *exclude,
 		       char *realm, Dataset *meta)
 {
 	ASSearch *search;
+	ASSearchRealm r = SEARCH_ANY;
+
+	if (realm)
+	{
+		struct {
+			char *name;
+			ASSearchRealm realm;
+		} realms[] = {
+			{ "image", SEARCH_IMAGE },
+			{ "audio", SEARCH_AUDIO },
+			{ "video", SEARCH_VIDEO },
+			{ "text", SEARCH_DOCUMENT },
+			{ "application", SEARCH_SOFTWARE },
+			{ NULL, SEARCH_ANY }
+		}, *ptr;
+
+		for (ptr = realms; ptr->name; ptr++)
+		{
+			if (!strncasecmp (realm, ptr->name, strlen (ptr->name)))
+			{
+				r = ptr->realm;
+				break;
+			}
+		}
+	}
 
 	search = as_searchman_search (AS->searchman,
 				      (ASSearchResultCb) search_callback,
-				      query, SEARCH_ANY);
+				      query, r);
 
 	if (!search)
 		return FALSE;
@@ -93,15 +121,19 @@ int asp_giftcb_search (Protocol *p, IFEvent *event, char *query, char *exclude,
 	return TRUE;
 }
 
-static as_bool find_search (ASHashTableEntry *entry, IFEvent *event)
+struct foo {
+	ASSearch *search;
+	IFEvent *event;
+};
+
+static as_bool find_search (ASHashTableEntry *entry, struct foo *bar)
 {
 	ASSearch *s = entry->val;
 	
-	if (s->udata == event)
+	if (s->udata == bar->event)
 	{
-		as_bool ret;
-		ret = as_searchman_remove (AS->searchman, s);
-		assert (ret);
+		assert (!bar->search);
+		bar->search = s;
 	}
 
 	return FALSE;
@@ -109,9 +141,17 @@ static as_bool find_search (ASHashTableEntry *entry, IFEvent *event)
 
 void asp_giftcb_search_cancel (Protocol *p, IFEvent *event)
 {
+	struct foo bar = { NULL, event };
+	as_bool ret;
+
 	as_hashtable_foreach (AS->searchman->searches,
 				    (ASHashTableForeachFunc)find_search,
-				    event);
+				    &bar);
+	
+	assert (bar.search);
+	
+	ret = as_searchman_remove (AS->searchman, bar.search);
+	assert (ret);
 }
 
 int asp_giftcb_stats (Protocol *p, unsigned long *users, unsigned long *files,
@@ -169,16 +209,24 @@ static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
 		s = SOURCE_CANCELLED, t = "Failed";/*, remove = TRUE;*/
 		break;
 	case DOWNCONN_COMPLETE:
-		s = SOURCE_COMPLETE, t = "Complete";
-		break;
+		/* transfer's already been freed */
+		return TRUE;
 	case DOWNCONN_QUEUED:
-		s = SOURCE_QUEUED_REMOTE, t = "Queued";
+	{
+		s = SOURCE_QUEUED_REMOTE;
+		if (conn->queue_pos && conn->queue_len)
+			t = stringf ("Queued (%d of %d)", conn->queue_pos, conn->queue_len);
+		else
+			t = "Queued";
 		break;
+	}
 	default:
 		abort ();
 	}
 
+#if 0
 	AS_DBG_3 ("state callback: %p (%s) '%s'", conn, source->url, t);
+#endif
 
 	if (remove)
 		proto->source_abort (proto, source->chunk->transfer, source);
@@ -248,15 +296,26 @@ int asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 	return TRUE;
 }
 
+static BOOL dl_stop_callback (ASDownConn *dc)
+{
+	as_downconn_free (dc);
+
+	return FALSE; /* remove */
+}
+
 void asp_giftcb_download_stop (Protocol *p, Transfer *transfer, Chunk *chunk,
 			       Source *source, int complete)
 {
 	ASDownConn *dc = source->udata;
 
+#if 1
+	timer_add (0, (TimerCallback)dl_stop_callback, dc);
+#else
 	as_downconn_cancel (dc);
 
 	/* FIXME */
 	as_downconn_free (dc);
+#endif
 }
 
 int Ares_init (Protocol *p)
