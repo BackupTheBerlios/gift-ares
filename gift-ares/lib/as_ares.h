@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.48 2004/10/25 14:17:21 HEx Exp $
+ * $Id: as_ares.h,v 1.49 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -188,7 +188,7 @@ typedef int            as_bool;
 /* How long before we remove an entry from the queue, in seconds */ 
 #define AS_UPLOAD_QUEUE_TIMEOUT 180
 
-/* Maximum number of simultaneous uploads */
+/* Maximum number of simultaneous uploads. */
 #define AS_UPLOAD_MAX_ACTIVE  3
 
 /* Timeout for tcp connect to firewalled source's supernode. */
@@ -222,7 +222,7 @@ typedef struct
 	ASDownMan *downman;
 
 	/* upload manager */
-	ASUploadMan *upman;
+	ASUpMan *upman;
 
 	/* push manager */
 	ASPushMan *pushman;

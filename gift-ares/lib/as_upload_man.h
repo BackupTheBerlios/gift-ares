@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.2 2004/10/26 21:25:52 HEx Exp $
+ * $Id: as_upload_man.h,v 1.3 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,21 +7,86 @@
  * All rights reserved.
  */
 
-typedef struct {
+/*****************************************************************************/
+
+typedef struct as_upman_t ASUpMan;
+
+/* Called for every state change of a managed upload. Return FALSE if the
+ * upload was freed and must no longer be accessed.
+ */
+typedef as_bool (*ASUpManStateCb) (ASUpMan *man, ASUpload *up,
+                                   ASUploadState state);
+
+/* Called before every upload to decide if it should be started. Return one
+ * of the following values:
+ *   -1  Upload is not started and 404 is sent to other host.
+ *    0  Upload starts immediately.
+ *   >0  Upload is not started and return value is sent as queue position to
+ *       requestor.
+ * The callback should also set queue_length if available.
+ */
+typedef as_bool (*ASUpManAuthCb) (ASUpMan *man, ASUpload *up,
+                                  int *queue_length);
+
+/* Called every AS_UPLOAD_PROGRESS_INTERVAL while there are active
+ * uploads.
+ */
+typedef void (*ASUpManProgressCb) (ASUpMan *man);
+
+struct as_upman_t
+{
 	ASHashTable *uploads; /* uploads keyed by host as an integer */
-	List *queue; /* list of struct queues */
+	List *queue;          /* list of struct queues */
 	
-	int max;
-	int nuploads;
-	int nqueued;
+	int max_active;       /* max concurrent uploads */
+	int nuploads;         /* Number of active downloads */
+	int nqueued;          /* Number of queued hosts */
 	int bandwidth;
-} ASUploadMan;
 
-ASUploadMan *as_upman_create (void);
-void as_upman_free (ASUploadMan *man);
+	/* The state callback we trigger for all uploads */
+	ASUpManStateCb state_cb;
+	ASUpManAuthCb auth_cb;
+	/* Periodic progress callback */
+	ASUpManProgressCb progress_cb;
+	timer_id progress_timer;
+};
 
-int as_upman_auth (ASUploadMan *man, in_addr_t host);
+/*****************************************************************************/
 
-/* create and register a new upload */
-ASUpload *as_upman_start (ASUploadMan *man, TCPC *c,
-			  ASHttpHeader *req);
+/* Create upload manager. */
+ASUpMan *as_upman_create ();
+
+/* Free upload manager and stop all uploads. */
+void as_upman_free (ASUpMan *man);
+
+/* Set callback triggered for every state change in one of the uploads. */
+void as_upman_set_state_cb (ASUpMan *man, ASUpManStateCb state_cb);
+
+/* Set callback before every upload to authorize transfer. */
+void as_upman_set_auth_cb (ASUpMan *man, ASUpManAuthCb auth_cb);
+
+/* Set callback triggered periodically for progress updates. */
+void as_upman_set_progress_cb (ASUpMan *man,
+                               ASUpManProgressCb progress_cb);
+
+/*****************************************************************************/
+
+/* Create and register a new upload from http request. */
+ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req);
+
+/*****************************************************************************/
+
+/* Cancel upload but do not remove it. */
+as_bool as_upman_cancel (ASUpMan *man, ASUpload *up);
+
+/* Remove and free finished, failed or cancelled upload. */
+as_bool as_upman_remove (ASUpMan *man, ASUpload *up);
+
+/* Return state of upload. The advantage to as_upload_state is that this
+ * makes sure the upload is actually still in the list and thus valid
+ * before accessing it. If the upload is invalid UPLOAD_INVALID is
+ * returned.
+ */
+ASUploadState as_upnman_state (ASUpMan *man, ASUpload *up);
+
+/*****************************************************************************/

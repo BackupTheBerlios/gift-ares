@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.h,v 1.5 2004/10/24 03:45:24 HEx Exp $
+ * $Id: as_share.h,v 1.6 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,6 +26,9 @@ typedef struct
  * is NULL the file will be hashed synchronously before return. */
 ASShare *as_share_create (char *path, ASHash *hash, ASMeta *meta,
                           size_t size, ASRealm realm);
+
+/* Create copy of share object. */
+ASShare *as_share_copy (ASShare *share);
 
 /* Free share object. */
 void as_share_free (ASShare *share);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.9 2004/10/21 17:11:26 mkern Exp $
+ * $Id: as_search_man.c,v 1.10 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -338,7 +338,7 @@ static as_bool valid_search_itr (ASHashTableEntry *entry, ASSearch **search)
 /* returns TRUE if search is currently managed by search man */
 as_bool as_searchman_valid_search (ASSearchMan *man, ASSearch *search)
 {
-	/* check if search is in one of the hash tables */
+	/* check if search is in the hash table */
 	as_hashtable_foreach (man->searches,
 	                      (ASHashTableForeachFunc)valid_search_itr, &search);
 	if (search == NULL)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.15 2004/10/25 14:17:21 HEx Exp $
+ * $Id: as_share.c,v 1.16 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,6 +56,27 @@ ASShare *as_share_create (char *path, ASHash *hash, ASMeta *meta,
 
 	return share;
 }
+
+/* Create copy of share object. */
+ASShare *as_share_copy (ASShare *share)
+{
+	ASShare *new_share;
+
+	if (!(new_share = malloc (sizeof (ASShare))))
+		return NULL;
+	
+	new_share->path  = strdup (share->path);
+	new_share->ext   = strrchr (as_get_filename (new_share->path), '.');
+	new_share->size  = share->size;
+	new_share->realm = share->realm;
+	new_share->fake  = share->fake;
+
+	new_share->hash = as_hash_copy (share->hash);
+	new_share->meta = as_meta_copy (share->meta);
+
+	return new_share;
+}
+
 
 void as_share_free (ASShare *share)
 {

@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.6 2004/10/26 21:25:52 HEx Exp $
+ * $Id: as_upload.c,v 1.7 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,6 +9,8 @@
 
 #include "as_ares.h"
 
+/*****************************************************************************/
+
 #define BLOCKSIZE 4096
 
 /* ares displays this (up to the first slash or space) as the network name,
@@ -17,134 +19,276 @@
 
 /*****************************************************************************/
 
-static as_bool send_reply (ASUpload *up);
-static as_bool send_reply_queued (ASUpload *up, int pos);
+static as_bool send_reply_success (ASUpload *up);
+static as_bool send_reply_queued (ASUpload *up, int queue_pos,
+                                  int queue_length);
 static as_bool send_reply_error (ASUpload *up);
+static as_bool send_reply_not_found (ASUpload *up);
 static void send_file (int fd, input_id input, ASUpload *up);
 
-ASUpload *as_upload_new (TCPC *c, ASHttpHeader *req,
-			 ASUploadStateCb callback)
-{
-	ASUpload *up = malloc (sizeof(ASUpload));
-	FILE *file;
-	const char *range;
-	ASHash *hash;
-	ASShare *share;
+/*****************************************************************************/
 
-	if (!up)
+static as_bool upload_set_state (ASUpload *up, ASUploadState state,
+                                 as_bool raise_callback)
+{
+	up->state = state;
+
+	/* raise callback if specified */
+	if (raise_callback && up->state_cb)
+		return up->state_cb (up, up->state);
+
+	return TRUE;
+}
+
+/*****************************************************************************/
+
+/* Create new upload from HTTP request. Takes ownership of tcp connection and
+ * request object if successful.
+ */
+ASUpload *as_upload_create (TCPC *c, ASHttpHeader *request,
+                            ASUploadStateCb state_cb,
+                            ASUploadAuthCb auth_cb)
+{
+	ASUpload *up;
+
+	assert (c);
+	assert (request);
+	
+	if (!(up = malloc (sizeof (ASUpload))))
 		return NULL;
 
 	up->c = c;
+	up->host = up->c->host;
+	up->request = request;
+	up->share = NULL;
+	up->file = NULL;
+	up->start = up->stop = up->sent = 0;
+	up->input = INVALID_INPUT;
+	
+	up->state = UPLOAD_NEW;
+	up->state_cb = state_cb;
+	up->auth_cb = auth_cb;
+	up->data_cb = NULL;
 
-	if ((strncmp (req->uri, "sha1:", 5) &&
-	     strncmp (req->uri, "/hack", 5)) || /* for debugging */
-	    !(hash = as_hash_decode (req->uri + 5)))
+	up->upman = NULL;
+	up->udata = NULL;
+
+	return up;
+}
+
+/* Free upload object. */
+void as_upload_free (ASUpload *up)
+{
+	if (!up)
+		return;
+
+	input_remove (up->input);
+	tcp_close_null (&up->c);
+
+	as_http_header_free (up->request);
+	as_share_free (up->share);
+
+	if (up->file)
+		fclose (up->file);
+	
+	free (up);
+}
+
+/* Set data callback for upload. */
+void as_upload_set_data_cb (ASUpload *up, ASUploadDataCb data_cb)
+{
+	up->data_cb = data_cb;
+}
+
+/*****************************************************************************/
+
+/* Send reply back to requester. Looks up share in shares manager, raises auth
+ * callback and sends reply. Either sends 503, 404, queued status, or
+ * requested data. Returns FALSE if the connection has been closed after a
+ * failure reply was sent and TRUE if data transfer was started.
+ */
+as_bool as_upload_start (ASUpload *up)
+{
+	ASHash *hash;
+	const char *range;
+	int queue_pos, queue_length;
+
+	if (up->state != UPLOAD_NEW)
 	{
-		AS_DBG_2 ("Malformed uri '%s' from %s",
-			  req->uri, net_ip_str (c->host));
-		free (up);
-
-		return NULL;
+		assert (up->state == UPLOAD_NEW);
+		return FALSE;
 	}
 
-	share = as_shareman_lookup (AS->shareman, hash);
+	/* Get hash from request header. */
+	if ((strncmp (up->request->uri, "sha1:", 5) &&
+	     strncmp (up->request->uri, "/hack", 5)) || /* for debugging */
+	    !(hash = as_hash_decode (up->request->uri + 5)))
+	{
+		AS_WARN_2 ("Malformed uri '%s' from %s",
+		           up->request->uri, net_ip_str (up->host));
+		send_reply_error (up);
+		return FALSE;
+	}
 
-	if (!share)
+	/* Lookup share. */
+	if (!(up->share = as_shareman_lookup (AS->shareman, hash)))
 	{
 		AS_DBG_2 ("Unknown share request '%s' from %s",
-			  as_hash_str (hash), net_ip_str (c->host));
-		send_reply_error (up);
-		free (up);
+		          as_hash_str (hash), net_ip_str (up->host));
+		send_reply_not_found (up);
 		as_hash_free (hash);
-
-		return NULL;
+		return FALSE;
 	}
-
-	AS_DBG_2 ("Upload request: '%s' from %s",
-		  share->path, net_ip_str (c->host));
 
 	as_hash_free (hash);
 
-	up->share = share;
-	up->cb = callback;
+	/* Make copy of share object in case share list changes during upload. */
+	if (!(up->share = as_share_copy (up->share)))
+	{
+		AS_ERR ("Insufficient memory.");
+		send_reply_error (up);
+		return FALSE;
+	}
 
-	range = as_http_header_get_field (req, "Range");
+	AS_DBG_2 ("Upload request: '%s' from %s",
+	          up->share->path, net_ip_str (up->host));
 
-	if (range)
+	/* Get range from request header. */
+	if ((range = as_http_header_get_field (up->request, "Range")))
 	{
 		int i = sscanf (range, "bytes=%u-%u", &up->start, &up->stop);
 
 		if (i == 1) /* only start specified */
-			up->stop = share->size;
+			up->stop = up->share->size;
 		else
-			up->stop++;
+			up->stop++; /* make range exclusive end */
 
-		if (!i || up->stop < up->start ||
-		    up->start > share->size || up->stop > share->size)
+		if (i == 0 || up->stop <= up->start ||
+		    up->start >= up->share->size || up->stop > up->share->size)
 		{
-			AS_ERR_2 ("invalid range header '%s' from %s",
-				  range, net_ip_str (up->c->host));
-
-			free (up);
-
-			return NULL;
+			AS_ERR_2 ("Invalid range header '%s' from %s",
+			          range, net_ip_str (up->host));
+			send_reply_error (up);
+			return FALSE;
 		}
 
 	}
 	else
 	{
 		AS_DBG_1 ("No range header from %s, assuming whole file",
-			  net_ip_str (up->c->host));
+		          net_ip_str (up->host));
 
 		up->start = 0;
-		up->stop = share->size;
+		up->stop = up->share->size;
 	}
 
-	up->sent = 0;
+	/* Ask auth callback what to do. */
+	queue_pos = 0; /* send data */
+	queue_length = 0;
 
-	if (AS->upman)
+	if (up->auth_cb)
+		queue_pos = up->auth_cb (up, &queue_length);
+
+	if (queue_pos < 0)
 	{
-		int pos = as_upman_auth (AS->upman, c->host);
+		/* Callback requested we tell this user to go away. */
+		send_reply_not_found (up);
+		return FALSE;
+	}
+	else if (queue_pos > 0)
+	{
+		/* User is queued */
+		send_reply_queued (up, queue_pos, queue_length);
+		return FALSE;
+	}
 
-		if (pos)
+	/* Send data. */
+	assert (queue_pos == 0);
+
+	up->file = fopen (up->share->path, "rb");
+
+	if (!up->file || (fseek (up->file, up->start, SEEK_SET) < 0))
+	{
+		AS_ERR_1 ("Failed to open file for upload: %s", up->share->path);
+
+		if (up->file)
 		{
-			send_reply_queued (up, pos);
-			free (up);
-
-			return NULL;
+			fclose (up->file);
+			up->file = NULL;
 		}
-	}
-
-	file = fopen (share->path, "rb");
-
-	if (!file || (fseek (file, up->start, SEEK_SET) < 0))
-	{
-		AS_ERR_1 ("Failed to open file for upload: %s", share->path);
-		free (up);
-		if (file)
-			fclose(file);
 		
-		return NULL;
+		send_reply_error (up);
+		return FALSE;
 	}
 
-	as_http_header_free (req);
+	/* Send 206 reply. */
+	if (!send_reply_success (up))
+	{
+		AS_ERR_1 ("Failed to send 206 reply for upload: %s", up->share->path);
 
-	send_reply (up);
+		if (up->file)
+		{
+			fclose (up->file);
+			up->file = NULL;
+		}
+		
+		return FALSE;
+	}
 
-	up->file = file;
+	if (!upload_set_state (up, UPLOAD_ACTIVE, TRUE))
+		return FALSE; /* Callback freed us */
 
+	/* Wait until we can write file data. */
 	up->input = input_add (up->c->fd, (void *)up, INPUT_WRITE,
-			       (InputCallback)send_file, 0);
+	                       (InputCallback)send_file, 0);
 
-	return up;
+	return TRUE;
 }
 
-void as_upload_free (ASUpload *up)
+/* Cancel data transfer and close connection. Raises state callback. */
+as_bool as_upload_cancel (ASUpload *up)
 {
-	tcp_close_null (&up->c);
+	if (up->state != UPLOAD_ACTIVE)
+		return FALSE;
+
 	input_remove (up->input);
-	fclose (up->file);
-	free (up);
+	up->input = INVALID_INPUT;
+	tcp_close_null (&up->c);
+
+	if (up->file)
+	{
+		fclose (up->file);
+		up->file = NULL;
+	}
+
+	if (!upload_set_state (up, UPLOAD_CANCELLED, TRUE))
+		return FALSE; /* Callback freed us */
+
+	return TRUE;
+}
+
+/*****************************************************************************/
+
+/* Returns current upload state */
+ASUploadState as_upload_state (ASUpload *up)
+{
+	return up->state;
+}
+
+/* Return upload state as human readable static string. */
+const char *as_upload_state_str (ASUpload *up)
+{
+	switch (up->state)
+	{
+	case UPLOAD_INVALID:   return "Invalid";
+	case UPLOAD_NEW:       return "New";
+	case UPLOAD_ACTIVE:    return "Active";
+	case UPLOAD_FAILED:    return "Failed";
+	case UPLOAD_QUEUED:    return "Queued";
+	case UPLOAD_COMPLETE:  return "Completed";
+	case UPLOAD_CANCELLED: return "Cancelled";
+	}
+	return "UNKNOWN";
 }
 
 /*****************************************************************************/
@@ -172,30 +316,29 @@ static void set_header_b6mi (ASHttpHeader *request)
 
 	p = as_packet_create ();
 
-        /* our supernode's IP and port
-	   (choose the first one in the list) */
-        if (AS && AS->sessman && AS->sessman->connected)
-                super = AS->sessman->connected->data;
+	/* our supernode's IP and port (choose the first one in the list) */
+	if (AS && AS->sessman && AS->sessman->connected)
+		super = AS->sessman->connected->data;
 
-        if (super)
-        {
-                as_packet_put_ip (p, super->host);
-                as_packet_put_le16 (p, super->port);
-        }
-        else
-        {
-                as_packet_put_ip (p, INADDR_NONE);
-                as_packet_put_le16 (p, 0);
-        }
+	if (super)
+	{
+		as_packet_put_ip (p, super->host);
+		as_packet_put_le16 (p, super->port);
+	}
+	else
+	{
+		as_packet_put_ip (p, INADDR_NONE);
+		as_packet_put_le16 (p, 0);
+	}
 
 	/* our IP and port */
-        as_packet_put_ip (p, AS->netinfo->outside_ip);
-        as_packet_put_le16 (p, AS->netinfo->port);
+	as_packet_put_ip (p, AS->netinfo->outside_ip);
+	as_packet_put_le16 (p, AS->netinfo->port);
 
-        as_encrypt_b6mi (p->data, p->used);
-        set_header_encoded (request, "X-B6MI", p);
+	as_encrypt_b6mi (p->data, p->used);
+	set_header_encoded (request, "X-B6MI", p);
         
-        as_packet_free (p);
+	as_packet_free (p);
 }
 
 static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
@@ -211,22 +354,24 @@ static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
 		as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nick);
 }
 
-static as_bool send_reply (ASUpload *up)
+/*****************************************************************************/
+
+static as_bool send_reply_success (ASUpload *up)
 {
 	ASHttpHeader *reply;
 	char buf[32];
 	String *str;
 
 	reply = as_http_header_reply (HTHD_VER_11,
-				      (up->start == 0 &&
-				       up->stop == up->share->size) ? 200 : 206);
+	                              (up->start == 0 &&
+	                              up->stop == up->share->size) ? 200 : 206);
 
 #if 0
 	sprintf (buf, "bytes=%u-%u/%u", up->start, up->stop-1,
-		 up->share->size); /* Ares */
+	         up->share->size); /* Ares */
 #else
 	sprintf (buf, "bytes %u-%u/%u", up->start, up->stop-1, 
-		 up->share->size); /* HTTP */
+		     up->share->size); /* HTTP */
 #endif
 	as_http_header_set_field (reply, "Content-Range", buf);
 
@@ -240,43 +385,61 @@ static as_bool send_reply (ASUpload *up)
 #if 0
 	AS_DBG_1("%s", str->str);
 #endif
-	tcp_write (up->c, str->str, str->len);
+
+	/* Immediately send reply since there might be a race condition between
+	 * the tcp write queue and our file send input. I think it is not defined
+	 * which input event gets triggered first if there are multiple.
+	 */
+	if (tcp_send (up->c, str->str, str->len) != str->len)
+	{
+		AS_ERR_1 ("Short send in reply for upload '%s'", up->share->path);
+
+		string_free (str);
+		as_http_header_free (reply);
+		return FALSE;
+	}
+
 	string_free (str);
 	as_http_header_free (reply);
 
 	return TRUE;
 }
 
-static as_bool send_reply_queued (ASUpload *up, int pos)
+static as_bool send_reply_queued (ASUpload *up, int queue_pos,
+                                  int queue_length)
 {
 	ASHttpHeader *reply;
 	String *str;
 	char buf[128];
-	ASUploadMan *man = AS->upman;
 
-	assert (man && pos);
+	assert (queue_pos > 0);
+	assert (queue_length > 0);
 
-	reply = as_http_header_reply (HTHD_VER_11,
-				      503);
-
+	reply = as_http_header_reply (HTHD_VER_11, 503);
 	set_common_headers (up, reply);
-
 	str = as_http_header_compile (reply);
 
-	if (pos > 0)
-	{
-		sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
-			 pos, man->nqueued, 1 /*man->max*/,
-			 AS_UPLOAD_QUEUE_MIN, AS_UPLOAD_QUEUE_MAX);
+	sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
+	         queue_pos, queue_length,
+	         1                    /* max active downloads (per user?) */,
+	         AS_UPLOAD_QUEUE_MIN, /* min/max recheck intervals in seconds */
+	         AS_UPLOAD_QUEUE_MAX);
 
-		as_http_header_set_field (reply, "X-Queued", buf);
+	as_http_header_set_field (reply, "X-Queued", buf);
 
-		AS_DBG_2 ("queued %s: %s", net_ip_str (up->c->host), buf); 
-	}
+#if 0
+	AS_HEAVY_DBG_2 ("queued %s: %s", net_ip_str (up->host), buf); 
+#endif
 
-	tcp_write (up->c, str->str, str->len);
+	/* Immediately send reply and close connection. */
+	tcp_send (up->c, str->str, str->len);
+	tcp_close_null (&up->c);
+
 	string_free (str);
 	as_http_header_free (reply);
+
+	if (!upload_set_state (up, UPLOAD_QUEUED, TRUE))
+		return FALSE; /* Callback freed us */
 
 	return TRUE;
 }
@@ -286,19 +449,60 @@ static as_bool send_reply_error (ASUpload *up)
 	ASHttpHeader *reply;
 	String *str;
 
-	reply = as_http_header_reply (HTHD_VER_11,
-				      404);
-
+	reply = as_http_header_reply (HTHD_VER_11, 500);
 	set_common_headers (up, reply);
-
 	str = as_http_header_compile (reply);
 
-	tcp_write (up->c, str->str, str->len);
+	/* Immediately send reply and close connection. */
+	tcp_send (up->c, str->str, str->len);
+	tcp_close_null (&up->c);
 
 	string_free (str);
 	as_http_header_free (reply);
 
+	if (!upload_set_state (up, UPLOAD_FAILED, TRUE))
+		return FALSE; /* Callback freed us */
+
 	return TRUE;
+}
+
+static as_bool send_reply_not_found (ASUpload *up)
+{
+	ASHttpHeader *reply;
+	String *str;
+
+	reply = as_http_header_reply (HTHD_VER_11, 404);
+	set_common_headers (up, reply);
+	str = as_http_header_compile (reply);
+
+	/* Immediately send reply and close connection. */
+	tcp_send (up->c, str->str, str->len);
+	tcp_close_null (&up->c);
+
+	string_free (str);
+	as_http_header_free (reply);
+
+	if (!upload_set_state (up, UPLOAD_FAILED, TRUE))
+		return FALSE; /* Callback freed us */
+
+	return TRUE;
+}
+
+/*****************************************************************************/
+
+static as_bool send_error (ASUpload *up)
+{
+	input_remove (up->input);
+	up->input = INVALID_INPUT;
+	tcp_close_null (&up->c);
+
+	if (up->file)
+	{
+		fclose (up->file);
+		up->file = NULL;
+	}
+
+	return upload_set_state (up, UPLOAD_CANCELLED, TRUE); /* may free us */
 }
 
 static void send_file (int fd, input_id input, ASUpload *up)
@@ -306,16 +510,14 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	unsigned int in, out, left, wanted;
 	as_uint8 buf[BLOCKSIZE];
 
-        if (net_sock_error (fd))
-        {
-                AS_ERR_3 ("net_sock_error %d after %u bytes for upload to %s",
-                                   errno, up->sent, net_ip_str (up->c->host));
-		(*up->cb) (up, UPLOAD_CANCELLED);
+	if (net_sock_error (fd))
+	{
+		AS_DBG_3 ("net_sock_error %d after %u bytes for upload to %s",
+		          errno, up->sent, net_ip_str (up->host));
 
-		as_upload_free (up);
-		
-                return;
-        }
+		send_error (up); /* may free us */
+		return;
+	}
 	
 	wanted = BLOCKSIZE;
 
@@ -328,10 +530,10 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	
 	if (in < wanted)
 	{
-		AS_DBG_1 ("read failed from %s", up->share->path);
-		(*up->cb) (up, UPLOAD_CANCELLED);
+		AS_WARN_1 ("Read failed from %s. Cancelling upload.",
+		           up->share->path);
 
-		as_upload_free (up);
+		send_error (up); /* may free us */
 		return;
 	}
 
@@ -339,40 +541,50 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	
 	if (out < 0)
 	{
-		AS_WARN_2 ("failed to write %d bytes to %s",
-			   in, net_ip_str (up->c->host));
-		(*up->cb) (up, UPLOAD_CANCELLED);
+		AS_WARN_2 ("Failed to write %d bytes to %s. Cancelling upload.",
+		           in, net_ip_str (up->host));
 
-		as_upload_free (up);
+		send_error (up); /* may free us */
 		return;
 	}
 
 	if (out < in)
 	{
-		AS_WARN_3 ("wrote %d of %d bytes to %s, rewinding",
-			   out, in, net_ip_str (up->c->host));
+		AS_DBG_3 ("Wrote %d of %d bytes to %s, rewinding",
+		           out, in, net_ip_str (up->host));
 
 		if (fseek (up->file, -((off_t)(in - out)), SEEK_CUR) < 0)
 		{
-			(*up->cb) (up, UPLOAD_CANCELLED);
-			AS_ERR ("rewind failed");
-			as_upload_free (up);
+			AS_ERR ("Rewind failed. Cancelling upload.");
+
+			send_error (up); /* may free us */
 			return;
 		}
 	}
 
 	up->sent += out;
 
+	/* Raise data callback if there is one */
+	if (up->data_cb)
+		up->data_cb (up, out);
+
+	/* Check if upload is complete */
 	assert (up->sent <= up->stop - up->start);
 
 	if (up->sent == up->stop - up->start)
 	{
-		AS_WARN_3 ("finished uploading %d bytes of '%s' to %s",
-			   up->sent, up->share->path, net_ip_str (up->c->host));
+		AS_DBG_3 ("Finished uploading %d bytes of '%s' to %s",
+		           up->sent, up->share->path, net_ip_str (up->host));
 
-		(*up->cb) (up, UPLOAD_COMPLETED);
+		input_remove (up->input);
+		up->input = INVALID_INPUT;
+		tcp_close_null (&up->c);
+		fclose (up->file);
+		up->file = NULL;
 
-		as_upload_free (up);
+		upload_set_state (up, UPLOAD_COMPLETE, TRUE); /* may free us */
 		return;
 	}
 }
+
+/*****************************************************************************/

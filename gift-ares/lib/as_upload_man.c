@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.4 2004/10/26 21:25:52 HEx Exp $
+ * $Id: as_upload_man.c,v 1.5 2004/10/30 01:00:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,24 +9,50 @@
 
 #include "as_ares.h"
 
-struct queue {
+/*****************************************************************************/
+
+struct queue
+{
 	in_addr_t host;
 	time_t    time;
 };
 
-ASUploadMan *as_upman_create (void)
-{
-	ASUploadMan *man = malloc (sizeof (ASUploadMan));
+/* Internal Queue system if no external auth callback was set. Returns zero
+ * for OK, -1 for not, or queue position.
+ */
+static int upman_auth (ASUpMan *man, in_addr_t host);
 
-	if (!man)
+/*****************************************************************************/
+
+static as_bool upload_state_cb (ASUpload *up, ASUploadState state);
+static int upload_auth_cb (ASUpload *up, int *queue_length);
+
+/*****************************************************************************/
+
+/* Create upload manager. */
+ASUpMan *as_upman_create ()
+{
+	ASUpMan *man;
+
+	if (!(man = malloc (sizeof (ASUpMan))))
 		return NULL;
 
-	man->uploads = as_hashtable_create_int ();
+	if (!(man->uploads = as_hashtable_create_int ()))
+	{
+		free (man);
+		return NULL;
+	}
+
 	man->queue   = NULL;
 
-	man->max = AS_UPLOAD_MAX_ACTIVE;
+	man->max_active = AS_UPLOAD_MAX_ACTIVE;
 	man->nuploads = man->nqueued = 0;
 	man->bandwidth = 0;
+
+	man->state_cb = NULL;
+	man->auth_cb = NULL;
+	man->progress_cb = NULL;
+	man->progress_timer = INVALID_TIMER;
 
 	return man;
 }
@@ -34,14 +60,20 @@ ASUploadMan *as_upman_create (void)
 static as_bool free_upload (ASHashTableEntry *entry, void *udata)
 {
 	as_upload_free (entry->val);
-
 	return TRUE; /* remove */
 }
 
-void as_upman_free (ASUploadMan *man)
+/* Free upload manager and stop all uploads. */
+void as_upman_free (ASUpMan *man)
 {
+	if (!man)
+		return;
+
+	if (man->progress_timer != INVALID_TIMER)
+		timer_remove (man->progress_timer);
+
 	as_hashtable_foreach (man->uploads, (ASHashTableForeachFunc)free_upload,
-                           NULL);
+	                      NULL);
 
 	as_hashtable_free (man->uploads, FALSE);
 	list_foreach_remove (man->queue, NULL, NULL); /* free entries */
@@ -50,7 +82,217 @@ void as_upman_free (ASUploadMan *man)
 	free (man);
 }
 
-static void queue_remove (ASUploadMan *man, List *link)
+/* Set callback triggered for every state change in one of the uploads. */
+void as_upman_set_state_cb (ASUpMan *man, ASUpManStateCb state_cb)
+{
+	man->state_cb = state_cb;	
+}
+
+/* Set callback before every upload to authorize transfer. */
+void as_upman_set_auth_cb (ASUpMan *man, ASUpManAuthCb auth_cb)
+{
+	man->auth_cb = auth_cb;
+}
+
+/* Set callback triggered periodically for progress updates. */
+void as_upman_set_progress_cb (ASUpMan *man,
+                               ASUpManProgressCb progress_cb)
+{
+	abort ();
+}
+
+/*****************************************************************************/
+
+/* Create and register a new upload from http request. */
+ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
+{
+	ASUpload *up;
+
+	/* Create upload object. */
+	if (!(up = as_upload_create (c, req, upload_state_cb, upload_auth_cb)))
+	{
+		AS_ERR_1 ("Couldn't create upload for request from %s",
+		          net_ip_str (c->host));
+		return NULL;
+	}
+
+	up->upman = man;
+
+	/* Insert into hash table first so it is available in callback triggeren
+	 * by as_upload_start.
+	 */
+	if (!as_hashtable_insert_int (man->uploads, (as_uint32)up->host, up))
+	{
+		AS_ERR_1 ("Failed to insert upload to %s in hash table",
+		          net_ip_str (up->host));
+		as_upload_free (up);
+		return NULL;
+	}
+
+	man->nuploads++;
+
+	/* Try to start upload. Auth callback will decide if this succeeds */
+	if (!as_upload_start (up))
+	{
+		/* Upload was not started. Failed/queued/404/etc */
+		if (!as_hashtable_remove_int (man->uploads, (as_uint32)(up->host)))
+		{
+			AS_WARN_1 ("Failed to remove unstarted upload from hash table",
+			           net_ip_str (up->host));
+			assert (0);
+		}
+		else
+		{
+			man->nuploads--;
+		}
+
+		as_upload_free (up);
+		return NULL;
+	}
+
+	return up;
+}
+
+/*****************************************************************************/
+
+static as_bool valid_upload_itr (ASHashTableEntry *entry, ASUpload **up)
+{
+	if (*up == entry->val)
+		*up = NULL;
+
+	return FALSE; /* don't delete item */
+}
+
+/* Returns TRUE if upload is currently managed by upman */
+static as_bool upman_valid_upload (ASUpMan *man, ASUpload *up)
+{
+	/* check if upload is in the hash table */
+	as_hashtable_foreach (man->uploads,
+	                      (ASHashTableForeachFunc)valid_upload_itr, &up);
+	if (up == NULL)
+		return TRUE;
+
+	return FALSE;
+}
+
+/* Cancel upload but do not remove it. */
+as_bool as_upman_cancel (ASUpMan *man, ASUpload *up)
+{
+	if (!upman_valid_upload (man, up))
+		return FALSE;
+
+	return as_upload_cancel (up); /* triggers callback */
+}
+
+/* Remove and free finished, failed or cancelled upload. */
+as_bool as_upman_remove (ASUpMan *man, ASUpload *up)
+{
+	if (!upman_valid_upload (man, up))
+		return FALSE;
+
+	if (!as_hashtable_remove_int (man->uploads, (as_uint32)up->host))
+	{
+		AS_ERR_1 ("Couldn't remove upload to %s from hashtable",
+		          net_ip_str (up->host));
+		assert (0);
+	}
+	else
+	{
+		man->nuploads--;
+		assert (man->uploads >= 0);
+	}
+
+	as_upload_free (up);
+
+	return TRUE;
+}
+
+/* Return state of upload. The advantage to as_upload_state is that this
+ * makes sure the upload is actually still in the list and thus valid
+ * before accessing it. If the upload is invalid UPLOAD_INVALID is
+ * returned.
+ */
+ASUploadState as_upnman_state (ASUpMan *man, ASUpload *up)
+{
+	if (!upman_valid_upload (man, up))
+		return UPLOAD_INVALID;
+
+	return as_upload_state (up);
+}
+
+/*****************************************************************************/
+
+static as_bool upload_state_cb (ASUpload *up, ASUploadState state)
+{
+	ASUpMan *man = up->upman;
+	int ret = TRUE;
+
+	switch (state)
+	{
+	case UPLOAD_FAILED:
+	case UPLOAD_QUEUED:
+		/* Don't forward any of these to upman callback since they mean the
+		 * upload was never created.
+		 */
+		break;
+
+	case UPLOAD_ACTIVE:
+		/* Raise callback */
+		if (man->state_cb)
+			ret = man->state_cb (man, up, state);
+		break;
+
+	case UPLOAD_COMPLETE:
+	case UPLOAD_CANCELLED:
+		/* Raise callback */
+		if (man->state_cb)
+			ret = man->state_cb (man, up, state);
+
+		/* And free download if it still exists.
+		 * FIXME: Is it a good idea to automatically do this for the user
+		 *        here?
+		 */
+		if (ret)
+		{
+			as_upman_remove (man, up);
+			ret = FALSE;
+		}
+		break;
+
+	default:
+		abort ();
+	}
+
+	return ret;
+}
+
+static int upload_auth_cb (ASUpload *up, int *queue_length)
+{
+	ASUpMan *man = up->upman;
+	int pos = 0;
+	int length = 0;
+
+	if (man->auth_cb)
+	{
+		pos = man->auth_cb (man, up, &length);
+	}
+	else
+	{
+		/* Use internal queue system. */
+		length = man->nqueued;
+		pos = upman_auth (man, up->host);
+	}
+
+	AS_DBG_3 ("Auth status for '%s': pos: %d, length: %d",
+	          net_ip_str (up->host), pos, length);
+
+	*queue_length = length;
+	return pos;
+}
+
+/*****************************************************************************/
+
+static void queue_remove (ASUpMan *man, List *link)
 {
 	free (link->data);
 	man->queue = list_remove_link (man->queue, link);
@@ -64,7 +306,7 @@ static void queue_remove (ASUploadMan *man, List *link)
  * specified to ignore beyond, so that we can avoid timing out entries
  * if later entries haven't pinged us yet.
  */
-static void tidy_queue (ASUploadMan *man, struct queue *last)
+static void tidy_queue (ASUpMan *man, struct queue *last)
 {
 	List *l, *next;
 	time_t t = time (NULL);
@@ -74,8 +316,8 @@ static void tidy_queue (ASUploadMan *man, struct queue *last)
 		struct queue *q = l->data;
 		
 		next = l->next; /* to avoid referencing freed data
-				 * should we choose to remove this
-				 * entry */
+		                 * should we choose to remove this
+		                 * entry */
  
 		if (q == last)
 			break;
@@ -83,14 +325,15 @@ static void tidy_queue (ASUploadMan *man, struct queue *last)
 		if (t - q->time > AS_UPLOAD_QUEUE_TIMEOUT)
 		{
 			/* it's stale, remove it */
-			AS_DBG_2 ("removing stale queue entry %s (%d elapssed)", net_ip_str (q->host), t - q->time);
+			AS_DBG_2 ("Removing stale queue entry %s (%d elapsed)",
+			          net_ip_str (q->host), t - q->time);
 			queue_remove (man, l);
 		}
 	}
 }
 
-/* returns zero for OK, -1 for not, or queue position */
-int as_upman_auth (ASUploadMan *man, in_addr_t host)
+/* Returns zero for OK, -1 for not, or queue position. */
+static int upman_auth (ASUpMan *man, in_addr_t host)
 {
 	List *l;
 	struct queue *q;
@@ -104,12 +347,13 @@ int as_upman_auth (ASUploadMan *man, in_addr_t host)
 		return -1;
 	}
 
-	/* spare slots are available even after dealing with everyone
-	   in the queue */
-	if (man->nuploads + man->nqueued < man->max)
+	/* Spare slots are available even after dealing with everyone
+	 * in the queue.
+	 */
+	if (man->nuploads + man->nqueued < man->max_active)
 	{
 		AS_DBG_3 ("spare slots available (%d+%d < %d), allowing",
-			  man->nuploads, man->nqueued, man->max);
+		          man->nuploads, man->nqueued, man->max_active);
 		return 0;
 	}
 
@@ -125,7 +369,7 @@ int as_upman_auth (ASUploadMan *man, in_addr_t host)
 
 	assert (list_length (man->queue) == man->nqueued);
 
-	AS_DBG_1 ("queue pos is %d", i);
+	AS_HEAVY_DBG_1 ("queue pos is %d", i);
 
 	if (!l)
 	{
@@ -143,11 +387,11 @@ int as_upman_auth (ASUploadMan *man, in_addr_t host)
 		assert (i == man->nqueued);
 	}
 
-	if (i + man->nuploads <= man->max)
+	if (i + man->nuploads <= man->max_active)
 	{
 		/* sufficiently near the front of the queue: pop it */
-		AS_DBG_3 ("reserved slot available (%d+%d <= %d), allowing",
-			  i, man->nuploads, man->max);
+		AS_DBG_3 ("Reserved slot available (%d+%d <= %d), allowing",
+		          i, man->nuploads, man->max_active);
 
 		queue_remove (man, l);
 		return 0;
@@ -158,42 +402,4 @@ int as_upman_auth (ASUploadMan *man, in_addr_t host)
 	return i;
 }
 
-static as_bool upload_callback (ASUpload *up, ASUploadState state)
-{
-	ASUploadMan *man = AS->upman;
-
-	switch (state)
-	{
-	case UPLOAD_COMPLETED:
-	case UPLOAD_CANCELLED:
-	{
-		void *ret;
-		ret = as_hashtable_remove_int (man->uploads, (int)(up->c->host));
-		assert (ret);
-		man->nuploads--;
-
-		assert (man->uploads >= 0);
-		break;
-	}
-	default:
-		break;
-	}
-
-	return TRUE;
-}
-
-ASUpload *as_upman_start (ASUploadMan *man, TCPC *c, 
-			  ASHttpHeader *req)
-{
-	ASUpload *up = as_upload_new (c, req,
-				      (ASUploadStateCb)upload_callback);
-
-	if (!up)
-		return NULL;
-
-	as_hashtable_insert_int (man->uploads, (int)(c->host), up);
-
-	man->nuploads++;
-
-	return up;
-}
+/*****************************************************************************/

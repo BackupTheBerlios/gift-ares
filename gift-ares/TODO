@@ -16,6 +16,9 @@ Essential stuff:
 - Time out inactive download connections. It hangs the download indefinitely.
   Update: Effects now limited by replacing slow nodes with faster ones.
   
+- Do we need an upper limit on the upload queue length? Is a list efficient
+  enough for large queues?
+
 
 Features:
 
