@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.10 2004/09/05 13:07:17 mkern Exp $
+ * $Id: as_node_man.c,v 1.11 2004/09/06 08:37:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -79,12 +79,6 @@ ASNodeMan *as_nodeman_create ()
 	return man;
 }
 
-static int node_free_itr (ASNode *node, void *udata)
-{
-	as_node_free (node);
-	return TRUE;
-}
-
 /* Free node manager. */
 void as_nodeman_free (ASNodeMan *man)
 {
@@ -96,14 +90,27 @@ void as_nodeman_free (ASNodeMan *man)
 	free (man);
 }
 
+static int node_free_itr (ASNode *node, int *used)
+{
+	if (node->in_use)
+		(*used)++;
+	as_node_free (node);
+	return TRUE;
+}
+
 /* Free all nodes. */
 void as_nodeman_empty (ASNodeMan *man)
 {
+	int used = 0;
+
 	/* remove index */
 	as_hashtable_free (man->index, FALSE);
 
 	/* free nodes */
-	list_foreach_remove (man->nodes, (ListForeachFunc)node_free_itr, NULL);
+	list_foreach_remove (man->nodes, (ListForeachFunc)node_free_itr, &used);
+
+	if (used > 0)
+		AS_WARN_1 ("%d nodes still in use when emptying node cache", used);
 }
 
 /* Print all nodes to log. */

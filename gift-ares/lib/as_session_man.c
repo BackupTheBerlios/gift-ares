@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.17 2004/09/05 13:04:09 mkern Exp $
+ * $Id: as_session_man.c,v 1.18 2004/09/06 08:37:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -77,6 +77,8 @@ void as_sessman_connect (ASSessMan *man, unsigned int connections)
 static int sessman_disconnect_itr (ASSession *session, ASSessMan *man)
 {
 	as_session_disconnect (session, FALSE);
+	/* notify node manager */
+	as_nodeman_update_disconnected (AS->nodeman, session->host);
 	as_session_free (session);
 
 	return TRUE; /* remove link */
@@ -85,6 +87,7 @@ static int sessman_disconnect_itr (ASSession *session, ASSessMan *man)
 /* take necessary steps to maintain man->connections sessions */
 static as_bool sessman_maintain (ASSessMan *man)
 {
+	ASSession *session;
 	unsigned int connected = list_length (man->connected);
 	unsigned int connecting = list_length (man->connecting);
 	int len;
@@ -110,8 +113,12 @@ static as_bool sessman_maintain (ASSessMan *man)
 		
 		while (len > 0)
 		{
-			as_session_disconnect (man->connected->data, FALSE);
-			as_session_free (man->connected->data);
+			session = (ASSession *) man->connected->data;
+
+			as_session_disconnect (session, FALSE);
+			/* notify node manager */
+			as_nodeman_update_disconnected (AS->nodeman, session->host);
+			as_session_free (session);
 
 			man->connected = list_remove_link (man->connected, man->connected);
 			len--;
@@ -179,6 +186,7 @@ static as_bool sessman_maintain (ASSessMan *man)
 static as_bool session_state_cb (ASSession *session, ASSessionState state)
 {
 	ASSessMan *man = (ASSessMan*) session->udata;
+	as_bool ret;
 
 	switch (state)
 	{
@@ -238,6 +246,7 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 		{
 			/* add session to connected list */
 			man->connected = list_prepend (man->connected, session);
+			ret = TRUE;
 		}
 		else
 		{
@@ -247,15 +256,24 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 			 * removed which we would have to signal to callback raiser.
 			 */
 			as_session_disconnect (session, FALSE);
+			/* notify node manager */
+			as_nodeman_update_disconnected (AS->nodeman, session->host);
 			as_session_free (session);
-			return FALSE; /* session was freed */
+			ret = FALSE; /* session was freed */
 		}
 
+		/* Now that we have removed the this session if necessary we can safely
+		 * call session_maintain to abort other pending connects if necessary.
+		 */
+		sessman_maintain (man);
+
+#if 0
 		AS_DBG_3 ("Session status: requested %d, connected: %d, connecting: %d",
 	              man->connections, list_length (man->connected), 
 	              list_length (man->connecting));
+#endif
 
-		return TRUE;
+		return ret;
 	}
 
 	return TRUE;
