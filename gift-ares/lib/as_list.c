@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.9 2004/09/01 18:01:02 HEx Exp $
+ * $Id: as_list.c,v 1.10 2004/09/02 22:35:59 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -371,7 +371,7 @@ List *list_sort (List *head, CompareFunc func)
 					/* q is empty; e must come from p. */
 					e = p; p = p->next; psize--;
 				}
-				else if (func (p,q) <= 0)
+				else if (func (p->data, q->data) <= 0)
 				{
 					/* First element of p is lower (or same);
 					 * e must come from p. */
