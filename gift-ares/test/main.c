@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.9 2004/09/05 03:29:03 HEx Exp $
+ * $Id: main.c,v 1.10 2004/09/10 00:35:47 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -198,7 +198,7 @@ static int parse_argv(char *cmdline, int *argc, char ***argv)
 	int in_quotes, in_token;
 	
 	/* should always be enough */
-	*argv = malloc (sizeof (char*) * strlen (cmdline) / 2 + 1);
+	*argv = malloc (sizeof (char*) * strlen (cmdline) + 1);
 	*argc = 0;
 
 	in_token = in_quotes = 0;
