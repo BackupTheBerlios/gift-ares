@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.4 2004/09/16 02:49:21 HEx Exp $
+ * $Id: as_share.c,v 1.5 2004/09/16 17:47:31 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,7 +31,7 @@ static char *get_filename (char *path)
 	return name;
 }
 
-ASShare *share_new (char *path, ASHash *hash, ASMeta *meta,
+ASShare *as_share_new (char *path, ASHash *hash, ASMeta *meta,
 		    size_t size, ASRealm realm)
 {
 	ASShare *share = malloc (sizeof (ASShare));
@@ -114,7 +114,7 @@ static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
 	return TRUE;
 }
 
-ASPacket *share_packet (ASShare *share)
+ASPacket *as_share_packet (ASShare *share)
 {
 	ASPacket *p = as_packet_create (), *tokens;
 

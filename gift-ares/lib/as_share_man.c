@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.1 2004/09/16 15:46:30 HEx Exp $
+ * $Id: as_share_man.c,v 1.2 2004/09/16 17:47:31 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -78,7 +78,7 @@ as_bool as_shareman_remove (ASShareMan *man, ASShare *share)
 
 static int share_send (ASShare *share, ASSession *session)
 {
-	ASPacket *p = share_packet (share);
+	ASPacket *p = as_share_packet (share);
 	
 	if (!p)
 		return FALSE;
