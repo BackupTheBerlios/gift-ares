@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.4 2004/09/10 13:19:54 mkern Exp $
+ * $Id: as_download_conn.h,v 1.5 2004/09/10 18:01:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,13 +35,13 @@ typedef enum
 
 typedef struct as_down_conn_t ASDownConn;
 
-/* Called for every state change. Return TRUE if the connection was free and
+/* Called for every state change. Return FALSE if the connection was freed and
  * must no longer be accessed.
  */
 typedef as_bool (*ASDownConnStateCb) (ASDownConn *conn, ASDownConnState state);
 
-/* Called for every piece of data downloaded. Return TRUE if the connection
- * was free and must no longer be accessed.
+/* Called for every piece of data downloaded. Return FALSE if the connection
+ * was freed and must no longer be accessed.
  */
 typedef as_bool (*ASDownConnDataCb) (ASDownConn *conn, as_uint8 *data,
                                      unsigned int len);

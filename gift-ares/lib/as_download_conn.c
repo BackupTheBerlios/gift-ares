@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.3 2004/09/10 13:19:54 mkern Exp $
+ * $Id: as_download_conn.c,v 1.4 2004/09/10 18:01:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -270,7 +270,7 @@ static as_bool downconn_request (ASDownConn *conn)
 	set_header_b6mi (request, conn->source);
 	set_header_b6st (request);
 
-	/* Send off the request. This takes care of freing it later. */
+	/* Send off the request. This takes care of freeing it later. */
 	if (!as_http_client_request (conn->client, request, TRUE))
 	{
 		as_http_header_free (request);
