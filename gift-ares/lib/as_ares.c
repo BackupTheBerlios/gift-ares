@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.19 2004/12/24 13:40:59 mkern Exp $
+ * $Id: as_ares.c,v 1.20 2004/12/24 13:45:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -68,7 +68,7 @@ static const ASConfVal default_conf[] =
 	{ AS_DOWNLOAD_MAX_ACTIVE_SOURCES, NULL,             AS_CONF_INT, 10,
 	                                  NULL,             NULL },
 	{ AS_UPLOAD_MAX_ACTIVE,           NULL,             AS_CONF_INT, 3,
-	                                  NULL,             NULL }
+	                                  NULL,             NULL },
 	{ AS_SEARCH_TIMEOUT,              "search/timeout", AS_CONF_INT, 3*60,
 	                                  NULL,             NULL }
 };
