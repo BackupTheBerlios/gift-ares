@@ -4,7 +4,6 @@
 
 static Protocol *proto;
 
-
 static int asp_giftcb_start (Protocol *proto)
 {
 	ASLogger *logger;
@@ -27,6 +26,7 @@ static int asp_giftcb_start (Protocol *proto)
 
 static void asp_giftcb_destroy (Protocol *proto)
 {
+	as_nodeman_save (AS->nodeman, gift_conf_path ("Ares/nodes"));
 	as_cleanup ();
 }
 
@@ -52,14 +52,12 @@ static void search_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 	share_set_path (share, r->filename);
 	share_set_mime (share, mime_type (r->filename));
 
-#if 0
-	share_set_hash();
-#endif
+	share_set_hash (share, "SHA1", r->hash->data, AS_HASH_SIZE, FALSE);
 
 	as_meta_foreach_tag (r->meta, (ASMetaForeachFunc)add_meta, share);
 
 	proto->search_result (proto, search->udata, r->source->username,
-			      NULL, "FIXME", 0, share);
+			      NULL, "FIXME", 1, share);
 
 	share_free (share);
 }
@@ -112,12 +110,42 @@ int asp_giftcb_stats (Protocol *p, unsigned long *users, unsigned long *files,
 	return AS->netinfo->conn_have;
 }
 
+unsigned char *asp_giftcb_hash (const char *path, size_t *len)
+{
+	ASHash *hash = as_hash_file (path);
+
+	if (len && hash)
+		*len = AS_HASH_SIZE;
+
+	return (unsigned char *)hash;
+}
+
+unsigned char *asp_giftcb_hash_encode (unsigned char *data)
+{
+	ASHash *hash;
+	unsigned char *encoded;
+
+	hash = as_hash_create (data, AS_HASH_SIZE);
+
+	if (!hash)
+		return NULL;
+	
+	encoded = as_hash_encode (hash);
+	as_hash_free (hash);
+
+	return encoded;
+}
+
 int Ares_init (Protocol *p)
 {
-	p->version_str = "foo";
+	p->version_str = strdup ("foo");
 
 	p->support (p, "range-get", TRUE);
 	p->support (p, "hash-unique", TRUE);
+
+	p->hash_handler (p, "SHA1", HASH_PRIMARY,
+			 (HashFn)asp_giftcb_hash,
+			 (HashDspFn)asp_giftcb_hash_encode);
 
 	p->start          = asp_giftcb_start;
 	p->destroy        = asp_giftcb_destroy;
