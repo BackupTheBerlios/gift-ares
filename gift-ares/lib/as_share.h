@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.h,v 1.6 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_share.h,v 1.7 2004/11/27 22:30:37 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,6 +18,7 @@ typedef struct
 	ASRealm  realm;
 	ASMeta  *meta;
 	as_bool  fake; /* whether we have fake metadata */
+	void    *udata;
 } ASShare;
 
 /***********************************************************************/

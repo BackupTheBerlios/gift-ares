@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.52 2004/11/19 21:16:34 HEx Exp $
+ * $Id: as_ares.h,v 1.53 2004/11/27 22:30:37 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -171,6 +171,10 @@ typedef enum
 } ASAresConfigValues;
 
 /*****************************************************************************/
+
+#ifdef GIFT_PLUGIN
+extern Protocol *gift_proto;
+#endif
 
 /* The client name we send to supernodes */
 #define AS_CLIENT_NAME "aREs"

@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.19 2004/11/26 20:45:06 hex Exp $
+ * $Id: as_share.c,v 1.20 2004/11/27 22:30:37 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -28,6 +28,7 @@ ASShare *as_share_create (char *path, ASHash *hash, ASMeta *meta,
 	share->size  = size;
 	share->realm = realm;
 	share->fake  = FALSE;
+	share->udata = NULL;
 
 	if (hash)
 	{
@@ -72,6 +73,7 @@ ASShare *as_share_copy (ASShare *share)
 	new_share->size  = share->size;
 	new_share->realm = share->realm;
 	new_share->fake  = share->fake;
+	new_share->udata = share->udata;
 
 	new_share->hash = as_hash_copy (share->hash);
 	new_share->meta = as_meta_copy (share->meta);

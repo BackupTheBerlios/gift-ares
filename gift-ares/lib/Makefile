@@ -7,12 +7,12 @@ GIFT_OBJECTS = \
 	as_strobj.o \
 	as_list.o \
 	as_tcp.o \
+	as_log.o \
 	as_parse.o
 
 OBJECTS = \
 	as_hashtable.o \
 	as_file.o \
-	as_log.o \
 	as_ares.o \
 	as_crypt.o \
 	as_config.o \

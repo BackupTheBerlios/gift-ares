@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.h,v 1.5 2004/10/26 19:31:12 mkern Exp $
+ * $Id: as_log.h,v 1.6 2004/11/27 22:30:37 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,6 +11,8 @@
 #define __AS_LOG_H_
 
 /*****************************************************************************/
+
+#ifndef GIFT_PLUGIN
 
 #define MAX_LOG_OUTPUTS 4
 
@@ -70,7 +72,16 @@ void as_logger_log (ASLogger *logger, int level, const char *file,
 extern ASLogger *g_logger;
 
 /* oh well */
-#define AS_LOG(l) as_logger_log (g_logger, l, __FILE__, __LINE__
+#  define AS_LOG(l) as_logger_log (g_logger, l, __FILE__, __LINE__
+
+
+#else
+#  define FILE_LINE_FUNC __FILE__,__LINE__,__PRETTY_FUNCTION__
+#  define AS_LOG_DEBUG gift_proto->trace (gift_proto, FILE_LINE_FUNC
+#  define AS_LOG_ERROR gift_proto->err (gift_proto
+#  define AS_LOG_WARNING gift_proto->warn (gift_proto
+#  define AS_LOG(l) l
+#endif
 
 #ifdef DEBUG
 #define AS_DBG(fmt)             AS_LOG (AS_LOG_DEBUG), fmt)
