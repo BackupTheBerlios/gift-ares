@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.63 2005/01/05 01:20:28 hex Exp $
+ * $Id: as_ares.h,v 1.64 2005/01/07 15:35:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -182,12 +182,15 @@ typedef enum
 extern Protocol *gift_proto;
 #endif
 
-/* The client name we send to supernodes */
-#ifdef GIFT_PLUGIN
-#  define AS_CLIENT_NAME "giFT"
-#else
-#  define AS_CLIENT_NAME "aREs"
-#endif
+/* The client name we send to supernodes. After the initial release of this
+ * plugin the author of Ares released a new version (build 2951) which blocked
+ * certain client names ("aREs", "Warez", ?) from Ares supernodes by simply
+ * not sending them any search results. For this reason we now have to keep
+ * our client name at "Ares" to prevent future problems effectively rendering
+ * client identification useless. Why the author of Ares would cripple his own
+ * network in this way is beyond me.
+ */
+#define AS_CLIENT_NAME "Ares"
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
