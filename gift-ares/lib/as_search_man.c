@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.3 2004/09/09 22:25:31 mkern Exp $
+ * $Id: as_search_man.c,v 1.4 2004/09/10 17:58:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -78,10 +78,9 @@ as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
 		/* hash search, look search up by hash */
 		if (!(search = as_searchman_lookup_hash (man, result->hash)))
 		{
-			char *hash_str = as_hash_encode (result->hash);
 			AS_DBG_3 ("No search found for result with hash %s from %s:%d",
-			          hash_str, net_ip_str (session->host), session->port);
-			free (hash_str);
+			          as_hash_str (result->hash), net_ip_str (session->host),
+			          session->port);
 			as_result_free (result);
 			return FALSE;
 		}
@@ -166,7 +165,6 @@ ASSearch *as_searchman_locate (ASSearchMan *man, ASSearchResultCb result_cb,
 {
 	ASSearch *search;
 	int count;
-	char *hash_str;
 
 	/* create search */
 	if (!(search = as_search_create_locate (man->next_search_id, result_cb,
@@ -205,10 +203,8 @@ ASSearch *as_searchman_locate (ASSearchMan *man, ASSearchResultCb result_cb,
 	                            (ASSessionForeachFunc)send_search_itr,
 	                            search);
 
-	hash_str = as_hash_encode (search->hash);
 	AS_DBG_2 ("Sent new hash search for \"%s\" to %d supernodes",
-	          hash_str, count);
-	free (hash);
+	          as_hash_str (search->hash), count);
 
 	return search;
 }
@@ -248,10 +244,8 @@ as_bool as_searchman_remove (ASSearchMan *man, ASSearch *search)
 		if (!(hs = as_hashtable_remove (man->hash_searches,
 		                                search->hash->data, AS_HASH_SIZE)))
 		{
-			char *hash_str = as_hash_encode (search->hash);
 			AS_WARN_2 ("Couldn't remove search with hash %s and id %d from hash table",
-			           hash_str, search->id);
-			free (hash_str);
+			           as_hash_str (search->hash), search->id);
 			/* this is a bug somewhere else */
 			assert (0);
 		}

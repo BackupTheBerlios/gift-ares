@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.4 2004/09/09 22:25:31 mkern Exp $
+ * $Id: as_source.c,v 1.5 2004/09/10 17:58:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -108,5 +108,26 @@ char *as_source_serialize (ASSource *source)
 }
 
 #endif
+
+/* Return static debug string with source data. Do not use for anything
+ * critical because threading may corrupt buffer.
+ */
+char *as_source_str (ASSource *source)
+{
+	static char buf[1024];
+	int len;
+
+	len = snprintf (buf, sizeof (buf), "user: %s:%d, username: %32s, ",
+	                net_ip_str (source->host), source->port,
+	                source->username);
+
+	len += snprintf (buf + len, sizeof (buf) - len, "supernode: %s:%d, ",
+	                 net_ip_str (source->shost), source->sport);
+
+	len += snprintf (buf + len, sizeof (buf) - len, "parent node: %s:%d",
+	                 net_ip_str (source->parent_host), source->parent_port);
+
+	return buf;
+}
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.h,v 1.2 2004/09/09 22:25:31 mkern Exp $
+ * $Id: as_source.h,v 1.3 2004/09/10 17:58:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -64,6 +64,11 @@ ASSource *as_source_unserialize (const char *str);
 char *as_source_serialize (ASSource *source);
 
 #endif
+
+/* Return static debug string with source data. Do not use for anything
+ * critical because threading may corrupt buffer.
+ */
+char *as_source_str (ASSource *source);
 
 /*****************************************************************************/
 

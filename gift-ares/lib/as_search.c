@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.7 2004/09/07 16:01:31 mkern Exp $
+ * $Id: as_search.c,v 1.8 2004/09/10 17:58:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -141,14 +141,9 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 		packet = search_query_packet (search);
 		break;
 	case SEARCH_LOCATE:
-#ifdef DEBUG
-		{
-		char *hash_str = as_hash_encode (search->hash);
-		AS_HEAVY_DBG_3 ("Sending hash search \"%s\" to %s:%d", hash_str,
+		AS_HEAVY_DBG_3 ("Sending hash search \"%s\" to %s:%d",
+		                as_hash_str (search->hash),
 		                net_ip_str (session->host), session->port);
-		free (hash_str);
-		}
-#endif
 		type = PACKET_LOCATE;
 		packet = search_locate_packet (search);
 		break;

@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.c,v 1.5 2004/09/06 18:55:17 mkern Exp $
+ * $Id: as_hash.c,v 1.6 2004/09/10 17:58:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -88,6 +88,23 @@ char *as_hash_encode (ASHash *hash)
 		return NULL;
 
 	return str;
+}
+
+/* Return static string of hash for _debugging_ purposes. Do not use for
+ * anything critical because threading may corrupt buffer. */
+char *as_hash_str (ASHash *hash)
+{
+	char *encoded;
+	static char buf[AS_HASH_BASE64_SIZE + 16];
+	
+	/* This implementation is far from efficient */
+	if (!(encoded = as_hash_encode (hash)))
+		return NULL;
+
+	gift_strncpy (buf, encoded, sizeof (buf) - 1);
+	free (encoded);
+
+	return buf;
 }
 
 /*****************************************************************************/

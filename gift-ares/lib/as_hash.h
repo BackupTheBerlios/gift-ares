@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.h,v 1.2 2004/09/06 12:49:31 HEx Exp $
+ * $Id: as_hash.h,v 1.3 2004/09/10 17:58:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -40,6 +40,10 @@ ASHash *as_hash_decode (const char *encoded);
 
 /* return base64 encoded string of hash. caller frees result. */
 char *as_hash_encode (ASHash *hash);
+
+/* Return static string of hash for _debugging_ purposes. Do not use for
+ * anything critical because threading may corrupt buffer. */
+char *as_hash_str (ASHash *hash);
 
 /*****************************************************************************/
 
