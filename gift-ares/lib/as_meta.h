@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.9 2004/10/24 03:45:24 HEx Exp $
+ * $Id: as_meta.h,v 1.10 2005/01/08 17:25:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,18 +50,28 @@ typedef enum
 	REALM_UNKNOWN  = 0xFFFF /* not used on the ares network */
 } ASRealm;
 
+/* Note that both tag types are used in the same packet. They overlap! */
 typedef enum
 {
-	TAG_TITLE  = 1,
-	TAG_ARTIST = 2,
-	TAG_ALBUM  = 3,
-	TAG_XXX    = 4, /* depends on realm */
-	TAG_UNKSTR = 5, /* some unknown string, maybe "comment" */
-	TAG_YEAR   = 6,
-	TAG_CODEC  = 7,
-	TAG_KEYWORDS = 15, /* verify */
-	TAG_FILENAME = 16
-} ASTagType;
+	TAG_TITLE     = 1,
+	TAG_ARTIST    = 2,
+	TAG_UNKNOWN_1 = 3,
+	TAG_XXX       = 4   /* Realm specific data */
+} ASTagType1;
+
+typedef enum
+{
+	TAG_CATEGORY  = 1,
+	TAG_ALBUM     = 2,
+	TAG_COMMENTS  = 3,
+	TAG_LANGUAGE  = 4,
+	TAG_UNKNOWN_2 = 5,  /* somtimes an url? */
+	TAG_YEAR      = 6,
+	TAG_CODEC     = 7,
+	TAG_KEYWORDS  = 15, /* verify */
+	TAG_FILENAME  = 16
+} ASTagType2;
+
 
 typedef struct
 {
@@ -78,10 +88,17 @@ typedef struct
 
 typedef struct
 {
-	const char *name;
-	ASTagType   type;
-	as_bool     tokenize;
-} ASTagMapping;
+	const char  *name;
+	ASTagType1   type;
+	as_bool      tokenize;
+} ASTagMapping1;
+
+typedef struct
+{
+	const char  *name;
+	ASTagType2   type;
+	as_bool      tokenize;
+} ASTagMapping2;
 
 typedef as_bool (*ASMetaForeachFunc) (ASMetaTag *tag, void *udata);
 
@@ -116,8 +133,19 @@ int as_meta_foreach_tag (ASMeta *meta, ASMetaForeachFunc func, void *udata);
 /* wrapper around as_meta_get_tag */
 int as_meta_get_int (ASMeta *meta, const char *name);
 
-const ASTagMapping *as_meta_tag_name (const char *name);
-const ASTagMapping *as_meta_tag_type (ASTagType type);
+/*****************************************************************************/
+
+/* return ASTagMapping1 from gift name */
+const ASTagMapping1 *as_meta_mapping1_from_name (const char *name);
+
+/* return ASTagMapping1 from ASTagType1 */
+const ASTagMapping1 *as_meta_mapping1_from_type (ASTagType1 type);
+
+/* return ASTagMapping2 from gift name */
+const ASTagMapping2 *as_meta_mapping2_from_name (const char *name);
+
+/* return ASTagMapping2 from ASTagType2 */
+const ASTagMapping2 *as_meta_mapping2_from_type (ASTagType2 type);
 
 /*****************************************************************************/
 

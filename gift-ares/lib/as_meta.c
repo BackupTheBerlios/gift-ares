@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.16 2004/12/24 18:22:21 mkern Exp $
+ * $Id: as_meta.c,v 1.17 2005/01/08 17:25:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,20 +11,29 @@
 
 /*****************************************************************************/
 
-/* these are only string types that have a type to themselves;
- * realm-specific tags are handled separately */
-static const ASTagMapping tag_types[] = {
-	{ "title",     TAG_TITLE,    TRUE  },
-	{ "artist",    TAG_ARTIST,   TRUE  },
-	{ "album",     TAG_ALBUM,    TRUE  },
-	{ "unknown_1", TAG_UNKSTR,   FALSE },
-	{ "year",      TAG_YEAR,     FALSE },
-	{ "codec",     TAG_CODEC,    FALSE },
-	{ "keywords",  TAG_KEYWORDS, TRUE  },
-	{ "filename",  TAG_FILENAME, FALSE } /* yes, really FALSE :( */
+/* These are only string types that have a type to themselves;
+ * realm-specific tags are handled separately. */
+
+static const ASTagMapping1 tag_types_1[] = {
+	{ "title",     TAG_TITLE,      TRUE  },
+	{ "artist",    TAG_ARTIST,     TRUE  },
+	{ "unknown_1", TAG_UNKNOWN_1,  FALSE }
 };
 
-#define NUM_TYPES (sizeof(tag_types) / sizeof(ASTagMapping))
+static const ASTagMapping2 tag_types_2[] = {
+	{ "category",  TAG_CATEGORY,   TRUE  },
+	{ "album",     TAG_ALBUM,      TRUE  },
+	{ "comments",  TAG_COMMENTS,   FALSE },
+	{ "language",  TAG_LANGUAGE,   FALSE },
+	{ "unknown_2", TAG_UNKNOWN_2,  FALSE },
+	{ "year",      TAG_YEAR,       FALSE },
+	{ "codec",     TAG_CODEC,      FALSE },
+	{ "keywords",  TAG_KEYWORDS,   TRUE  },
+	{ "filename",  TAG_FILENAME,   FALSE } /* yes, really FALSE :( */
+};
+
+#define NUM_TYPES_1 (sizeof(tag_types_1) / sizeof(ASTagMapping1))
+#define NUM_TYPES_2 (sizeof(tag_types_2) / sizeof(ASTagMapping2))
 
 /*****************************************************************************/
 
@@ -230,24 +239,50 @@ int as_meta_foreach_tag (ASMeta *meta, ASMetaForeachFunc func, void *udata)
 
 /*****************************************************************************/
 
-const ASTagMapping *as_meta_tag_name (const char *name)
+/* return ASTagMapping1 from gift name */
+const ASTagMapping1 *as_meta_mapping1_from_name (const char *name)
 {
 	int i;
 	
-	for (i=0; i < NUM_TYPES; i++)
-		if (!gift_strcasecmp (tag_types[i].name, name))
-			return &tag_types[i];
+	for (i=0; i < NUM_TYPES_1; i++)
+		if (!gift_strcasecmp (tag_types_1[i].name, name))
+			return &tag_types_1[i];
 
 	return NULL;
 }
 
-const ASTagMapping *as_meta_tag_type (ASTagType type)
+/* return ASTagMapping1 from ASTagType1 */
+const ASTagMapping1 *as_meta_mapping1_from_type (ASTagType1 type)
 {
 	int i;
 	
-	for (i=0; i < NUM_TYPES; i++)
-		if (tag_types[i].type == type)
-			return &tag_types[i];
+	for (i=0; i < NUM_TYPES_1; i++)
+		if (tag_types_1[i].type == type)
+			return &tag_types_1[i];
+
+	return NULL;
+}
+
+/* return ASTagMapping2 from gift name */
+const ASTagMapping2 *as_meta_mapping2_from_name (const char *name)
+{
+	int i;
+	
+	for (i=0; i < NUM_TYPES_2; i++)
+		if (!gift_strcasecmp (tag_types_2[i].name, name))
+			return &tag_types_2[i];
+
+	return NULL;
+}
+
+/* return ASTagMapping2 from ASTagType2 */
+const ASTagMapping2 *as_meta_mapping2_from_type (ASTagType2 type)
+{
+	int i;
+	
+	for (i=0; i < NUM_TYPES_2; i++)
+		if (tag_types_2[i].type == type)
+			return &tag_types_2[i];
 
 	return NULL;
 }
@@ -267,120 +302,156 @@ static void meta_add_string (ASMeta *meta, ASPacket *packet, const char *name)
 
 static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 {
-	char buf[32];
-	int i;
+	int meta_type;
 
-	/* Some packets seem to have a couple of stray bytes
-	 * at the end; just hack around this for now */
-	while (as_packet_remaining (p) > 2)
+	/* It seems that some of the tag types we define occur multiple times in
+	 * the meta data with completely different data. For example sometimes the
+	 * 0x04 type is indeed TAG_XXX and other times it's a language string.
+	 * Obviously there must be a way to tell which is which. From looking at
+	 * several packet dumps I think that there is first a small block in which
+	 * fields are optional but fixed in order. Then follows a second random
+	 * order block where types have a different meaning. Presumably the second
+	 * block was added at a later time but why the same type values were used
+	 * I don't know.
+	 */
+
+	/* Fixed position fields (ASTagType1). */
+	meta_type = as_packet_get_8 (p);
+
+	if (meta_type == TAG_TITLE)
 	{
-		int meta_type = as_packet_get_8 (p);
+		meta_add_string (meta, p, as_meta_mapping1_from_type (TAG_TITLE)->name);
+		meta_type = as_packet_get_8 (p);
+	}
 
-		const ASTagMapping *map;
-		
-		/* turn everything into gift style meta tags */
-		if ((map = as_meta_tag_type (meta_type)))
-		{
-			meta_add_string (meta, p, map->name);
-			continue;
-		}
+	if (meta_type == TAG_ARTIST)
+	{
+		meta_add_string (meta, p, as_meta_mapping1_from_type (TAG_ARTIST)->name);
+		meta_type = as_packet_get_8 (p);
+	}
+
+	if (meta_type == TAG_UNKNOWN_1)
+	{
+		meta_add_string (meta, p, as_meta_mapping1_from_type (TAG_UNKNOWN_1)->name);
+		meta_type = as_packet_get_8 (p);
+	}
+
+	if (meta_type == TAG_XXX)
+	{
+		char buf[32];
+		int i;
 
 		/* handle the realm-specific/non-string stuff */
-		switch (meta_type)
+		switch (realm)
 		{
-		case TAG_XXX:
-			switch (realm)
+		case REALM_ARCHIVE:
+			/* nothing */
+			break;
+
+		case REALM_AUDIO:
+			/* bitrate */
+			i = as_packet_get_le16 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "bitrate", buf);
+				
+			/* duration */
+			i = as_packet_get_le32 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "duration", buf);
+			break;
+				
+		case REALM_SOFTWARE:
+		{
+			as_uint8 c = as_packet_get_8 (p);
+			if (c != 2 && c != 6)
 			{
-			case REALM_ARCHIVE:
-				/* nothing */
-				break;
-
-			case REALM_AUDIO:
-				/* bitrate */
-				i = as_packet_get_le16 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "bitrate", buf);
-				
-				/* duration */
-				i = as_packet_get_le32 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "duration", buf);
-				break;
-				
-			case REALM_SOFTWARE:
-			{
-				as_uint8 c = as_packet_get_8 (p);
-				if (c != 2 && c != 6)
-				{
-					AS_DBG_2 ("REALM_SOFTWARE: c=%d, offset %x",
-					          c, p->read_ptr - p->data);
-#ifdef DEBUG
-					as_packet_dump (p);
-#endif
-				}
-				
-				/* version */
-				free (as_packet_get_strnul (p));
-				break;
-			}
-			case REALM_VIDEO:
-				/* width/height */
-				i = as_packet_get_le16 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "width", buf);
-				i = as_packet_get_le16 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "height", buf);
-				
-				/* duration? */
-				i = as_packet_get_le32 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "duration", buf);
-				break;
-				
-			case REALM_IMAGE:
-				/* width/height */
-				i = as_packet_get_le16 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "width", buf);
-				i = as_packet_get_le16 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "height", buf);
-				
-				/* unknown (depth?) */
-				i = as_packet_get_le32 (p);
-				sprintf (buf, "%u", i);
-				as_meta_add_tag (meta, "bitdepth?", buf);
-				break;
-
-			case REALM_DOCUMENT:
-				/* nothing */
-				break;
-
-			default:
-				/* because size is implicitly encoded,
-				 * we have no choice but to bail when
-				 * an unknown tag type is encountered
-				 */
-				AS_DBG_2 ("Unknown realm %d, offset %x", realm,
-				          p->read_ptr - p->data);
+				AS_DBG_2 ("REALM_SOFTWARE: c=%d, offset %x",
+				          c, p->read_ptr - p->data);
 #ifdef DEBUG
 				as_packet_dump (p);
 #endif
-				return FALSE;
 			}
+				
+			/* version */
+			free (as_packet_get_strnul (p));
+			break;
+		}
+
+		case REALM_VIDEO:
+			/* width/height */
+			i = as_packet_get_le16 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "width", buf);
+			i = as_packet_get_le16 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "height", buf);
+				
+			/* duration? */
+			i = as_packet_get_le32 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "duration", buf);
+			break;
+				
+		case REALM_IMAGE:
+			/* width/height */
+			i = as_packet_get_le16 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "width", buf);
+			i = as_packet_get_le16 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "height", buf);
+				
+			/* unknown (depth?) */
+			i = as_packet_get_le32 (p);
+			sprintf (buf, "%u", i);
+			as_meta_add_tag (meta, "bitdepth?", buf);
+			break;
+
+		case REALM_DOCUMENT:
+			/* nothing */
 			break;
 
 		default:
-			/* see above */
-			AS_DBG_2 ("Unknown tag type %d, offset %x", meta_type,
+			/* Because size is implicitly encoded, we have no choice but to
+			 * bail when an unknown tag type is encountered.
+			 */
+			AS_DBG_2 ("Unknown realm %d, offset %x", realm,
 			          p->read_ptr - p->data);
 #ifdef DEBUG
 			as_packet_dump (p);
 #endif
 			return FALSE;
 		}
+
+		meta_type = as_packet_get_8 (p);
 	}
+
+
+	/* Random position fields (ASTagType2). Some packets seem to be padded
+	 * with zeros and other stuff at the end. If we reach that abort parsing.
+	 */
+	while (as_packet_remaining (p) > 2 && meta_type != 0x00)
+	{
+		const ASTagMapping2 *map;
+
+		/* turn everything into gift style meta tags */
+		if ((map = as_meta_mapping2_from_type (meta_type)))
+		{
+			meta_add_string (meta, p, map->name);
+		}
+		else
+		{
+			AS_DBG_2 ("Unknown tag type %d, offset %x", meta_type,
+			          p->read_ptr - p->data);
+#ifdef HEAVY_DEBUG
+			as_packet_dump (p);
+#endif
+			return FALSE;
+		}
+
+		meta_type = as_packet_get_8 (p);
+	}
+
 
 	return TRUE;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.23 2004/12/24 18:22:21 mkern Exp $
+ * $Id: as_share.c,v 1.24 2005/01/08 17:25:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -98,14 +98,25 @@ void as_share_free (ASShare *share)
 
 static as_bool share_tokenize_tag (ASMetaTag *tag, ASPacket *p)
 {
-	const ASTagMapping *map;
+	const ASTagMapping1 *map1;
+	const ASTagMapping2 *map2;
 
-	map = as_meta_tag_name (tag->name);
+	/* We need to try both tag types, see as_meta.c for details. */
+	if ((map1 = as_meta_mapping1_from_name (tag->name)))
+	{
+		if (!map1->tokenize)
+			return FALSE;
+		return !!as_tokenize (p, tag->value, map1->type);
+	}
 	
-	if (!map || !map->tokenize)
-		return FALSE;
+	if ((map2 = as_meta_mapping2_from_name (tag->name)))
+	{
+		if (!map2->tokenize)
+			return FALSE;
+		return !!as_tokenize (p, tag->value, map2->type);
+	}
 
-	return !!as_tokenize (p, tag->value, map->type);
+	return FALSE;
 }
 
 static ASPacket *share_add_tokens (ASMeta *meta)
@@ -119,24 +130,6 @@ static ASPacket *share_add_tokens (ASMeta *meta)
 
 	return p;
 }
-
-/* Not currently used. */
-#if 0
-static as_bool share_add_tag (ASMetaTag *tag, ASPacket *p)
-{
-	const ASTagMapping *map;
-
-	map = as_meta_tag_name (tag->name);
-	
-	if (!map)
-		return FALSE;
-
-	as_packet_put_8 (p, map->type);
-	as_packet_put_strnul (p, tag->value);
-
-	return TRUE;
-}
-#endif
 
 static as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 {
@@ -188,32 +181,48 @@ static as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 	return TRUE;
 }
 
-static void add_meta_tags (ASPacket *p, ASShare *share)
+static void add_meta_tags1 (ASPacket *p, ASShare *share)
 {
 	ASMeta *meta = share->meta;
-	const ASTagMapping *map;
+	const ASTagMapping1 *map;
+	const char *value;
+
+	/* Add all type 1 tags. */
+
+	if ((map = as_meta_mapping1_from_type (TAG_TITLE)) &&
+	    (value = as_meta_get_tag (meta, map->name)))
+	{
+		as_packet_put_8 (p, (as_uint8) map->type);
+		as_packet_put_strnul (p, value);
+	}
+
+	if ((map = as_meta_mapping1_from_type (TAG_ARTIST)) &&
+	    (value = as_meta_get_tag (meta, map->name)))
+	{
+		as_packet_put_8 (p, (as_uint8) map->type);
+		as_packet_put_strnul (p, value);
+	}
+
+	add_realm_tag (p, meta, share->realm);
+}
+
+static void add_meta_tags2 (ASPacket *p, ASShare *share)
+{
+	ASMeta *meta = share->meta;
+	const ASTagMapping2 *map;
 	int i;
 
-	/* add tags in order */
+	/* Add all type 2 tags in order (not sure if order is necessary). */
 	for (i = 0; i <= 16; i++)
 	{
 		const char *value;
 
-		if (i == TAG_XXX)
+		if ((map = as_meta_mapping2_from_type (i)) &&
+		    (value = as_meta_get_tag (meta, map->name)))
 		{
-			add_realm_tag (p, meta, share->realm);
-			/* I think there should be a continue here. We don't want to rely
-			 * on obscure situations in other parts of the code for the
-			 * following if to succeed.
-			 */
+			as_packet_put_8 (p, (as_uint8) map->type);
+			as_packet_put_strnul (p, value);
 		}
-
-		if (!(map = as_meta_tag_type (i)) ||
-		    !(value = as_meta_get_tag (meta, map->name)))
-			continue;
-		
-		as_packet_put_8 (p, (as_uint8) map->type);
-		as_packet_put_strnul (p, value);
 	}
 }
 
@@ -263,12 +272,11 @@ ASPacket *as_share_packet (ASShare *share)
 	as_packet_put_hash (p, share->hash);
 	as_packet_put_strnul (p, share->ext ? share->ext : "");
 
-#if 0
-	/* appears not to work */
-	as_meta_foreach_tag (share->meta, (ASMetaForeachFunc)share_add_tag, p);
-#else
-	add_meta_tags (p, share);
-#endif
+	/* Add fixed position block. See as_meta.c. */
+	add_meta_tags1 (p, share);
+
+	/* Add random position block. See as_meta.c. */
+	add_meta_tags2 (p, share);
 
 	return p;
 }
