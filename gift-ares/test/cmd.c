@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.24 2004/09/16 22:19:55 HEx Exp $
+ * $Id: cmd.c,v 1.25 2004/09/16 23:36:54 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -612,16 +612,43 @@ COMMAND_FUNC (exec)
 {
 	FILE *f;
 	int count = 0;
-
+	int eargc;
+	char **eargv;
+	char buf[16384];
 	if (argc < 2)
 		return FALSE;
 
 	if (!(f = fopen (argv[1], "r")))
 		return FALSE;
 
-	while (read_command (fileno (f)))
-		count++;
+	while (fgets (buf, sizeof(buf), f))
+	{
+		int len = strlen(buf);
+		if (len && buf[len-1]=='\n')
+		{
+			char *copy;
+			buf[len-1] = 0;
+			copy = strdup(buf);
+			parse_argv (buf, &eargc, &eargv);
+			if (eargc >  0)
+			{
+				int ret = dispatch_cmd (eargc, eargv);
+				
+				if (!ret)
+				{				
+					printf ("Command was: '%s'\nAborting.\n", copy);
+					free (copy);
+					free (eargv);
+					break;
+				}
+			}				
+			count++;
+			free (copy);
+			free (eargv);
+		}
+	}
 
+	fclose (f);
 	printf ("%d commands processed.\n", count);
 
 	return TRUE;

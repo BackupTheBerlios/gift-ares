@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.12 2004/09/16 22:19:55 HEx Exp $
+ * $Id: main.c,v 1.13 2004/09/16 23:36:54 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,7 +17,7 @@
 /*****************************************************************************/
 
 /* see end of file */
-static int parse_argv(char *cmdline, int *argc, char ***argv);
+int parse_argv(char *cmdline, int *argc, char ***argv);
 
 /*****************************************************************************/
 
@@ -56,7 +56,7 @@ unsigned int __stdcall console_input_func (void *data)
 
 #endif
 
-as_bool read_command (int fd)
+void stdin_cb (int fd, input_id id, void *udata)
 {
 	static char buf[1024*16];
 	static int buf_pos = 0;
@@ -69,7 +69,7 @@ as_bool read_command (int fd)
 #else
 	if ((read_buf = read (fd, buf + buf_pos, sizeof (buf) - buf_pos)) < 0)
 #endif
-		return FALSE;
+		return;
 
 	buf_pos += read_buf;
 
@@ -82,7 +82,7 @@ as_bool read_command (int fd)
 	{
 		/* panic if buffer is too small */
 		assert (buf_pos < sizeof (buf));
-		return FALSE;
+		return;
 	}
 
 	buf[len++] = 0;
@@ -99,13 +99,6 @@ as_bool read_command (int fd)
 	/* remove used data */
 	memmove (buf, buf + len, buf_pos - len);
 	buf_pos -= len;
-
-	return TRUE;
-}
-
-void stdin_cb (int fd, input_id id, void *udata)
-{
-	int ret = read_command (fd);
 
 #if 0
 	/* print prompt */
@@ -200,7 +193,7 @@ int main (int argc, char *argv[])
 /*****************************************************************************/
 
 /* modifies cmdline */
-static int parse_argv(char *cmdline, int *argc, char ***argv)
+int parse_argv(char *cmdline, int *argc, char ***argv)
 {
 	char *p, *token;
 	int in_quotes, in_token;
