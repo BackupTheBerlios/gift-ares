@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.4 2004/09/02 21:57:50 HEx Exp $
+ * $Id: as_search.c,v 1.5 2004/09/05 02:54:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,27 +8,6 @@
  */
 
 #include "as_ares.h"
-
-typedef enum {
-	TAG_TITLE  = 1,
-	TAG_ARTIST = 2,
-	TAG_ALBUM  = 3,
-	TAG_XXX    = 4, /* depends on realm */
-	TAG_UNKSTR = 5, /* some unknown string, maybe "comment" */
-	TAG_YEAR   = 6,
-	TAG_CODEC  = 7,
-	TAG_KEYWORDS = 15, /* verify */
-	TAG_FILENAME = 16
-} ASTagType;
-
-typedef enum {
-	REALM_ARCHIVE = 0,
-	REALM_AUDIO = 1,
-	REALM_SOFTWARE = 3,
-	REALM_VIDEO = 5,
-	REALM_DOCUMENT = 6,
-	REALM_IMAGE = 7
-} ASRealm;
 
 /* create a search request packet */
 ASPacket *search_request (unsigned char *query, as_uint16 id)
@@ -58,32 +37,14 @@ ASPacket *search_request (unsigned char *query, as_uint16 id)
 	return packet;
 }
 
-struct search_result {
-	unsigned char *user;
-	as_uint16 id;
-	
-	int       realm;
-	size_t    size;
-
-	/* always 0x61? (could be bandwidth) */
-	as_uint8  unknown;
-
-	as_uint8  *hash;
-
-	unsigned char *filename;
-	unsigned char *ext;
-};
-
-void parse_metadata (ASPacket *packet, struct search_result *r)
+void parse_metadata (ASPacket *packet, ASResult *r)
 {
 	/* Some packets seem to have a couple of stray bytes
 	 * at the end; just hack around this for now */
 	while (as_packet_remaining (packet) > 2)
 	{
 		int meta_type = as_packet_get_8 (packet);
-		unsigned char *meta;
 		
-		/* FIXME: do something with these */
 		switch (meta_type)
 		{
 		case TAG_TITLE:
@@ -93,9 +54,9 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 		case TAG_YEAR:
 		case TAG_CODEC:
 		case TAG_KEYWORDS:
-			meta = as_packet_get_strnul (packet);
+			free (r->meta[meta_type]);
+			r->meta[meta_type] = as_packet_get_strnul (packet);
 
-			free (meta);
 			break;
 			
 		case TAG_FILENAME:
@@ -173,17 +134,47 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 	}
 }
 
-
-void parse_search_result (ASPacket *packet)
+void as_result_free (ASResult *r)
 {
-	struct search_result r;
-	int reply_type = as_packet_get_8 (packet);
-	memset (&r, 0, sizeof(r));
+	int i;
+
+	free (r->user);
+	free (r->filename);
+	free (r->ext);
+	free (r->hash);
+
+	for (i = 0; i < RESULT_NUM_TAGS; i++)
+		free (r->meta[i]);
+
+	free (r);
+
+	return;
+}
+
+ASResult *parse_search_result (ASPacket *packet)
+{
+	ASResult *r;
+	int reply_type;
+	int i;
+
+	r = malloc (sizeof (ASResult));
+
+	if (!r)
+		return NULL;
+
+	memset (r, 0, sizeof(*r));
+
+	r->user = r->filename = r->ext = r->hash = NULL;
+
+	for (i=0; i < RESULT_NUM_TAGS; i++)
+		r->meta[i] = NULL;
+
+	reply_type = as_packet_get_8 (packet);
 
 	switch (reply_type)
 	{
 	case 0: /* token search result */
-		r.id = as_packet_get_le16 (packet);
+		r->id = as_packet_get_le16 (packet);
 		
 		/* supernode IP/port */
 		as_packet_get_be32 (packet);
@@ -193,19 +184,19 @@ void parse_search_result (ASPacket *packet)
 		as_packet_get_be32 (packet);
 		as_packet_get_le16 (packet);
 
-		r.unknown = as_packet_get_8 (packet);
-		r.user = as_packet_get_strnul (packet);
+		r->unknown = as_packet_get_8 (packet);
+		r->user = as_packet_get_strnul (packet);
 
 		/* unknown, may be split differently */
 		as_packet_get_8 (packet);
 		as_packet_get_le32 (packet);
 
-		r.realm = as_packet_get_8 (packet);
-		r.size = as_packet_get_le32 (packet);
-		r.hash = as_packet_get_ustr (packet, 20);
-		r.ext = as_packet_get_strnul (packet);
+		r->realm = as_packet_get_8 (packet);
+		r->size = as_packet_get_le32 (packet);
+		r->hash = as_packet_get_ustr (packet, 20);
+		r->ext = as_packet_get_strnul (packet);
 		
-		parse_metadata (packet, &r);
+		parse_metadata (packet, r);
 		break;
 		
 	case 1: /* hash search result */
@@ -217,24 +208,19 @@ void parse_search_result (ASPacket *packet)
 		as_packet_get_be32 (packet);
 		as_packet_get_le16 (packet);
 
-		r.unknown = as_packet_get_8 (packet);
-		r.user = as_packet_get_strnul (packet);
-		r.hash = as_packet_get_ustr (packet, 20);
-		r.ext = as_packet_get_strnul (packet);
+		r->unknown = as_packet_get_8 (packet);
+		r->user = as_packet_get_strnul (packet);
+		r->hash = as_packet_get_ustr (packet, 20);
+		r->ext = as_packet_get_strnul (packet);
 		break;
 
 	default:
-		return;
+		AS_WARN_1 ("unknown search result type %d", reply_type);
+		as_result_free (r);
+		return NULL;
 	}
 	
-	printf ("%20s %10d %d [%s]\n", r.user, r.size, r.realm, r.filename);
-
-	free (r.user);
-	free (r.filename);
-	free (r.ext);
-	free (r.hash);
-
-	return;
+	return r;
 }
 
 #if 0

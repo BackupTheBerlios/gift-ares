@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.16 2004/09/04 18:21:51 mkern Exp $
+ * $Id: as_ares.h,v 1.17 2004/09/05 02:54:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -110,7 +110,7 @@ typedef struct
 	/* session manager */
 	ASSessMan *sessman;
 
-
+	ASResultCallback callback; /* MOVEME */
 } ASInstance;
 
 /*****************************************************************************/

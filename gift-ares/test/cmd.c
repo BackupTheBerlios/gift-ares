@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.9 2004/09/01 17:49:26 HEx Exp $
+ * $Id: cmd.c,v 1.10 2004/09/05 02:55:01 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,6 +25,8 @@ COMMAND_FUNC (save_nodes);
 COMMAND_FUNC (connect);
 COMMAND_FUNC (connect_to);
 COMMAND_FUNC (search);
+COMMAND_FUNC (info);
+COMMAND_FUNC (clear);
 
 COMMAND_FUNC (quit);
 
@@ -63,6 +65,14 @@ commands[] =
 	COMMAND (search,
 	         "<query>",
 	         "Search connected hosts for files.")
+
+	COMMAND (info,
+		 "<result number>",
+		 "Show details for a given search result.")
+
+	COMMAND (clear,
+		 "",
+		 "Clear search results.")
 
 	COMMAND (quit,
              "",
@@ -166,7 +176,7 @@ COMMAND_FUNC (connect)
 	i = atoi (argv[1]);
 	assert (i >= 0);
 
-	printf ("Telling seesion manager to connect to %d nodes.\n", i);
+	printf ("Telling session manager to connect to %d nodes.\n", i);
 
 	as_sessman_connect (AS->sessman, i);
 
@@ -198,6 +208,32 @@ COMMAND_FUNC (connect_to)
 	return TRUE;
 }
 
+static const char *realm_chars="RA?S?VDI";
+
+/* warning: ludicrously inefficient list code ahead */
+static List *results = NULL;
+
+static void search_callback (ASResult *r)
+{
+	printf ("%3d) %20s %10d %c [%s]\n", list_length (results),
+		r->user, r->size,
+		realm_chars[r->realm], r->filename);
+
+	results = list_append (results, r);
+}
+
+static int clear_result (ASResult *result)
+{
+	as_result_free (result);
+
+	return TRUE;
+}
+
+static void clear_results (void)
+{
+	results = list_foreach_remove (results, (ListForeachFunc)clear_result, NULL);
+}
+
 COMMAND_FUNC (search)
 {
 	unsigned char *query;
@@ -208,9 +244,60 @@ COMMAND_FUNC (search)
 
 	query = argv[1];
 	
+	clear_results ();
+
+	/* FIXME */
+	AS->callback = (ASResultCallback)search_callback;
+
 	count = as_send_search (AS->sessman, query);
 
 	printf ("sent query '%s' to %d nodes\n", query, count);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (info)
+{
+	int rnum;
+	int i;
+	ASResult *r;
+
+	if (argc < 2)
+		return FALSE;
+
+	rnum = atoi (argv[1]);
+
+	r = list_nth_data (results, rnum);
+
+	if (!r)
+		return FALSE;
+
+	printf ("Filename: %s (extension '%s')\n", r->filename, r->ext);
+	printf ("Filesize: %d bytes\n", r->size);
+	printf ("User: %s\n", r->user);
+	printf ("SHA1: ");
+	for (i=0; i<20; i++)
+		printf ("%02x", r->hash[i]);
+	printf ("\n");
+	if (r->meta[TAG_TITLE])
+		printf ("Title: %s\n", r->meta[TAG_TITLE]);
+	if (r->meta[TAG_ARTIST])
+		printf ("Artist: %s\n", r->meta[TAG_ARTIST]);
+	if (r->meta[TAG_ALBUM])
+		printf ("Album: %s\n", r->meta[TAG_ALBUM]);
+	if (r->meta[TAG_YEAR])
+		printf ("Year: %s\n", r->meta[TAG_YEAR]);
+	if (r->meta[TAG_CODEC])
+		printf ("Codec: %s\n", r->meta[TAG_CODEC]);
+	if (r->meta[TAG_KEYWORDS])
+		printf ("Keywords: %s\n", r->meta[TAG_KEYWORDS]);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (clear)
+{
+	clear_results ();
 
 	return TRUE;
 }

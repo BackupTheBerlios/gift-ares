@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.14 2004/09/02 20:22:20 HEx Exp $
+ * $Id: as_session_man.c,v 1.15 2004/09/05 02:54:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -272,9 +272,15 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		break;
 	}
 	case PACKET_RESULT:
-		parse_search_result (packet);
-		break;
+	{
+		ASResult *result;
+		result = parse_search_result (packet);
 
+		/* FIXME: track id/query */
+		if (result)
+			(*AS->callback) (result);
+		break;
+	}
 	case PACKET_NICKNAME:
 	{
 		unsigned char *nick;
@@ -294,16 +300,21 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 
 /*****************************************************************************/
 
-static int send_search (ASSession *session, unsigned char *query)
+static as_bool send_search (ASSession *session, unsigned char *query)
 {
 	ASPacket *packet;
+	as_bool ret;
 
 	packet = search_request (query, session->search_id++);
 
 	if (!packet)
 		return FALSE;
 
-	if (!as_session_send (session, PACKET_SEARCH, packet, PACKET_ENCRYPTED))
+	ret = as_session_send (session, PACKET_SEARCH, packet, PACKET_ENCRYPTED);
+
+	as_packet_free (packet);
+
+	if (!ret)
 		return FALSE;
 
 	AS_HEAVY_DBG_2 ("sent query '%s' to %s", query, net_ip_str (session->host));
