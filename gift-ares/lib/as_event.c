@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.12 2004/09/05 03:23:25 HEx Exp $
+ * $Id: as_event.c,v 1.13 2004/09/05 11:54:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,6 +45,10 @@ typedef struct as_event_t
 
 	/* user data */
 	void *udata;
+
+	/* *sigh*, this is getting ugly */
+	as_bool in_callback;
+	as_bool in_callback_removed;
 
 	/* the libevent struct */
 	struct event ev;
@@ -138,6 +142,9 @@ static ASEvent *event_create (ASEventType type, void *udata)
 	ev->input.validate = FALSE;
 	ev->input.cb = NULL;
 
+	ev->in_callback = FALSE;
+	ev->in_callback_removed = FALSE;
+
 	/* zero libevent struct */
 	memset (&ev->ev, 0, sizeof (ev->ev));
 
@@ -158,6 +165,7 @@ static void event_free (ASEvent *ev)
 static void libevent_cb (int fd, short event, void *arg)
 {
 	ASEvent *ev = (ASEvent *) arg;
+	as_bool ret;
 
 #if 0
 	AS_HEAVY_DBG_3 ("libevent_cb: fd: %d, event: 0x%02x, arg: %p", fd,
@@ -169,19 +177,32 @@ static void libevent_cb (int fd, short event, void *arg)
 		assert (fd == -1);
 		assert (event & EV_TIMEOUT);
 
+		ev->in_callback = TRUE;
+		ev->in_callback_removed = FALSE;
+
 		/* raise the callback */
-		if (ev->timer.cb (ev->udata))
+		ret = ev->timer.cb (ev->udata);
+
+		ev->in_callback = FALSE;
+
+		/* Reset timer if callback returned true. */
+		if (ret)
 		{
-			/* Reset timer if callback returned true. This will crash if
-			 * callback removed timer which is expected behaviour.
-			 */
-			timer_reset (ev);	
+			if (ev->in_callback_removed)
+			{
+				/* Callback removed timer and now wants to reset it. */
+				AS_ERR_1 ("Callback requested reset of removed timer (%p)", ev);
+				
+				timer_remove (ev);
+				assert (0);
+			}
+			else
+			{
+				timer_reset (ev);	
+			}
 		}
 		else
 		{
-			/* This will crash if the callback removed the timer itself using
-			 * timer_remove(). Just don't do that.
-			 */
 			timer_remove (ev);
 		}	
 	}
@@ -192,26 +213,23 @@ static void libevent_cb (int fd, short event, void *arg)
 
 		if (event & EV_TIMEOUT)
 		{
-			InputCallback cb;
-			void *udata;
-
 			/* libgift closes fd and removes all inputs. WTF? */
 			net_close (ev->input.fd);
 #if 0
 			input_remove_all (ev->input.fd);
 #endif
+	
+			ev->in_callback = TRUE;
+			ev->in_callback_removed = FALSE;
 			
-			/* copy things we need for callback */
-			cb = ev->input.cb;
-			udata = ev->udata;
-
-			/* event is presistent so remove it now */
-#if 0
-			input_remove (ev);
-#endif
-
 			/* raise callback with bad fd and no input_id */
-			cb (-1, 0, udata);
+			ev->input.cb (-1, 0, ev->udata);
+
+			ev->in_callback = FALSE;
+
+			/* event is persistent so remove it now on matter whether callback
+			 * requested it or not. */
+			input_remove (ev);
 		}
 		else if (event & (EV_READ | EV_WRITE))
 		{
@@ -239,8 +257,17 @@ static void libevent_cb (int fd, short event, void *arg)
 				}
 			}
 
+			ev->in_callback = TRUE;
+			ev->in_callback_removed = FALSE;
+			
 			/* raise callback */
 			ev->input.cb (fd, (input_id)ev, ev->udata);
+
+			ev->in_callback = FALSE;
+	
+			/* remove input if requested by callback */
+			if (ev->in_callback_removed)
+				input_remove (ev);
 		}
 		else
 		{
@@ -268,7 +295,7 @@ input_id input_add (int fd, void *udata, InputState state,
 	assert (fd >= 0);
 
 	if (!(ev = event_create (AS_EVINPUT, udata)))
-		return NULL;
+		return INVALID_INPUT;
 
 	ev->input.fd = fd;
 	ev->input.state = state;
@@ -301,7 +328,7 @@ input_id input_add (int fd, void *udata, InputState state,
 	{
 		AS_ERR ("input_add: event_add() failed!");
 		event_free (ev);
-		return NULL;
+		return INVALID_INPUT;
 	}
 
 	/* add to hash table. this overwrites previous entries with the same fd
@@ -316,8 +343,15 @@ void input_remove (input_id id)
 {
 	ASEvent *ev = (ASEvent *) id;
 
-	if (id == (input_id) 0)
+	if (id == INVALID_INPUT)
 		return;
+
+	if (ev->in_callback)
+	{
+		/* callback wrapper will remove the input when it's save */
+		ev->in_callback_removed = TRUE;
+		return;
+	}
 
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("input_remove: event_del() failed!");
@@ -364,7 +398,7 @@ timer_id timer_add (time_t interval, TimerCallback callback, void *udata)
 	assert (callback);
 
 	if (!(ev = event_create (AS_EVTIMER, udata)))
-		return NULL;
+		return INVALID_TIMER;
 
 	ev->timer.cb = callback;
 	ev->timer.interval.tv_sec = interval / 1000;
@@ -376,7 +410,7 @@ timer_id timer_add (time_t interval, TimerCallback callback, void *udata)
 	{
 		AS_ERR ("timer_add: event_add() failed!");
 		event_free (ev);
-		return NULL;
+		return INVALID_TIMER;
 	}
 
 	return (timer_id) ev;
@@ -386,7 +420,15 @@ void timer_reset (timer_id id)
 {
 	ASEvent *ev = (ASEvent *) id;
 
-	assert (ev);
+	if (id == INVALID_TIMER)
+		return;
+
+	if (ev->in_callback && ev->in_callback_removed)
+	{
+		AS_ERR_1 ("Tried to reset a removed timer (%p).", id);
+		assert (0);
+		return;
+	}
 
 	/* simply add it again, this reset the timeout if it was already added */
 	if (event_add (&ev->ev, &ev->timer.interval) != 0)
@@ -401,7 +443,15 @@ void timer_remove (timer_id id)
 {
 	ASEvent *ev = (ASEvent *) id;
 
-	assert (ev);
+	if (id == INVALID_TIMER)
+		return;
+
+	if (ev->in_callback)
+	{
+		/* callback wrapper will remove the timer when it's save */
+		ev->in_callback_removed = TRUE;
+		return;
+	}
 
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("timer_remove: event_del() failed!");
@@ -414,7 +464,7 @@ void timer_remove_zero (timer_id *id)
 	assert (id);
 
 	timer_remove (*id);
-	*id = NULL;
+	*id = INVALID_TIMER;
 }
 
 /*****************************************************************************/
