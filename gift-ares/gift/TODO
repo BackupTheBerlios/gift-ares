@@ -2,6 +2,7 @@
 - Smooth upstream/downstream throttling by calling giFT's upload_throttle/download_throttle
   Clean way: Add callback to as_upload object which is used by plugin.
   Lazy way: Add #ifdef'ed throttle call directly to as_upload.c::send_file
+  FIXME: Throttling should work without the above but seems not to.
 
 - Source searching
 

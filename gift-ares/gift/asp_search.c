@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.5 2004/12/19 00:50:14 mkern Exp $
+ * $Id: asp_search.c,v 1.6 2004/12/19 01:11:36 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -240,6 +240,8 @@ void asp_giftcb_search_cancel (Protocol *p, IFEvent *event)
 
 	search = find_search (event);
 	assert (search);
+
+	AS_DBG_1 ("Search cancelled. Id: %d.", search->id);
 	
 	if (!as_searchman_remove (AS->searchman, search))
 	{
