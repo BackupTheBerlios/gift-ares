@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.5 2004/08/25 19:46:14 mkern Exp $
+ * $Id: as_event.c,v 1.6 2004/08/26 15:57:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,8 +7,12 @@
  * All rights reserved.
  */
 
-#include "as_event.h"
+#include "as_ares.h"
 #include "event.h"    /* libevent */
+
+#ifndef WIN32
+#define EV_EXCEPT 0
+#endif
 
 /*****************************************************************************/
 

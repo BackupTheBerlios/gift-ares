@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.3 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_crypt.c,v 1.4 2004/08/26 15:57:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,7 +7,7 @@
  * All rights reserved.
  */
 
-#include "as_crypt.h"
+#include "as_ares.h"
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.h,v 1.4 2004/08/24 20:56:26 mkern Exp $
+ * $Id: as_event.h,v 1.5 2004/08/26 15:57:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,8 +9,6 @@
 
 #ifndef __AS_EVENT_H
 #define __AS_EVENT_H
-
-#include "as_ares.h"
 
 /*****************************************************************************/
 

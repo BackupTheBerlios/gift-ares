@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.5 2004/08/25 19:46:14 mkern Exp $
+ * $Id: as_tcp.c,v 1.6 2004/08/26 15:57:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,8 +7,7 @@
  * All rights reserved.
  */
 
-#include "as_tcp.h"
-#include "as_event.h"
+#include "as_ares.h"
 
 /*****************************************************************************/
 
@@ -19,6 +18,9 @@
 #ifndef SD_BOTH
 # define SD_BOTH 2
 #endif
+#else
+
+#define optval_t void *
 
 #endif
 
@@ -186,7 +188,7 @@ TCPC *tcp_bind (in_port_t port, int block)
 	addr.sin_port = htons (port);
 
 	reuse = 1;
-	setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, (optval_t)&reuse, sizeof (reuse));
+	setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, (void *)&reuse, sizeof (reuse));
 
 	socket_set_blocking (fd, block);
 

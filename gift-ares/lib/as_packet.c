@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.5 2004/08/24 20:56:26 mkern Exp $
+ * $Id: as_packet.c,v 1.6 2004/08/26 15:57:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,7 +7,7 @@
  * All rights reserved.
  */
 
-#include "as_packet.h"
+#include "as_ares.h"
 
 /*****************************************************************************/
 
@@ -85,7 +85,7 @@ size_t as_packet_size(ASPacket* packet)
 size_t as_packet_remaining(ASPacket* packet)
 {
 	assert (packet->read_ptr >= packet->data);
-	assert (packet->used > (size_t) (packet->read_ptr - packet->data));
+	assert (packet->used >= (size_t) (packet->read_ptr - packet->data));
 
 	return packet->used - (packet->read_ptr - packet->data);
 }
@@ -268,13 +268,13 @@ char *as_packet_get_strnul (ASPacket *packet)
 
 #if 0
 // encrypt entire packet using cipher
-void as_packet_encrypt(ASPacket *packet, FSTCipher *cipher)
+void as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
 {
 	as_cipher_crypt(cipher, packet->data, packet->used);
 }
 
 // decrypt entire packet using cipher
-void as_packet_decrypt(ASPacket *packet, FSTCipher *cipher)
+void as_packet_decrypt(ASPacket *packet, ASCipher *cipher)
 {
 	as_cipher_crypt(cipher, packet->data, packet->used);
 }
@@ -282,7 +282,6 @@ void as_packet_decrypt(ASPacket *packet, FSTCipher *cipher)
 
 /*****************************************************************************/
 
-#if 0
 as_bool as_packet_send (ASPacket *packet, TCPC *tcpcon)
 {
 	int sent;
@@ -315,7 +314,6 @@ as_bool as_packet_recv (ASPacket *packet, TCPC *tcpcon)
 
 	return TRUE;
 }
-#endif
 
 /*****************************************************************************/
 

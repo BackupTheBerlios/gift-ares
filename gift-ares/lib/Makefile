@@ -8,6 +8,7 @@ OBJECTS = \
 	as_log.o \
 	as_packet.o \
 	as_search.o \
+	as_session.o \
 	as_tcp.o \
 	as_tokenize.o
 

@@ -1,3 +1,12 @@
+/*
+ * $Id: as_tokenize.c,v 1.3 2004/08/26 15:57:44 HEx Exp $
+ *
+ * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
+ * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
+ *
+ * All rights reserved.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>

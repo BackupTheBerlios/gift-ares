@@ -1,5 +1,13 @@
-#include "as_packet.h"
-#include "as_tokenize.h"
+/*
+ * $Id: as_search.c,v 1.2 2004/08/26 15:57:44 HEx Exp $
+ *
+ * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
+ * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
+ *
+ * All rights reserved.
+ */
+
+#include "as_ares.h"
 
 typedef enum {
 	TAG_TITLE  = 1,
@@ -203,6 +211,7 @@ void parse_search_result (ASPacket *packet)
 	return;
 }
 
+#if 0
 int main (void)
 {
 	ASPacket *p = as_packet_slurp();
@@ -213,3 +222,4 @@ int main (void)
 
 	return 0;
 }
+#endif

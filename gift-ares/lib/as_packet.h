@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.2 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_packet.h,v 1.3 2004/08/26 15:57:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,8 +9,6 @@
 
 #ifndef __AS_PACKET_H
 #define __AS_PACKET_H
-
-#include "as_ares.h"
 
 /*****************************************************************************/
 
@@ -105,23 +103,20 @@ ASPacket *as_packet_slurp (void);
 
 /*****************************************************************************/
 
-#if 0
 // encrypt entire packet using cipher
-void as_packet_encrypt(ASPacket *packet, FSTCipher *cipher);
+void as_packet_encrypt(ASPacket *packet, ASCipher *cipher);
 
 // decrypt entire packet using cipher
-void as_packet_decrypt(ASPacket *packet, FSTCipher *cipher);
-#endif
+void as_packet_decrypt(ASPacket *packet, ASCipher *cipher);
 
 /*****************************************************************************/
 
-#if 0
 /* send entire packet to connected host */
 as_bool as_packet_send (ASPacket *packet, TCPC *tcpcon);
 
 /* recv 1024 bytes from connected host and append data */
 as_bool as_packet_recv (ASPacket *packet, TCPC *tcpcon);
-#endif
+
 /*****************************************************************************/
 
 void as_packet_dump(ASPacket *packet);
