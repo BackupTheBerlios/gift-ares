@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.9 2004/10/23 09:23:50 mkern Exp $
+ * $Id: as_share_man.c,v 1.10 2004/10/23 12:29:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -200,7 +200,14 @@ static as_bool submit_share_list (ASSession *session, List *shares)
 /* Submit all shares to specified supernode. */
 as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 {
-	return submit_share_list (session, man->shares);
+	if (submit_share_list (session, man->shares))
+	{
+		AS_DBG_2 ("Submitted all %d shares to supernode %s",
+		          man->nshares, net_ip_str (session->host));
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 /* Submit list of shares to all connected supernodes and add shares to
