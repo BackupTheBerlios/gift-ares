@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.3 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_hashtable.c,v 1.4 2004/09/07 13:30:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -120,6 +120,9 @@ static ASHashTableEntry *hashtable_entry (void *key, unsigned int key_len,
 	if (!(entry = malloc (sizeof (ASHashTableEntry))))
 		return NULL;
 
+	entry->next = NULL;
+	entry->key_len = key_len;
+
 	if (copy)
 	{
 		if (!(entry->key = malloc (key_len)))
@@ -146,6 +149,7 @@ static ASHashTableEntry *hashtable_entry_int (as_uint32 int_key, void *val)
 	if (!(entry = malloc (sizeof (ASHashTableEntry))))
 		return NULL;
 
+	entry->next = NULL;
 	entry->int_key = int_key;
 	entry->val = val;
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.19 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_session_man.c,v 1.20 2004/09/07 13:30:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -310,7 +310,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 	case PACKET_LOCALIP:
 	{
 		in_addr_t ip;
-		ip = as_packet_get_be32 (packet);
+		ip = as_packet_get_ip (packet);
 		AS_DBG_1 ("Got local IP: %s", net_ip_str (ip)); 
 		break;
 	}
