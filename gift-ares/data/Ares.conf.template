@@ -16,11 +16,6 @@ port = 59049
 #
 username = 
 
-#
-# Number of supernodes to connect to.  Be sensible, please.
-#
-sessions = 4
-
 
 [search]
 
@@ -28,4 +23,4 @@ sessions = 4
 # Timeout in seconds from the time the search was sent to the first supernode.
 # After the search has timed out all further results will be ignored.
 #
-timeout = 180
+timeout = 300
