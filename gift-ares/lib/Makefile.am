@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.1 2004/11/28 21:10:03 mkern Exp $
+# $Id: Makefile.am,v 1.2 2004/12/18 15:19:56 hex Exp $
 AM_CFLAGS = -Wall
 
 noinst_LTLIBRARIES = libaresgift.la
@@ -40,6 +40,7 @@ libaresgift_la_SOURCES = \
 	as_upload.c          as_upload.h \
 	as_upload_man.c      as_upload_man.h \
 	as_util.c            as_util.h \
+	as_push_reply.c      as_push_reply.h \
 	as_log.h
 
  
