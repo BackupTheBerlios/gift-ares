@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.h,v 1.2 2004/09/10 13:19:54 mkern Exp $
+ * $Id: as_http_client.h,v 1.3 2004/09/12 23:59:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -13,7 +13,7 @@
 /*****************************************************************************/
 
 /* some time outs in ms */
-#define HTCL_CONNECT_TIMEOUT	(15*SECONDS)
+#define HTCL_CONNECT_TIMEOUT	(20*SECONDS)
 #define HTCL_REQUEST_TIMEOUT	(20*SECONDS)
 #define HTCL_DATA_TIMEOUT		(20*SECONDS)
 
@@ -76,7 +76,7 @@ struct _ASHttpClient
 	unsigned int  data_len;			/* length of content in data */
 
 	ASHttpClientCallback callback;
-	enum { CB_NONE, CB_ACTIVE, CB_FREED } callback_state;
+	enum { CB_NONE, CB_ACTIVE, CB_FREED, CB_RESET } callback_state;
 
 	void *udata;					/* user data */
 };

@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.c,v 1.4 2004/09/09 21:50:46 HEx Exp $
+ * $Id: as_http_client.c,v 1.5 2004/09/12 23:59:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -72,6 +72,13 @@ static void client_reset (ASHttpClient *client, int close_tcpcon)
 	client->data_len = 0;
 	free (client->data);
 	client->data = NULL;
+
+	/* Beautiful this is not.
+	 * The problem conceptual.
+	 * The solution hidden in darkness.
+	 */
+	if (client->callback_state = CB_ACTIVE)
+		client->callback_state = CB_RESET;
 }
 
 /*****************************************************************************/
@@ -126,7 +133,8 @@ void as_http_client_free (ASHttpClient *client)
 	if (!client)
 		return;
 
-	if (client->callback_state == CB_ACTIVE)
+	if (client->callback_state == CB_ACTIVE ||
+	    client->callback_state == CB_RESET)
 	{
 		/* free us after callback returns */
 		client->callback_state = CB_FREED;
@@ -385,6 +393,13 @@ static void client_read_header (int fd, input_id input, ASHttpClient *client)
 		return;
 	}
 
+	if (client->callback_state == CB_RESET)
+	{
+		/* Do nothing else. There may be a new request. */
+		client->callback_state = CB_NONE;
+		return;
+	}
+
 	client->callback_state = CB_NONE;
 
 	if (!cb_ret)
@@ -511,6 +526,13 @@ static int client_write_data (ASHttpClient *client)
 			client->callback_state = CB_NONE;
 			as_http_client_free (client);
 			return FALSE; /* remove input */
+		}
+
+		if (client->callback_state == CB_RESET)
+		{
+			/* Do nothing else. There may be a new request. */
+			client->callback_state = CB_NONE;
+			return FALSE;
 		}
 
 		client->callback_state = CB_NONE;
