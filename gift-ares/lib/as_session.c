@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.29 2004/10/29 16:00:09 HEx Exp $
+ * $Id: as_session.c,v 1.30 2004/10/29 16:27:28 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -398,9 +398,19 @@ static as_bool session_send_handshake (ASSession *session,
 	as_packet_put_ustr (packet, nonce, 22);
 	free (nonce);
 
-	/* don't know what these are */
-	as_packet_put_le16 (packet, AS->netinfo->unk2);
-	as_packet_put_le32 (packet, AS->netinfo->unk1);
+	if (AS->upman)
+	{
+		as_packet_put_le16 (packet, 0); /* unknown */
+		as_packet_put_8 (packet, AS->upman->nuploads);
+		as_packet_put_8 (packet, AS->upman->max);
+		as_packet_put_8 (packet, 0); /* unknown */
+		as_packet_put_8 (packet, AS->upman->nqueued);
+	}
+	else
+	{	
+		as_packet_put_le16 (packet, 0);
+		as_packet_put_le32 (packet, 0);
+	}
 
 	/* our listening port. */
 	as_packet_put_le16 (packet, AS->netinfo->port);
