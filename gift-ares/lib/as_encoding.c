@@ -1,5 +1,5 @@
 /*
- * $Id: as_encoding.c,v 1.3 2004/09/13 22:21:07 HEx Exp $
+ * $Id: as_encoding.c,v 1.4 2004/09/13 23:28:52 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -134,7 +134,6 @@ unsigned char *as_hex_decode (const char *data, int *dst_len)
 {
 	char *dst, *h;
 	int i, j;
-	unsigned char hi, lo;
 
 	if (!data)
 		return NULL;
@@ -154,9 +153,8 @@ unsigned char *as_hex_decode (const char *data, int *dst_len)
 				return NULL;
 			}
 
-			h -= hex_string;
 			byte <<= 4;
-			byte |= (h > 0x0F) ? h - 6 : h;
+			byte |= (h - hex_string > 0x0F) ? (h - hex_string - 6) : h - hex_string;
 		}
 
 		dst[i] = byte;
