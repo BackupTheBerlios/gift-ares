@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.11 2004/09/13 15:29:07 HEx Exp $
+ * $Id: as_packet.h,v 1.12 2004/09/15 21:30:02 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -147,6 +147,9 @@ as_bool as_packet_encrypt (ASPacket *packet, ASCipher *cipher);
  * at the beginning of the packet.
  */
 as_bool as_packet_decrypt (ASPacket *packet, ASCipher *cipher);
+
+/* Compress packet with zlib */
+as_bool as_packet_compress (ASPacket *packet);
 
 /* Prepend the three-byte header (type and length). */
 as_bool as_packet_header (ASPacket *packet, ASPacketType type);

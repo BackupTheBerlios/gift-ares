@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.23 2004/09/14 01:18:26 HEx Exp $
+ * $Id: as_session.c,v 1.24 2004/09/15 21:30:02 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -159,10 +159,11 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		break;
 
 	case PACKET_COMPRESSED:
-		/* TODO */
-		AS_ERR ("Packet compression not implemented");
-		assert (0);
-		return FALSE;
+		if (!as_packet_compress (body))
+		{
+			AS_ERR ("Compression failed");
+			return FALSE;
+		}
 		break;
 	}
 
