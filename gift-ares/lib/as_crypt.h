@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.9 2004/10/03 18:01:08 HEx Exp $
+ * $Id: as_crypt.h,v 1.10 2005/01/07 20:05:00 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -80,6 +80,13 @@ void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port);
 void as_encrypt_arlnk (as_uint8 *data, int len);
 
 void as_decrypt_arlnk (as_uint8 *data, int len);
+
+/* encrypt/decrypt login string */
+void as_encrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
+                              as_uint8 seed_8);
+
+void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
+                              as_uint8 seed_8);
 
 /*****************************************************************************/
 

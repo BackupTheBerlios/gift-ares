@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.64 2005/01/07 15:35:27 mkern Exp $
+ * $Id: as_ares.h,v 1.65 2005/01/07 20:05:00 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -191,6 +191,13 @@ extern Protocol *gift_proto;
  * network in this way is beyond me.
  */
 #define AS_CLIENT_NAME "Ares"
+
+/* The login string was added in Ares build 2951 probably to block out other
+ * clients in the future. It is sent to the supernode in encrypted form during
+ * handshaking. Just like the client name we now have to keep it in sync with
+ * the latest Ares client. Yes, it's pointless.
+ */
+#define AS_LOGIN_STRING "Ares 1.8.1.2951"
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)

@@ -1,5 +1,13 @@
- $Id: ChangeLog,v 1.1 2004/11/28 21:10:02 mkern Exp $
+ $Id: ChangeLog,v 1.2 2005/01/07 20:04:59 mkern Exp $
 
-2004-11-28  Markus Kern <mkern@users.berlios.de>
+gift-ares 0.2.1:
+
+	* Adjusted to protocol changes introduced in Ares build 2951.
+	
+	* Fixed path conversion bug leading to failing uploads in windows.
+
+	* Fixed unhandled download completion case leading to abort.
+
+gift-ares 0.2:
 
 	* Automagic build system

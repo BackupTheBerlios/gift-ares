@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.35 2004/11/06 19:51:27 mkern Exp $
+ * $Id: as_session.c,v 1.36 2005/01/07 20:05:00 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -395,6 +395,7 @@ static as_bool session_send_handshake (ASSession *session,
 	if (!(nonce = as_cipher_nonce (session->cipher, supernode_guid)))
 	{
 		AS_ERR ("Handshake nonce creation failed");
+		as_packet_free (packet);
 		return FALSE;
 	}
 	as_packet_put_ustr (packet, nonce, 22);
@@ -436,6 +437,31 @@ static as_bool session_send_handshake (ASSession *session,
 	/* local ip */
 	as_packet_put_ip (packet, net_local_ip (session->c->fd, NULL));
 
+	/* Append encrypted login string added in Ares 2951. */
+	if (strlen (AS_LOGIN_STRING) > 0)
+	{
+		as_uint8 *login_str, *login_hex;
+
+		login_str = strdup (AS_LOGIN_STRING);
+		assert (login_str);
+
+		/* Encrypt login string. */
+		as_encrypt_login_string (login_str, strlen (login_str),
+		                         session->cipher->session_seed_16,
+		                         session->cipher->session_seed_8);
+
+		/* Hex encode login string. */
+		if ((login_hex = as_hex_encode (login_str, strlen (AS_LOGIN_STRING))))
+		{
+			/* Append it to packet with zero termiantor */
+			as_packet_put_strnul (packet, login_hex);
+			free (login_hex);
+		}
+
+		free (login_str);
+	}
+
+	/* Send packet. */
 	if (!as_session_send (session, PACKET_HANDSHAKE, packet,
 	                      PACKET_ENCRYPT))
 	{

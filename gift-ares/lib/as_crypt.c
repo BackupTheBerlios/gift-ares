@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.13 2004/10/03 17:54:01 HEx Exp $
+ * $Id: as_crypt.c,v 1.14 2005/01/07 20:05:00 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -558,6 +558,21 @@ void as_encrypt_arlnk (as_uint8 *data, int len)
 void as_decrypt_arlnk (as_uint8 *data, int len)
 {
 	unmunge (data, len, 0x6F13, 0x5AB3, 0x8D1E);
+}
+
+/* encrypt/decrypt login string */
+void as_encrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
+                              as_uint8 seed_8)
+{
+	munge (data, len, seed_16 + 0x0C, 0xCE6D, 0x58BF);
+	munge (data, len, (seed_16 - seed_8) + 0x0B, 0x310F, 0x3A4E);
+}
+
+void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
+                              as_uint8 seed_8)
+{
+	unmunge (data, len, (seed_16 - seed_8) + 0x0B, 0x310F, 0x3A4E);
+	unmunge (data, len, seed_16 + 0x0C, 0xCE6D, 0x58BF);
 }
 
 /*****************************************************************************/
