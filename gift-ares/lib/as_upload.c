@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.16 2004/12/24 12:56:29 mkern Exp $
+ * $Id: as_upload.c,v 1.17 2004/12/31 22:18:20 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -15,7 +15,12 @@
 
 /* ares displays this (up to the first slash or space) as the network name,
    so we should be consistent with what we tell supernodes */
-#define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares/0.1)"
+
+#ifdef GIFT_PLUGIN
+#  define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares; " PACKAGE "/" VERSION ")"
+#else
+#  define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares)"
+#endif
 
 /* Log http reply headers. */
 /* #define LOG_HTTP_REPLIES */
@@ -25,7 +30,7 @@
 static as_bool send_reply_success (ASUpload *up);
 static as_bool send_reply_queued (ASUpload *up, int queue_pos,
                                   int queue_length);
-static as_bool send_reply_error (ASUpload *up);
+static as_bool send_reply_error (ASUpload *up, as_bool our_fault);
 static as_bool send_reply_not_found (ASUpload *up);
 static void send_file (int fd, input_id input, ASUpload *up);
 
@@ -147,7 +152,7 @@ as_bool as_upload_start (ASUpload *up)
 	{
 		AS_WARN_2 ("Malformed uri '%s' from %s",
 		           up->request->uri, net_ip_str (up->host));
-		send_reply_error (up);
+		send_reply_error (up, FALSE);
 		return FALSE;
 	}
 
@@ -167,7 +172,7 @@ as_bool as_upload_start (ASUpload *up)
 	if (!(up->share = as_share_copy (up->share)))
 	{
 		AS_ERR ("Insufficient memory.");
-		send_reply_error (up);
+		send_reply_error (up, TRUE);
 		return FALSE;
 	}
 
@@ -189,7 +194,7 @@ as_bool as_upload_start (ASUpload *up)
 		{
 			AS_ERR_2 ("Invalid range header '%s' from %s",
 			          range, net_ip_str (up->host));
-			send_reply_error (up);
+			send_reply_error (up, FALSE);
 			return FALSE;
 		}
 
@@ -213,13 +218,7 @@ as_bool as_upload_start (ASUpload *up)
 	if (up->auth_cb)
 		queue_pos = up->auth_cb (up, &queue_length);
 
-	if (queue_pos < 0)
-	{
-		/* Callback requested we tell this user to go away. */
-		send_reply_not_found (up);
-		return FALSE;
-	}
-	else if (queue_pos > 0)
+	if (queue_pos)
 	{
 		/* User is queued */
 		send_reply_queued (up, queue_pos, queue_length);
@@ -241,7 +240,7 @@ as_bool as_upload_start (ASUpload *up)
 			up->file = NULL;
 		}
 		
-		send_reply_error (up);
+		send_reply_error (up, TRUE);
 		return FALSE;
 	}
 
@@ -461,8 +460,6 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 	char buf[128];
 
 	assert (queue_pos != 0);
-	assert (queue_length > 0);
-	assert (queue_pos <= queue_length);
 
 	reply = as_http_header_reply (HTHD_VER_11, 503);
 	set_common_headers (up, reply);
@@ -497,12 +494,12 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 	return TRUE;
 }
 
-static as_bool send_reply_error (ASUpload *up)
+static as_bool send_reply_error (ASUpload *up, as_bool our_fault)
 {
 	ASHttpHeader *reply;
 	String *str;
 
-	reply = as_http_header_reply (HTHD_VER_11, 500);
+	reply = as_http_header_reply (HTHD_VER_11, our_fault ? 500 : 400);
 	set_common_headers (up, reply);
 	str = as_http_header_compile (reply);
 
