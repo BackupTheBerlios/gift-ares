@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.8 2004/09/17 11:42:19 mkern Exp $
+ * $Id: as_tcp.c,v 1.9 2004/09/17 20:12:51 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -339,8 +339,9 @@ int tcp_write (TCPC *c, unsigned char *data, size_t len)
 		return 0;
 
 	/* If there already is a non-empty buffer just append new data */
-	if (c->wbuf && as_packet_size (c->wbuf) > 0)
+	if (c->wbuf)
 	{
+		assert (as_packet_size (c->wbuf) > 0);
 		assert (c->winput != INVALID_INPUT);
 
 		if (!as_packet_put_ustr (c->wbuf, data, len))
@@ -366,6 +367,9 @@ int tcp_write (TCPC *c, unsigned char *data, size_t len)
 
 		sent = 0;
 	}
+
+	if (!(c->wbuf = as_packet_create ()))
+		return -1;
 
 	/* Queue rest of data */
 	if (!as_packet_put_ustr (c->wbuf, data + sent, len - sent))
