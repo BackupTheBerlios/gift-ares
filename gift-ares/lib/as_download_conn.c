@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.10 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_download_conn.c,v 1.11 2004/09/19 18:35:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -485,6 +485,9 @@ static int downconn_http_callback (ASHttpClient *client,
 
 	switch (code)
 	{
+	case HTCL_CB_REQUESTING:
+		return TRUE;
+
 	case HTCL_CB_CONNECT_FAILED:
 	case HTCL_CB_REQUEST_FAILED:
 		conn->fail_count++;
