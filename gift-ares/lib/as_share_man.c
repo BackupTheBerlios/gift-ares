@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.14 2004/12/20 12:22:58 mkern Exp $
+ * $Id: as_share_man.c,v 1.15 2004/12/24 16:30:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -60,8 +60,8 @@ as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 	man->shares = list_prepend (man->shares, share);
 
 	if (!as_hashtable_insert (man->table, share->hash->data,
-				  sizeof (share->hash->data),
-				  man->shares))
+	                          sizeof (share->hash->data),
+	                          man->shares))
 	{
 		AS_ERR_1 ("Hashtable insert failed for share '%s'", share->path);
 		assert (0);
@@ -83,7 +83,7 @@ as_bool as_shareman_remove (ASShareMan *man, ASHash *hash)
 
 	/* Lookup and remove list link from hashtable. */
 	if (!(link = as_hashtable_remove (man->table, hash->data,
-	                               sizeof (hash->data))))
+	                                  sizeof (hash->data))))
 	{
 		AS_ERR_1 ("Didn't find share '%s' for removal.",
 		          as_hash_str (hash));
