@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.47 2004/10/24 03:45:59 HEx Exp $
+ * $Id: as_ares.h,v 1.48 2004/10/25 14:17:21 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -189,7 +189,7 @@ typedef int            as_bool;
 #define AS_UPLOAD_QUEUE_TIMEOUT 180
 
 /* Maximum number of simultaneous uploads */
-#define AS_UPLOAD_MAX_ACTIVE  4
+#define AS_UPLOAD_MAX_ACTIVE  3
 
 /* Timeout for tcp connect to firewalled source's supernode. */
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)

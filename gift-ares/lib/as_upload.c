@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.4 2004/10/24 03:45:59 HEx Exp $
+ * $Id: as_upload.c,v 1.5 2004/10/25 14:17:22 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -228,13 +228,12 @@ static as_bool send_reply_queued (ASUpload *up, int pos)
 
 	set_common_headers (up, reply);
 
-	as_http_header_set_field (reply, "X-MyLIP", buf);
-	
 	str = as_http_header_compile (reply);
 
+	if (pos > 0)
 	{
 		sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
-			 pos, man->nqueued, man->max,
+			 pos, man->nqueued, 1 /*man->max*/,
 			 AS_UPLOAD_QUEUE_MIN, AS_UPLOAD_QUEUE_MAX);
 
 		as_http_header_set_field (reply, "X-Queued", buf);

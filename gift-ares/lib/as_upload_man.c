@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.2 2004/10/24 03:45:59 HEx Exp $
+ * $Id: as_upload_man.c,v 1.3 2004/10/25 14:17:22 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,8 +56,8 @@ static void queue_remove (ASUploadMan *man, List *link)
 	man->queue = list_remove_link (man->queue, link);
 	man->nqueued--;
 	
-	assert (man->nqueued);
-} 
+	assert (man->nqueued >= 0);
+}
 
 /* Tidy up the queue, removing stale entries to avoid whoever's at the
  * head of the queue having to wait too long. A "last entry" may be
@@ -80,11 +80,12 @@ static void tidy_queue (ASUploadMan *man, struct queue *last)
 		if (q == last)
 			break;
 
-		if (q->time + AS_UPLOAD_QUEUE_TIMEOUT < t)
-			continue;
-
-		/* it's stale, remove it */
-		queue_remove (man, l);
+		if (t - q->time > AS_UPLOAD_QUEUE_TIMEOUT)
+		{
+			/* it's stale, remove it */
+			AS_DBG_2 ("removing stale queue entry %s (%d elapssed)", net_ip_str (q->host), t - q->time);
+			queue_remove (man, l);
+		}
 	}
 }
 
@@ -97,19 +98,34 @@ int as_upman_auth (ASUploadMan *man, in_addr_t host)
 
 	if (as_hashtable_lookup_int (man->uploads, (int)host))
 	{
+		AS_DBG_1 ("currently uploading to %s, denying", net_ip_str (host));
+
 		/* if this host is currently uploading, make it wait */
 		return -1;
 	}
 
-	if (man->nuploads < man->max)
+	/* spare slots are available even after dealing with everyone
+	   in the queue */
+	if (man->nuploads + man->nqueued < man->max)
+	{
+		AS_DBG_3 ("spare slots available (%d+%d < %d), allowing",
+			  man->nuploads, man->nqueued, man->max);
 		return 0;
+	}
 
-	for (l = man->queue, i = 0; l; l = l->next, i++)
+	/* tidy up the queue, then see if there's anyone before us */
+	tidy_queue (man, NULL);
+
+	for (l = man->queue, i = 1; l; l = l->next, i++)
 	{
 		q = l->data;
 		if (q->host == host)
 			break;
 	}
+
+	assert (list_length (man->queue) == man->nqueued);
+
+	AS_DBG_1 ("queue pos is %d", i);
 
 	if (!l)
 	{
@@ -123,15 +139,16 @@ int as_upman_auth (ASUploadMan *man, in_addr_t host)
 		q->time = time (NULL);
 		man->queue = list_append (man->queue, q);
 
-		return ++man->nqueued;
+		man->nqueued++;
+		assert (i == man->nqueued);
 	}
 
-	/* tidy up the queue, then see if there's anyone before us */
-	tidy_queue (man, q);
-
-	if (!l->prev)
+	if (i + man->nuploads <= man->max)
 	{
-		/* first in queue: pop it */
+		/* sufficiently near the front of the queue: pop it */
+		AS_DBG_3 ("reserved slot available (%d+%d <= %d), allowing",
+			  i, man->nuploads, man->max);
+
 		queue_remove (man, l);
 		return 0;
 	}
