@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.27 2004/09/17 00:32:32 HEx Exp $
+ * $Id: as_session.c,v 1.28 2004/09/19 22:05:11 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -398,16 +398,9 @@ static as_bool session_send_handshake (ASSession *session,
 	as_packet_put_ustr (packet, nonce, 22);
 	free (nonce);
 
-	/* unknown, 2 bytes, (always?) zero */
-	as_packet_put_le16 (packet, 0x0000);
-	/* unknown, 1 byte, (always?) zero */
-	as_packet_put_8 (packet, 0x00);
-	/* unknown, 1 byte, (always?) 0x04 */
-	as_packet_put_8 (packet, 0x04);
-	/* unknown, 1 byte, (always?) zero */
-	as_packet_put_8 (packet, 0x00);
-	/* unknown, 1 byte, (always?) zero */
-	as_packet_put_8 (packet, 0x00);
+	/* don't know what these are */
+	as_packet_put_le16 (packet, AS->netinfo->unk2);
+	as_packet_put_le32 (packet, AS->netinfo->unk1);
 
 	/* our listening port. */
 	as_packet_put_le16 (packet, AS->netinfo->port);
@@ -547,9 +540,9 @@ static as_bool session_ping (ASSession *session)
 	ASPacket *p = as_packet_create ();
 
 	/* not a clue what any of these are */
-	as_packet_put_le32 (p, 0x400);
+	as_packet_put_le32 (p, AS->netinfo->unk1);
+	as_packet_put_le16 (p, AS->netinfo->unk2);
 	as_packet_put_8 (p, 0);
-	as_packet_put_le16 (p, 0);
 	
 	AS_DBG_2 ("Sent ping to %s:%d",
 	          net_ip_str (session->host), session->port);

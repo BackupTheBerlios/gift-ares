@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.h,v 1.2 2004/09/14 01:18:26 HEx Exp $
+ * $Id: as_netinfo.h,v 1.3 2004/09/19 22:05:11 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,6 +21,8 @@ typedef struct
 	in_addr_t outside_ip; /* out ip from the outside */
 	in_port_t port; /* port we're listening on */
 
+	as_uint32 unk1; /* always 0x400? */
+	as_uint16 unk2; /* unknown */
 } ASNetInfo;
 
 /*****************************************************************************/
