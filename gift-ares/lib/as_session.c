@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.26 2004/09/17 00:08:07 HEx Exp $
+ * $Id: as_session.c,v 1.27 2004/09/17 00:32:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -151,7 +151,15 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		break;
 
 	case PACKET_ENCRYPT:
-		if (type == PACKET_HANDSHAKE || body->used < 10)
+#ifdef AS_COMPRESS_ALL
+		if (type != PACKET_HANDSHAKE && body->used > 10)
+		{
+			as_packet_header (body, type);
+			type = PACKET_COMPRESSED;
+			/* fall-through */
+		}
+		else
+#endif
 		{
 			if (!as_packet_encrypt (body, session->cipher))
 			{
@@ -159,12 +167,6 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 				return FALSE;
 			}
 			break;
-		}
-		else
-		{
-			as_packet_header (body, type);
-			type = PACKET_COMPRESSED;
-			/* fall-through */
 		}
 	case PACKET_COMPRESS:
 		if (!as_packet_compress (body))

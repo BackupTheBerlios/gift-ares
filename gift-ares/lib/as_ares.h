@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.37 2004/09/16 18:24:46 mkern Exp $
+ * $Id: as_ares.h,v 1.38 2004/09/17 00:32:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -149,6 +149,11 @@ typedef int            as_bool;
 
 /* Number of request fails after which a source is removed */
 #define AS_DOWNLOAD_SOURCE_MAX_FAIL (2)
+
+/* Uncomment to compress arbitrary sufficiently-large packets, just
+   because we can (it's unlikely to improve efficiency).  This might
+   affect compatibility with other clients. */
+/* define AS_COMPRESS_ALL */
 
 /*****************************************************************************/
 
