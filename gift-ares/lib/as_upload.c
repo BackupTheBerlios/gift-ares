@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.1 2004/10/03 17:37:49 HEx Exp $
+ * $Id: as_upload.c,v 1.2 2004/10/19 23:41:48 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -174,9 +174,8 @@ static as_bool send_reply (ASUpload *up)
 
 	sprintf (buf, "%08X", ntohl (net_local_ip (up->c->fd, NULL)));
 	as_http_header_set_field (reply, "X-MyLIP", buf);
-#if 0
-	as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nickname);
-#endif
+	if (AS->netinfo->nick)
+		as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nick);
 
 	str = as_http_header_compile (reply);
 
@@ -197,8 +196,8 @@ static void send_file (int fd, input_id input, ASUpload *up)
 
         if (net_sock_error (fd))
         {
-                AS_ERR_1 ("net_sock_error for upload to %s",
-                                   net_ip_str (up->c->host));
+                AS_ERR_3 ("net_sock_error %d after %u bytes for upload to %s",
+                                   errno, up->sent, net_ip_str (up->c->host));
 		as_upload_free (up);
 		
                 return;

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.28 2004/10/10 18:44:11 mkern Exp $
+ * $Id: as_session_man.c,v 1.29 2004/10/19 23:41:48 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -328,20 +328,18 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		break;
 
 	case PACKET_NICKNAME:
-	{
-		unsigned char *nick;
-
-		nick = as_packet_get_strnul (packet);
-		AS_DBG_1 ("Got nickname: '%s'", nick);
-		free (nick);
+		as_netinfo_handle_nick (AS->netinfo, session, packet);
 		break;
-	}
+
 	case PACKET_NODELIST:
-		AS_WARN ("FIXME: Got nodelist packet. Make me use it!");
+		/* FIXME */
+		break;
+	case PACKET_SUPERINFO:
 		/* FIXME */
 		break;
 	default:
-		AS_WARN_1 ("Got unknown packet 0x%02x:", type);
+		AS_WARN_2 ("Got unknown packet 0x%02x from %s:",
+			   type, net_ip_str (session->host));
 		as_packet_dump (packet);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.h,v 1.4 2004/10/10 15:22:48 mkern Exp $
+ * $Id: as_netinfo.h,v 1.5 2004/10/19 23:41:48 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -24,6 +24,8 @@ struct as_net_info_t
 	unsigned int users;     /* users on network */
 	unsigned int files;     /* files on network */
 	unsigned int size;      /* total network size in GB */
+
+	unsigned char *nick;    /* nickname from server (unique?) */
 
 	ASNetInfoStatsCb stats_cb;
 
@@ -59,6 +61,10 @@ as_bool as_netinfo_handle_stats (ASNetInfo *info, ASSession *session,
 
 /* handle outside ip packet */
 as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
+                              ASPacket *packet);
+
+/* handle nickname packet */
+as_bool as_netinfo_handle_nick (ASNetInfo *info, ASSession *session,
                               ASPacket *packet);
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.5 2004/10/10 15:22:48 mkern Exp $
+ * $Id: as_netinfo.c,v 1.6 2004/10/19 23:41:48 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,8 @@ ASNetInfo *as_netinfo_create ()
 	info->outside_ip = 0;
 	info->port       = 0;
 
+	info->nick       = NULL;
+
 	/* FIXME: what do these do? */
 	info->unk1       = 0x400;
 	info->unk2       = 0x22;
@@ -40,6 +42,8 @@ void as_netinfo_free (ASNetInfo *info)
 {
 	if (!info)
 		return;
+
+	free (info->nick);
 
 	free (info);
 }
@@ -118,6 +122,31 @@ as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
 	}
 	
 	info->outside_ip = ip;
+
+	return TRUE;
+}
+
+/* handle nickname packet */
+as_bool as_netinfo_handle_nick (ASNetInfo *info, ASSession *session,
+                              ASPacket *packet)
+{
+	unsigned char *nick;
+	
+	nick = as_packet_get_strnul (packet);
+
+	if (!nick)
+		return FALSE;
+
+	AS_DBG_1 ("Got nickname: '%s'", nick);
+
+	if (info->nick && strcmp (nick, info->nick))
+	{
+		AS_WARN_1 ("Reported nick differs from previously reported nick '%s'",
+		           info->nick);
+	}
+	
+	free (info->nick);
+	info->nick = nick;
 
 	return TRUE;
 }

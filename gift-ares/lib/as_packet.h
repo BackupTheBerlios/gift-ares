@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.17 2004/09/22 04:04:12 HEx Exp $
+ * $Id: as_packet.h,v 1.18 2004/10/19 23:41:48 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -46,6 +46,7 @@ typedef enum
 	PACKET_RESULT     = 18, /* 0x12, search result */
 	PACKET_NODELIST   = 54, /* 0x36, list of index nodes? */
 	PACKET_PUSH       = 8,  /* 0x08, push request */
+	PACKET_SUPERINFO  = 58, /* 0x3a, info about this supernode? */
 } ASPacketType;
 
 typedef enum
