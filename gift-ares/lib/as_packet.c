@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.17 2004/09/16 02:25:08 HEx Exp $
+ * $Id: as_packet.c,v 1.18 2004/09/16 16:24:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -53,9 +53,19 @@ void as_packet_free(ASPacket *packet)
 	free(packet);
 }
 
-void as_packet_append(ASPacket *packet, ASPacket *append)
+as_bool as_packet_append(ASPacket *packet, ASPacket *append)
 {
-	packet_write(packet, append->read_ptr, as_packet_remaining(append));
+	return packet_write(packet, append->read_ptr, as_packet_remaining(append));
+}
+
+as_bool as_packet_pad (ASPacket *packet, as_uint8 c, size_t count)
+{
+	if (!packet_resize (packet, packet->used + count))
+		return FALSE;
+
+	memset (packet->data + packet->used, c, count);
+	packet->used += count;
+	return TRUE;
 }
 
 void as_packet_rewind(ASPacket *packet)

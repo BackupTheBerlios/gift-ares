@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.14 2004/09/16 15:45:32 HEx Exp $
+ * $Id: as_packet.h,v 1.15 2004/09/16 16:24:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -68,7 +68,10 @@ ASPacket *as_packet_create_copy(ASPacket* packet, size_t len);
 void as_packet_free(ASPacket *packet);
 
 /* appends everything from append->read_ptr to packet */
-void as_packet_append(ASPacket *packet, ASPacket *append);
+as_bool as_packet_append(ASPacket *packet, ASPacket *append);
+
+/* appends c count number of times to packet */
+as_bool as_packet_pad (ASPacket *packet, as_uint8 c, size_t count);
 
 /* rewinds read_ptr to data */
 void as_packet_rewind(ASPacket *packet);
