@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.6 2004/09/15 22:18:25 HEx Exp $
+ * $Id: as_meta.c,v 1.7 2004/09/15 23:04:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -168,7 +168,7 @@ const ASTagMapping *as_meta_tag_name (const char *name)
 	int i;
 	
 	for (i=0; i < NUM_TYPES; i++)
-		if (!strcasecmp (tag_types[i].name, name))
+		if (!gift_strcasecmp (tag_types[i].name, name))
 			return &tag_types[i];
 
 	return NULL;
