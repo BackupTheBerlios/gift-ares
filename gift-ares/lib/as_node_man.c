@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.5 2004/09/01 14:22:21 HEx Exp $
+ * $Id: as_node_man.c,v 1.6 2004/09/03 16:18:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -96,7 +96,7 @@ void as_nodeman_free (ASNodeMan *man)
 void as_nodeman_empty (ASNodeMan *man)
 {
 	/* remove index */
-	as_hashtable_free (man->index);
+	as_hashtable_free (man->index, FALSE);
 
 	/* free nodes */
 	list_foreach_remove (man->nodes, (ListForeachFunc)node_free_itr, NULL);

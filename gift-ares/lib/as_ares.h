@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.14 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_ares.h,v 1.15 2004/09/03 16:18:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -69,7 +69,14 @@ typedef int            as_bool;
 #include "as_event.h"
 #include "as_crypt.h"
 #include "as_tcp.h"
+#include "as_parse.h"
+#include "as_strobj.h"
 #include "as_packet.h"
+#include "as_http_header.h"
+#include "as_http_client.h"
+#if 0
+#include "as_http_server.h"
+#endif
 #include "as_tokenize.h"
 #include "as_search.h"
 #include "as_node.h"

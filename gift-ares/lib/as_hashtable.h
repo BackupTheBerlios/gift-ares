@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.h,v 1.2 2004/08/26 22:55:30 mkern Exp $
+ * $Id: as_hashtable.h,v 1.3 2004/09/03 16:18:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,10 +92,10 @@ ASHashTable *as_hashtable_create_mem (as_bool copy_keys);
  */
 ASHashTable *as_hashtable_create_int ();
 
-/* Free hash table. keys are freed as well if they were copied, values remain
- * untouched.
+/* Free hash table. keys are freed as well if they were copied, values are
+ * freed if specified.
  */
-void as_hashtable_free (ASHashTable *table);
+void as_hashtable_free (ASHashTable *table, as_bool free_values);
 
 /*****************************************************************************/
 

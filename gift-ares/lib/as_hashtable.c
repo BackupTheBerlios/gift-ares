@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.2 2004/08/31 23:25:49 mkern Exp $
+ * $Id: as_hashtable.c,v 1.3 2004/09/03 16:18:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -256,39 +256,31 @@ static ASHashTable *hashtable_new (unsigned int minsize,
     return h;
 }
 
-static void hashtable_free(ASHashTable *h)
+static void hashtable_free(ASHashTable *h, as_bool free_values)
 {
     unsigned int i;
     ASHashTableEntry *e, *f;
     ASHashTableEntry **table = h->table;
 
-    if (h->copy_keys)
+	for (i = 0; i < h->tablelength; i++)
     {
-        for (i = 0; i < h->tablelength; i++)
+		e = table[i];
+        while (NULL != e)
         {
-            e = table[i];
-            while (NULL != e)
-            {
-				f = e;
-				e = e->next;
-				free(f->key); /* free key if we copied it */
-				free(f);
-			}
-        }
-    }
-    else
-    {
-        for (i = 0; i < h->tablelength; i++)
-        {
-            e = table[i];
-            while (NULL != e)
-            {
-				f = e;
-				e = e->next;
-				free(f);
-			}
-        }
-    }
+			f = e;
+			e = e->next;
+				
+			/* free key if we copied it */
+			if (h->copy_keys)
+				free(f->key);
+
+			/* free values if requested */
+			if (free_values)
+				free(f->val);
+
+			free(f);
+		}
+	}
 
     free(h->table);
     free(h);
@@ -441,12 +433,18 @@ ASHashTable *as_hashtable_create_int ()
 /* Free hash table. keys are freed as well if they were copied, values remain
  * untouched.
  */
-void as_hashtable_free (ASHashTable *table)
+void as_hashtable_free (ASHashTable *table, as_bool free_values)
 {
 	if (!table)
 		return;
 
-	hashtable_free (table);
+	if (free_values && table->int_keys)
+	{
+		assert (table->int_keys == FALSE);
+		free_values = FALSE;
+	}
+
+	hashtable_free (table, free_values);
 }
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.10 2004/08/31 20:05:25 mkern Exp $
+ * $Id: as_event.c,v 1.11 2004/09/03 16:18:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -77,7 +77,7 @@ void as_event_shutdown ()
 {
 	/* FIXME: free remaining events? */
 
-	as_hashtable_free (input_table);
+	as_hashtable_free (input_table, FALSE);
 	input_table = NULL;
 
 	return;
