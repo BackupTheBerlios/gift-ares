@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.8 2004/10/03 17:54:01 HEx Exp $
+ * $Id: as_crypt.h,v 1.9 2004/10/03 18:01:08 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -76,7 +76,7 @@ void as_encrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port);
 
 void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port);
 
-* encrypt/decrypt arlnk URLs */
+/* encrypt/decrypt arlnk URLs */
 void as_encrypt_arlnk (as_uint8 *data, int len);
 
 void as_decrypt_arlnk (as_uint8 *data, int len);
