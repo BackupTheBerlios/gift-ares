@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.12 2004/11/04 23:31:53 HEx Exp $
+ * $Id: as_upload.c,v 1.13 2004/11/05 19:05:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -249,6 +249,7 @@ as_bool as_upload_start (ASUpload *up)
 			up->file = NULL;
 		}
 		
+		tcp_close_null (&up->c);
 		return FALSE;
 	}
 
@@ -365,7 +366,8 @@ static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
 	as_http_header_set_field (reply, "Server", AS_HTTP_SERVER_NAME);
 	set_header_b6mi (reply);
 
-	sprintf (buf, "%08X", ntohl (net_local_ip (up->c->fd, NULL)));
+	snprintf (buf, sizeof (buf), "%08X",
+	          ntohl (net_local_ip (up->c->fd, NULL)));
 	as_http_header_set_field (reply, "X-MyLIP", buf);
 	if (AS->netinfo->nick)
 		as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nick);
@@ -376,7 +378,7 @@ static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
 static as_bool send_reply_success (ASUpload *up)
 {
 	ASHttpHeader *reply;
-	char buf[32];
+	char buf[64];
 	String *str;
 
 	reply = as_http_header_reply (HTHD_VER_11,
@@ -384,15 +386,15 @@ static as_bool send_reply_success (ASUpload *up)
 	                              up->stop == up->share->size) ? 200 : 206);
 
 #if 0
-	sprintf (buf, "bytes=%u-%u/%u", up->start, up->stop-1,
-	         up->share->size); /* Ares */
+	snprintf (buf, sizeof (buf), "bytes=%u-%u/%u", up->start, up->stop-1,
+	          up->share->size); /* Ares */
 #else
-	sprintf (buf, "bytes %u-%u/%u", up->start, up->stop-1, 
-		     up->share->size); /* HTTP */
+	snprintf (buf, sizeof (buf), "bytes %u-%u/%u", up->start, up->stop-1, 
+		      up->share->size); /* HTTP */
 #endif
 	as_http_header_set_field (reply, "Content-Range", buf);
 
-	sprintf (buf, "%u", up->stop - up->start);
+	snprintf (buf, sizeof (buf), "%u", up->stop - up->start);
 	as_http_header_set_field (reply, "Content-Length", buf);
 
 	set_common_headers (up, reply);

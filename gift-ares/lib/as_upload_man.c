@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.10 2004/10/31 13:01:48 mkern Exp $
+ * $Id: as_upload_man.c,v 1.11 2004/11/05 19:05:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,7 +12,7 @@
 /*****************************************************************************/
 
 /* Verify count of active uploads by going through upload list each time */
-#define VERIFY_ACTIVE_COUNT
+/* #define VERIFY_ACTIVE_COUNT */
 
 /*****************************************************************************/
 
