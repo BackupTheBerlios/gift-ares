@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.17 2004/10/30 16:48:08 mkern Exp $
+ * $Id: as_share.c,v 1.18 2004/11/05 01:40:24 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -161,7 +161,13 @@ static as_bool add_realm_tag (ASPacket *p, ASMeta *meta, ASRealm realm)
 	}
 	case REALM_VIDEO:
 	{
-		/* FIXME */
+		int width, height, duration;
+		width    = as_meta_get_int (meta, "width");
+		height   = as_meta_get_int (meta, "height");
+		duration = as_meta_get_int (meta, "duration");
+		as_packet_put_le16 (p, (as_uint16) width);
+		as_packet_put_le16 (p, (as_uint16) height);
+		as_packet_put_le32 (p, (as_uint32) duration);
 		break;
 	}
 	case REALM_ARCHIVE:
