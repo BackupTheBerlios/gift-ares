@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.15 2004/09/07 18:37:31 mkern Exp $
+ * $Id: cmd.c,v 1.16 2004/09/09 22:16:27 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,7 @@ COMMAND_FUNC (search);
 COMMAND_FUNC (info);
 COMMAND_FUNC (clear);
 COMMAND_FUNC (download);
+COMMAND_FUNC (dl);
 
 COMMAND_FUNC (quit);
 
@@ -83,6 +84,10 @@ commands[] =
 	COMMAND (download,
 		 "<ip> <port> <hash> <filename>",
 		 "Download file.")
+
+	COMMAND (dl,
+		 "<result number>",
+		 "Download search result.")
 
 	COMMAND (quit,
              "",
@@ -318,7 +323,8 @@ COMMAND_FUNC (info)
 
 	printf ("Filename: %s (extension '%s')\n", r->filename, r->fileext);
 	printf ("Filesize: %d bytes\n", r->filesize);
-	printf ("User: %s\n", r->source->username);
+	printf ("User: %s (%s:%d)\n", r->source->username,
+		net_ip_str (r->source->host), r->source->port);
 
 	printf ("SHA1: ");
 	for (i=0; i < AS_HASH_SIZE; i++)
@@ -352,6 +358,35 @@ COMMAND_FUNC (clear)
 
 /*****************************************************************************/
 
+COMMAND_FUNC (dl)
+{
+	int rnum;
+	int i;
+	char *str;
+	ASResult *r;
+
+	if (argc < 2)
+		return FALSE;
+
+	rnum = atoi (argv[1]);
+
+	r = list_nth_data (results, rnum);
+
+	if (!r)
+	{
+		printf ("Invalid result number\n");
+		return TRUE;
+	}
+
+	ASDownload *dl;
+
+	dl = as_download_new (r->source, r->hash, r->filename);
+
+	as_download_start (dl);
+
+	return TRUE;
+}
+
 COMMAND_FUNC (download)
 {
 	in_addr_t ip;
@@ -359,6 +394,7 @@ COMMAND_FUNC (download)
 	ASSource *source;
 	ASHash *hash;
 	unsigned char *filename;
+	ASDownload *dl;
 
 	if (argc < 5)
 		return FALSE;
@@ -373,7 +409,9 @@ COMMAND_FUNC (download)
 	source->host = ip;
 	source->port = port;
 
-	as_download_start (as_download_new (source, hash, filename));
+	dl = as_download_new (source, hash, filename);
+
+	as_download_start (dl);
 
 	return TRUE;
 }
