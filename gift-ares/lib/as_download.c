@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.17 2004/09/19 18:33:54 mkern Exp $
+ * $Id: as_download.c,v 1.18 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -509,50 +509,6 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 	return TRUE;
 }
 
-/* Make download use incoming push connection. */
-as_bool as_download_take_push (ASDownload *dl, TCPC *c)
-{
-	List *l;
-	ASDownConn *conn;
-
-	/* Only add connections to active downloads */
-	if (dl->state != DOWNLOAD_ACTIVE)
-	{
-		AS_HEAVY_DBG ("Not adding pushed connection to inactive download");
-		return FALSE;
-	}
-
-	/* Create new connection */
-	if (!(conn = as_downconn_create_tcpc (c, conn_state_cb, conn_data_cb)))
-	{
-		AS_ERR ("Failed to create connection for push");
-		return FALSE;
-	}
-
-	/* Make sure we do not already have a connection to this host. */
-	for (l = dl->conns; l; l = l->next)
-	{
-		if (as_source_equal (((ASDownConn *)l->data)->source, conn->source))
-		{
-			AS_ERR_1 ("Pushed connection \"%s\" already added.",
-			          as_source_str (conn->source));
-			as_downconn_free (conn);
-			return FALSE;
-		}
-	}
-
-	/* point udata1 to download, we will use udata2 for the chunk */
-	conn->udata1 = dl;
-
-	dl->conns = list_prepend (dl->conns, conn);
-
-	/* check if the source should be used now */
-	if (dl->state == DOWNLOAD_ACTIVE)
-		download_maintain (dl);
-
-	return TRUE;
-}
-
 /*****************************************************************************/
 
 static void search_result_cb (ASSearch *search, ASResult *result)
@@ -710,6 +666,7 @@ static as_bool disassociate_conn (ASDownConn *conn)
 		return FALSE;
 	}
 
+#if 0
 	/* remove connection if it was pushed and failed */
 	if (conn->pushed && conn->fail_count > 0)
 	{
@@ -721,6 +678,7 @@ static as_bool disassociate_conn (ASDownConn *conn)
 		dl->conns = list_remove (dl->conns, conn);
 		return FALSE;
 	}
+#endif
 
 	return TRUE;
 }
@@ -789,7 +747,7 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 		break;
 
 	case DOWNCONN_FAILED:
-		AS_HEAVY_DBG_4 ("DOWNCONN_FAILED: Chunk (%u,%u), conn %s:%dd.",
+		AS_HEAVY_DBG_4 ("DOWNCONN_FAILED: Chunk (%u,%u), conn %s:%d.",
 		                chunk->start, chunk->size,
 		                net_ip_str (conn->source->host), conn->source->port);
 
@@ -879,23 +837,8 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 
 			as_downconn_cancel (conn);
 
-#if 0
 			/* disassociate chunk */
-			conn->udata2 = NULL;
-			chunk->udata = NULL;
-
-			/* remove connection if it was pushed */
-			if (conn->pushed)
-			{
-				AS_DBG_2 ("Removing pushed source %s:%d",
-				          net_ip_str (conn->source->host),
-				          conn->source->port);
-				as_downconn_free (conn);
-				dl->conns = list_remove (dl->conns, conn);
-			}
-#else
 			disassociate_conn (conn);
-#endif
 
 			/* clean up / start new connections / etc */
 			download_maintain (dl);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.41 2004/09/22 03:40:55 HEx Exp $
+ * $Id: as_ares.h,v 1.42 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -106,6 +106,8 @@ typedef int            as_bool;
 #include "as_http_header.h"
 #include "as_http_client.h"
 #include "as_http_server.h"
+#include "as_push.h"
+#include "as_push_man.h"
 #include "as_download_chunk.h"
 #include "as_download_conn.h"
 #include "as_download.h"
@@ -114,7 +116,6 @@ typedef int            as_bool;
 #include "as_incoming.h"
 #include "as_share.h"
 #include "as_share_man.h"
-#include "as_push.h"
 
 /*****************************************************************************/
 
@@ -160,6 +161,12 @@ typedef int            as_bool;
 /* Number of request fails after which a source is removed */
 #define AS_DOWNLOAD_SOURCE_MAX_FAIL (2)
 
+/* Timeout for tcp connect to firewalled source's supernode. */
+#define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)
+
+/* Timeout for push after request was sent */
+#define AS_PUSH_TIMEOUT (20 * SECONDS)
+
 /* Uncomment to compress arbitrary sufficiently-large packets, just
    because we can (it's unlikely to improve efficiency).  This might
    affect compatibility with other clients. */
@@ -183,6 +190,9 @@ typedef struct
 
 	/* download manager */
 	ASDownMan *downman;
+
+	/* push manager */
+	ASPushMan *pushman;
 
 	/* share manager */
 	ASShareMan *shareman;

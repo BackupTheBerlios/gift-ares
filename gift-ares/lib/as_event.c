@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.17 2004/09/19 18:27:42 mkern Exp $
+ * $Id: as_event.c,v 1.18 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -218,14 +218,12 @@ static void libevent_cb (int fd, short event, void *arg)
 
 		if (event & EV_TIMEOUT)
 		{
-			/* libgift closes fd and removes all inputs. WTF? */
-			net_close (ev->d.input.fd);
-#if 0
-			input_remove_all (ev->d.input.fd);
-#endif
-	
 			ev->in_callback = TRUE;
 			ev->in_callback_removed = FALSE;
+
+			/* libgift closes fd and removes all inputs. WTF? */
+			net_close (ev->d.input.fd);
+			input_remove_all (ev->d.input.fd);
 			
 			/* raise callback with bad fd and no input_id */
 			ev->d.input.cb (-1, 0, ev->udata);

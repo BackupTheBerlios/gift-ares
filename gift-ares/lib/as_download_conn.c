@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.11 2004/09/19 18:35:40 mkern Exp $
+ * $Id: as_download_conn.c,v 1.12 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -15,6 +15,8 @@ static as_bool downconn_request (ASDownConn *conn);
 
 static int downconn_http_callback (ASHttpClient *client,
                                    ASHttpClientCbCode code);
+
+static void downconn_push_callback (ASPush *push, TCPC *c);
 
 /*****************************************************************************/
 
@@ -41,7 +43,7 @@ static ASDownConn *downconn_new ()
 	conn->chunk_start = 0;
 	conn->chunk_size  = 0;
 	conn->client      = NULL;
-	conn->pushed      = FALSE;
+	conn->push        = NULL;
 
 	conn->queue_pos      = 0;
 	conn->queue_len      = 0;
@@ -66,6 +68,8 @@ static void downconn_reset (ASDownConn *conn)
 {
 	conn->chunk_start = 0;
 	conn->chunk_size = 0;
+	as_pushman_remove (AS->pushman, conn->push);
+	conn->push = NULL;
 	as_hash_free (conn->hash);
 	conn->hash = NULL;
 }
@@ -90,46 +94,6 @@ ASDownConn *as_downconn_create (ASSource *source, ASDownConnStateCb state_cb,
 	return conn;
 }
 
-/* Create new download connection from pushed connection. */
-ASDownConn *as_downconn_create_tcpc (TCPC *c, ASDownConnStateCb state_cb,
-                                     ASDownConnDataCb data_cb)
-{
-	ASDownConn *conn;
-
-	assert (c);
-
-	if (!(conn = downconn_new ()))
-		return NULL;
-
-	conn->pushed   = TRUE;
-	conn->state_cb = state_cb;
-	conn->data_cb  = data_cb;
-
-	if (!(conn->source = as_source_create ()))
-	{
-		as_downconn_free (conn);
-		return NULL;
-	}
-
-	/* Get ip and port from endpoint of pushed connection */
-	conn->source->host = c->host;
-	conn->source->port = c->port;
-	
-	/* Create new http client using connection */
-	conn->client = as_http_client_create_tcpc (c, downconn_http_callback);
-
-	if (!conn->client)
-	{
-		AS_ERR_2 ("Failed to create http client push from %s:%d",
-		          net_ip_str (conn->source->host), conn->source->port);
-		return NULL;
-	}
-
-	conn->client->udata = conn;
-
-	return conn;
-}
-
 /* Free download connection. */
 void as_downconn_free (ASDownConn *conn)
 {
@@ -137,7 +101,9 @@ void as_downconn_free (ASDownConn *conn)
 		return;
 
 	as_downconn_cancel (conn);
+
 	assert (conn->hash == NULL);
+	assert (conn->push == NULL);
 
 	as_source_free (conn->source);
 	as_http_client_free (conn->client);
@@ -169,23 +135,6 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
 
 	if (!conn->client)
 	{
-		if (conn->pushed)
-		{
-			/* This shouldn't happen. Pushed downloads should be removed
-			 * immediately by as_download when the http client is closed.
-			 */
-			AS_ERR_2 ("Tried to start download pushed from %s:%d but there is "
-			          "no http client", net_ip_str (conn->source->host),
-			          conn->source->port);
-
-			conn->fail_count++;
-			downconn_reset (conn);
-			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
-
-			assert (0);
-			return FALSE;
-		}
-
 		/* create http client for direct connection */
 		conn->client = as_http_client_create (net_ip_str (conn->source->host),
 		                                      conn->source->port,
@@ -489,6 +438,34 @@ static int downconn_http_callback (ASHttpClient *client,
 		return TRUE;
 
 	case HTCL_CB_CONNECT_FAILED:
+		/* This will be called if the connection was _not_ pushed and connect
+		 * failed. Send a push request in this case. */
+		AS_HEAVY_DBG_2 ("Connect to %s:%d failed. Trying push.",
+		                net_ip_str (conn->source->host), conn->source->port);
+
+		/* Cancel and free failed connection */
+		as_http_client_cancel (conn->client);
+		as_http_client_free (conn->client);
+		conn->client = NULL;
+
+		/* Start push request. */
+		assert (conn->push == NULL);
+		if (!(conn->push = as_pushman_send (AS->pushman,
+		                                    downconn_push_callback,
+		                                    conn->source, conn->hash)))
+		{
+			conn->fail_count++;
+			downconn_reset (conn);
+			/* this may free us */
+			downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+			return FALSE;
+		}
+
+		conn->push->udata = conn;
+
+		/* Now wait for push reply or timeout */
+		return FALSE;
+
 	case HTCL_CB_REQUEST_FAILED:
 		conn->fail_count++;
 		downconn_reset (conn);
@@ -544,6 +521,70 @@ static int downconn_http_callback (ASHttpClient *client,
 	}
 
 	return TRUE;
+}
+
+/*****************************************************************************/
+
+static void downconn_push_callback (ASPush *push, TCPC *c)
+{
+	ASDownConn *conn = (ASDownConn *) push->udata;
+
+	assert (conn->push == push);
+	assert (as_source_equal (push->source, conn->source));
+
+	if (!c || push->state != PUSH_OK)
+	{
+		/* Fail the download. */
+		tcp_close (c);
+
+		conn->fail_count++;
+		downconn_reset (conn); /* frees and removes push */
+		/* this may free us */
+		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+		return;
+	}
+
+	/* Create new http client with pushed connection */
+	assert (conn->client == NULL);
+	conn->client = as_http_client_create_tcpc (c, downconn_http_callback);
+
+	if (!conn->client)
+	{
+		AS_ERR_3 ("Failed to create http client for push %d from %s:%d",
+		          push->id, net_ip_str (conn->source->host),
+		          conn->source->port);
+
+		/* Fail the download. */
+		tcp_close (c);
+
+		conn->fail_count++;
+		downconn_reset (conn); /* frees and removes push */
+		/* this may free us */
+		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+		return;
+	}
+
+	conn->client->udata = conn;
+
+	AS_HEAVY_DBG_3 ("Created http client from push %u by %s:%d", push->id,
+	                net_ip_str (conn->source->host), conn->source->port);
+
+	/* Send http request. */
+	if (!downconn_request (conn))
+	{
+		AS_ERR_3 ("Failed to send http request to push %d connection from %s:%d",
+		          push->id, net_ip_str (conn->source->host),
+		          conn->source->port);
+
+		conn->fail_count++;
+		downconn_reset (conn); /* frees and removes push */
+		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+		return;
+	}
+
+	/* We no longer need the push */
+	as_pushman_remove (AS->pushman, push);
+	conn->push = NULL;
 }
 
 /*****************************************************************************/

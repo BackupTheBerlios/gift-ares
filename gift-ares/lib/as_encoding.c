@@ -1,5 +1,5 @@
 /*
- * $Id: as_encoding.c,v 1.4 2004/09/13 23:28:52 HEx Exp $
+ * $Id: as_encoding.c,v 1.5 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -147,7 +147,7 @@ unsigned char *as_hex_decode (const char *data, int *dst_len)
 
 		for (j=0; j<2; j++)
 		{
-			if ((h = strchr (hex_string, data[0])) == NULL)
+			if ((h = strchr (hex_string, data[j])) == NULL)
 			{
 				free (dst);
 				return NULL;

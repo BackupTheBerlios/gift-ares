@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.10 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_download.h,v 1.11 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -105,9 +105,6 @@ ASDownloadState as_download_state (ASDownload *dl);
 
 /* Add source to download (copies source). */
 as_bool as_download_add_source (ASDownload *dl, ASSource *source);
-
-/* Make download use incoming push connection. */
-as_bool as_download_take_push (ASDownload *dl, TCPC *c);
 
 /*****************************************************************************/
 

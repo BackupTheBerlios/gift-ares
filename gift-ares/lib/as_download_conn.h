@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.9 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_download_conn.h,v 1.10 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,7 +21,8 @@
 typedef enum
 {
 	DOWNCONN_UNUSED,        /* Initial state and state after canceling */
-	DOWNCONN_CONNECTING,    /* We are connecting/requesting */
+	DOWNCONN_CONNECTING,    /* We are connecting/requesting push/requesting
+	                         * data */
 	DOWNCONN_TRANSFERRING,  /* We are receiving data. */
 	DOWNCONN_FAILED,        /* Connect or request failed. */
 	DOWNCONN_COMPLETE,      /* Requested chunk completed or connection was
@@ -54,9 +55,8 @@ struct as_down_conn_t
 	size_t chunk_start;
 	size_t chunk_size;
 
-	/* the actually http client for downloading */
-	ASHttpClient *client;
-	as_bool pushed;        /* TRUE if the connection was pushed to us */
+	ASHttpClient *client; /* the actuall http client for downloading */
+	ASPush       *push;   /* push if one is in progress */
 
 	/* remote queue handling */
 	unsigned int queue_pos;        /* our position in source's queue */
@@ -85,10 +85,6 @@ struct as_down_conn_t
 /* Create new download connection from source (copies source). */
 ASDownConn *as_downconn_create (ASSource *source, ASDownConnStateCb state_cb,
                                 ASDownConnDataCb data_cb);
-
-/* Create new download connection from pushed connection. */
-ASDownConn *as_downconn_create_tcpc (TCPC *c, ASDownConnStateCb state_cb,
-                                     ASDownConnDataCb data_cb);
 
 /* Free download connection. */
 void as_downconn_free (ASDownConn *conn);

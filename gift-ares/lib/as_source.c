@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.8 2004/09/24 22:27:20 mkern Exp $
+ * $Id: as_source.c,v 1.9 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -41,7 +41,7 @@ ASSource *as_source_copy (ASSource *source)
 
 	cpy->host = source->host;
 	cpy->port = source->port;
-	cpy->shost = source->host;
+	cpy->shost = source->shost;
 	cpy->sport = source->sport;
 	cpy->username = gift_strdup (source->username);
 	cpy->parent_host = source->parent_host;
@@ -73,8 +73,8 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 /*
  * User on different supernodes or result from different supernodes is
  * still the same user.
- * TODO: Verify guess that supernode uniquefies username by appending a
- * number.
+ * Supernode uniquefies username by appending a hex number and giving it back
+ * to us.
  */
 #if 0
 	        a->shost       == b->shost &&
@@ -88,6 +88,9 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 /* returns TRUE if the source is firewalled */
 as_bool as_source_firewalled (ASSource *source)
 {
+	/* Note: There is really no way to tell if a source is _not_
+	 * firewalled.
+	 */
 	return (!net_ip_routable (source->host)) || (source->port == 0);
 }
 
@@ -95,9 +98,7 @@ as_bool as_source_firewalled (ASSource *source)
 as_bool as_source_has_push_info (ASSource *source)
 {
 	return (net_ip_routable (source->shost) && source->sport != 0 &&
-	        net_ip_routable (source->parent_host) &&
-	        source->parent_port != 0 &&
-			source->username && source->username[0] != '\0');
+	        source->host != 0 && source->host != INADDR_NONE);
 }
 
 /*****************************************************************************/

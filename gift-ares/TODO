@@ -44,3 +44,9 @@ Optimizations:
 
 - Figure out how to detected firewalled search results.
   Update: There seems to be nothing in the search results.
+
+- Check if we can send push requests for our own supernodes over the already
+  established session.
+
+- Differentiate between download source connect and request failure and
+  immediately remove the source in the former case.

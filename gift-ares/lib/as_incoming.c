@@ -1,5 +1,5 @@
 /*
- * $Id: as_incoming.c,v 1.4 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_incoming.c,v 1.5 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,11 +50,14 @@ int as_incoming_push (ASHttpServer *server, TCPC *tcpcon, String *buf)
 	unsigned char *hex, *nl;
 	int hlen;
 	ASHash *hash;
-	as_uint32 unk;
-	ASDownload *dl;
+	as_uint32 push_id;
 
 	if ((nl = strchr (buf->str, '\n')))
 	    *nl = '\0';
+
+#if 0
+	AS_HEAVY_DBG_1 ("Got push line: %s", buf->str);
+#endif
 
 	/* parse push reply */
 	if (strncmp (buf->str, "PUSH SHA1:", 10) ||
@@ -66,7 +69,7 @@ int as_incoming_push (ASHttpServer *server, TCPC *tcpcon, String *buf)
 		return FALSE;
 	}
 
-	if (hlen < 20)
+	if (hlen < 24)
 	{
 		AS_ERR_2 ("truncated push from %s: '%s'",
 		          net_ip_str(tcpcon->host), buf->str);
@@ -75,46 +78,33 @@ int as_incoming_push (ASHttpServer *server, TCPC *tcpcon, String *buf)
 		return FALSE;
 	}
 		
-	hash = as_hash_create (hex, 20);
+	/* Create hash. */
+	if (!(hash = as_hash_create (hex, 20)))
+	{
+		free (hex);
+		return FALSE;
+	}
+
+	/* Get push id. See as_push.c for how we send it. */
+	push_id = (((as_uint32)hex[20]) << 24) | 
+	          (((as_uint32)hex[21]) << 16) |
+	          (((as_uint32)hex[22]) << 8) |
+	          (((as_uint32)hex[23]));
 
 	free (hex);
 
-	if (!hash)
-		return FALSE;
+	AS_HEAVY_DBG_3 ("Got push %d from %s for '%s'", (unsigned int)push_id,
+	                net_ip_str(tcpcon->host), as_hash_str (hash));
 
-	if (hlen >= 24)
+	/* Let push manager handle it */
+	if (!as_pushman_accept (AS->pushman, hash, push_id, tcpcon))
 	{
-		unk = ntohl (*(long*)(hex+20));
-		
-		AS_HEAVY_DBG_2 ("%s: unknown is %08x",
-		                net_ip_str(tcpcon->host), unk);
-	}
-
-	/* Find download with this hash */
-	if (!(dl = as_downman_lookup_hash (AS->downman, hash)))
-	{
-		/* This can happen if the download is already finished */
-		AS_HEAVY_DBG_2 ("Couldn't find download for pushed hash '%s' from %s",
-		                as_hash_str (hash), net_ip_str(tcpcon->host));
 		as_hash_free (hash);
-		return FALSE;
+		return FALSE; /* Close connection */
 	}
-
-	/* Add connection to download */
-	if (!as_download_take_push (dl, tcpcon))
-	{
-		AS_HEAVY_DBG_3 ("Couldn't add pushed hash '%s' from %s to download '%s'",
-		                as_hash_str (hash), net_ip_str(tcpcon->host),
-		                dl->filename);
-		as_hash_free (hash);
-		return FALSE;
-	}
-
-	AS_HEAVY_DBG_3 ("Added incoming push from %s for '%s' to download '%s'",
-	                net_ip_str(tcpcon->host), as_hash_str (hash),
-	                dl->filename);
 
 	as_hash_free (hash);
+
 	return TRUE; /* Don't close connection */
 }
 

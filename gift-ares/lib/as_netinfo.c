@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.3 2004/09/19 22:05:11 HEx Exp $
+ * $Id: as_netinfo.c,v 1.4 2004/09/26 19:49:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,7 +23,7 @@ ASNetInfo *as_netinfo_create ()
 	info->files      = 0;
 	info->size       = 0;
 	info->outside_ip = 0;
-	info->port       = AS->server ? AS->server->port : 0;
+	info->port       = 0;
 
 	/* FIXME: what do these do? */
 	info->unk1       = 0x400;
