@@ -1,11 +1,13 @@
 /*
- * $Id: as_encoding.c,v 1.1 2004/09/06 12:37:24 HEx Exp $
+ * $Id: as_encoding.c,v 1.2 2004/09/06 15:06:44 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
  *
  * All rights reserved.
  */
+
+#include "as_ares.h"
 
 /* caller frees returned string */
 char *as_base64_encode (const unsigned char *data, int src_len)
