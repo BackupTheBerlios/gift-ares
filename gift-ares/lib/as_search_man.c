@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.11 2004/12/31 22:42:48 mkern Exp $
+ * $Id: as_search_man.c,v 1.12 2005/02/09 19:44:32 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -202,6 +202,13 @@ ASSearch *as_searchman_locate (ASSearchMan *man, ASSearchResultCb result_cb,
 {
 	ASSearch *search;
 	int count;
+
+	/* check for dups first, as we key by hash (FIXME?) */
+	if (as_hashtable_lookup (man->hash_searches, hash->data,
+				 AS_HASH_SIZE))
+	{
+		return NULL;
+	}
 
 	/* create search */
 	if (!(search = as_search_create_locate (man->next_search_id, result_cb,
