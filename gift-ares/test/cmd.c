@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.7 2004/08/31 20:05:25 mkern Exp $
+ * $Id: cmd.c,v 1.8 2004/09/01 12:43:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,6 +21,7 @@ COMMAND_FUNC (help);
 COMMAND_FUNC (event_test);
 
 COMMAND_FUNC (load_nodes);
+COMMAND_FUNC (save_nodes);
 COMMAND_FUNC (connect);
 COMMAND_FUNC (connect_to);
 
@@ -46,6 +47,9 @@ commands[] =
 	COMMAND (load_nodes,
 	         "<file>",
 	         "Load nodes file.")
+	COMMAND (save_nodes,
+	         "<file>",
+	         "Save nodes file.")
 
 	COMMAND (connect,
 	         "<no_sessions>",
@@ -130,6 +134,19 @@ COMMAND_FUNC (load_nodes)
 
 	if (!as_nodeman_load (AS->nodeman, argv[1]))
 		printf ("Node file load failed.\n");
+
+	return TRUE;
+}
+
+COMMAND_FUNC (save_nodes)
+{
+	if (argc != 2)
+		return FALSE;
+
+	printf ("Saving nodes to file %s.\n", argv[1]);
+
+	if (!as_nodeman_save (AS->nodeman, argv[1]))
+		printf ("Node file save failed.\n");
 
 	return TRUE;
 }
