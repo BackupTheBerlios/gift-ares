@@ -20,7 +20,8 @@ OBJECTS = \
 	as_node_man.o \
 	as_tcp.o \
 	as_tokenize.o \
-	as_sha1.o
+	as_sha1.o \
+	as_hash.o
 
 all: libares.a($(OBJECTS))
 
