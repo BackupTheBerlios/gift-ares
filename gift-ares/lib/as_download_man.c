@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.8 2004/10/19 23:48:14 HEx Exp $
+ * $Id: as_download_man.c,v 1.9 2004/10/23 12:24:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -228,10 +228,23 @@ ASDownload *as_downman_start_result (ASDownMan *man, ASResult *result,
 	if (!as_download_start (dl, result->hash, result->filesize, save_path))
 	{
 		/* This can happen if the state callback freed the search and returned
-		 * FALSE. So only free the search if it is still in the list which is
-		 * exactly what as_downman_remove does.
+		 * FALSE. So only free the search if it is still in the list.
 		 */
-		as_downman_remove (man, dl);
+		List *link, *index_link;
+
+		if ((link = list_find (man->downloads, dl)))
+		{
+			/* remove from hash index */
+			index_link = as_hashtable_remove (man->hash_index,
+			                                  result->hash->data,
+			                                  AS_HASH_SIZE);
+			assert (index_link == link);
+			/* remove from list */
+			man->downloads = list_remove_link (man->downloads, link);
+			/* free download */
+			as_download_free (dl);
+		}
+
 		AS_ERR ("Couldn't start new download");
 		return NULL;
 	}
