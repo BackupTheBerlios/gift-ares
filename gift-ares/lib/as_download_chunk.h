@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_chunk.h,v 1.1 2004/09/09 16:12:29 mkern Exp $
+ * $Id: as_download_chunk.h,v 1.2 2004/09/09 16:55:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,7 +18,7 @@ typedef struct
 	size_t size;     /* size of entire chunk in bytes */
 	siez_t received; /* bytes already received */
 
-	void *udata; /* arbitrary user data */
+	void *udata;     /* arbitrary user data */
 
 } ASDownChunk;
 

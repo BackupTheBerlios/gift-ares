@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.h,v 1.1 2004/09/09 16:12:29 mkern Exp $
+ * $Id: as_download_1.h,v 1.2 2004/09/09 16:55:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,14 +31,21 @@ typedef struct
 
 /*****************************************************************************/
 
-/* create download from hash, filesize and save name */
+/* Create download from hash, filesize and save name. */
 ASDownload *as_download_create (ASHash *hash, size_t size,
                                 const char *filename);
 
-/* free download and lose all data */
+/* Create download from incomplete _ARESTRA_ file. This will fail if the file
+ * is not found/corrupt/etc.
+ */
+ASDownload *as_download_recreate (const char *filename);
+
+/* Free download and lose all data. */
 void as_download_free (ASDownload *dl);
 
-/* add source to download */
+/*****************************************************************************/
+
+/* Add source to download. */
 as_bool as_download_add_source (ASDownload *dl, ASSource *source);
 
 /*****************************************************************************/
