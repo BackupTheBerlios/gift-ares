@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.10 2004/12/28 18:28:41 hex Exp $
+ * $Id: asp_share.c,v 1.11 2004/12/30 08:43:03 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -157,7 +157,7 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 
 	/* Add share to list and commit to ares library using a timer. */
 	sharelist = list_insert_sorted (sharelist,
-					(CompareFunc)compare_share, &ashare);
+					(CompareFunc)compare_share, ashare);
 
 	if (share_timer != INVALID_TIMER)
 		timer_reset (share_timer);
