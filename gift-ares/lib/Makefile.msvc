@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.26 2004/12/24 16:09:26 mkern Exp $
+# $Id: Makefile.msvc,v 1.27 2005/01/08 13:57:49 mkern Exp $
 
 
 !include ../Make.msvc
@@ -18,6 +18,10 @@ LIBIGIFT_OBJECTS = \
 	as_strobj$(O) \
 	as_tcp$(O)
 
+HEX_OPTIMIZATION_OBJECTS = \
+	as_download_state$(O) \
+	as_download_man$(O) \
+	as_download$(O)
 
 OBJECTS = \
 	as_hashtable$(O) \
@@ -44,11 +48,8 @@ OBJECTS = \
 	as_http_header$(O) \
 	as_http_client$(O) \
 	as_http_server$(O) \
-	as_download_chunk$(O) \
 	as_download_conn$(O) \
-	as_download_state$(O) \
-	as_download_man$(O) \
-	as_download$(O) \
+	as_download_chunk$(O) \
 	as_incoming$(O) \
 	as_share$(O) \
 	as_share_man$(O) \
@@ -63,7 +64,7 @@ OBJECTS = \
 DEFS = $(DEFS) -DGIFT_PLUGIN
 
 
-aslib: $(OBJECTS) $(LIBGIFT_OBJECTS)
+aslib: $(OBJECTS) $(HEX_OPTIMIZATION_OBJECTS) $(LIBGIFT_OBJECTS)
 	cd libevent
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
 	cd ..
