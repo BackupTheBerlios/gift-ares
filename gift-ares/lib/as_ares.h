@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.2 2004/08/20 13:31:07 mkern Exp $
+ * $Id: as_ares.h,v 1.3 2004/08/20 17:22:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,12 +20,6 @@
 #ifdef WIN32
 # include winsock.h
 #endif /* WIN32 */
-
-//#include "as_log.h"
-#include "as_packet.h"
-//#include "as_crypt.h"
-
-//#include "as_tcp.h"
 
 /*****************************************************************************/
 
@@ -50,6 +44,14 @@ typedef int            as_bool;
 
 #define TRUE 1
 #define FALSE 0
+
+/*****************************************************************************/
+
+//#include "as_log.h"
+#include "as_packet.h"
+//#include "as_crypt.h"
+
+//#include "as_tcp.h"
 
 /*****************************************************************************/
 
