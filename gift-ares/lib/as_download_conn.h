@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.7 2004/09/13 01:01:18 mkern Exp $
+ * $Id: as_download_conn.h,v 1.8 2004/09/15 13:02:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -98,6 +98,11 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
  * DOWNCONN_UNUSED. 
  */
 void as_downconn_cancel (ASDownConn *conn);
+
+/*****************************************************************************/
+
+/* Return connection state as human readable static string. */
+const char *as_downconn_state_str (ASDownConn *conn);
 
 /*****************************************************************************/
 

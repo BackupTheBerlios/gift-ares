@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.8 2004/09/14 01:18:26 HEx Exp $
+ * $Id: as_download_conn.c,v 1.9 2004/09/15 13:02:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -190,6 +190,23 @@ void as_downconn_cancel (ASDownConn *conn)
 
 	downconn_reset (conn);
 	downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+}
+
+/*****************************************************************************/
+
+/* Return connection state as human readable static string. */
+const char *as_downconn_state_str (ASDownConn *conn)
+{
+	switch (conn->state)
+	{
+	case DOWNCONN_UNUSED:       return "Unused";
+	case DOWNCONN_CONNECTING:   return "Connecting";
+	case DOWNCONN_TRANSFERRING: return "Transferring";
+	case DOWNCONN_FAILED:       return "Failed";
+	case DOWNCONN_COMPLETE:     return "Complete";
+	case DOWNCONN_QUEUED:       return "Queued";
+	}
+	return "UNKNOWN";
 }
 
 /*****************************************************************************/

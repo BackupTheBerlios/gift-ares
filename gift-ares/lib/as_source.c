@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.5 2004/09/10 17:58:53 mkern Exp $
+ * $Id: as_source.c,v 1.6 2004/09/15 13:02:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -69,10 +69,18 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 
 	return (a->host        == b->host  &&
 	        a->port        == b->port  &&
+/*
+ * User on different supernodes or result from different supernodes is
+ * still the same user.
+ * TODO: Verify guess that supernode uniquefies username by appending a
+ * number.
+ */
+#if 0
 	        a->shost       == b->shost &&
 	        a->sport       == b->sport &&
 	        a->parent_host == b->parent_host &&
 	        a->parent_port == b->parent_port &&
+#endif
 	        gift_strcmp (a->username, b->username) == 0); 
 }
 
@@ -117,7 +125,7 @@ char *as_source_str (ASSource *source)
 	static char buf[1024];
 	int len;
 
-	len = snprintf (buf, sizeof (buf), "user: %s:%d, username: %32s, ",
+	len = snprintf (buf, sizeof (buf), "user: %s:%d, username: %-32s, ",
 	                net_ip_str (source->host), source->port,
 	                source->username);
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.5 2004/09/14 09:36:08 mkern Exp $
+ * $Id: as_download.c,v 1.6 2004/09/15 13:02:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,7 +19,7 @@
 #define MAINTENANCE_TIMER_INTERVAL (30 * SECONDS)
 
 /* Filename prefix for incomplete files */
-#define INCOMPLETE_PREFIX "_ARESTRA_"
+#define INCOMPLETE_PREFIX "___ARESTRA___"
 
 /* If defined failed downloads will not be deleted */
 #define KEEP_FAILED
@@ -40,6 +40,11 @@ static as_bool maintenance_timer_func (ASDownload *dl);
 static as_bool download_failed (ASDownload *dl);
 static as_bool download_complete (ASDownload *dl);
 static as_bool download_finished (ASDownload *dl);
+
+#ifdef HEAVY_DEBUG
+static void dump_chunks (ASDownload *dl);
+static void dump_connections (ASDownload *dl);
+#endif
 
 /*****************************************************************************/
 
@@ -341,6 +346,25 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 
 /*****************************************************************************/
 
+/* Return download state as human readable static string. */
+const char *as_download_state_str (ASDownload *dl)
+{
+	switch (dl->state)
+	{
+	case DOWNLOAD_NEW:       return "New";
+	case DOWNLOAD_ACTIVE:    return "Active";
+	case DOWNLOAD_QUEUED:    return "Queued";
+	case DOWNLOAD_PAUSED:    return "Paused";
+	case DOWNLOAD_COMPLETE:  return "Completed";
+	case DOWNLOAD_FAILED:    return "Failed";
+	case DOWNLOAD_CANCELLED: return "Cancelled";
+	case DOWNLOAD_VERIFYING: return "Verifying";
+	}
+	return "UNKNOWN";
+}
+
+/*****************************************************************************/
+
 /* Returns number of active and connecting downloads by traversing connection
  * list.
  */
@@ -437,7 +461,7 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 
 	case DOWNCONN_CONNECTING:
 		/* Chunk used by connection may not be in chunk list at this point.
-		 * See recalc_chunks. 
+		 * See start_chunks. 
 		 */
 		AS_HEAVY_DBG_4 ("DOWNCONN_CONNECTING: %s:%d for chunk (%u,%u).",
 		                net_ip_str (conn->source->host), conn->source->port,
@@ -547,8 +571,10 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 		return FALSE;
 	}
 
+	dl->received += write_len;
 	chunk->received += write_len;
 	assert (chunk->received <= chunk->size);
+	assert (dl->recevied <= dl->filesize);
 
 	/* chunk complete? */
 	if (chunk->received == chunk->size)
@@ -653,33 +679,86 @@ static as_bool verify_chunks (ASDownload *dl)
 	return TRUE;
 }
 
-/* Merge complete chunks. */
-static as_bool merge_chunks (ASDownload *dl)
+/* This mangels chunks as follows:
+ *   - Leave active chunks alone
+ *   - Split half complete chunks in a complete and an empty chunk
+ *   - Merge consecutive complete chunks
+ *   - Merge consecutive empty chunks
+ */
+static as_bool consolidate_chunks (ASDownload *dl)
 {
-	List *link, *last_link;
-	ASDownChunk *chunk, *last_chunk;
+	List *link, *last_link, *new_link;
+	ASDownChunk *chunk, *last_chunk, *new_chunk;
+	size_t new_start, new_size;
 
-	last_link = dl->chunks; 
-	link = last_link->next;
+	link = dl->chunks;
+	last_link = NULL;
+	last_chunk = NULL;
 
 	while (link)
 	{
 		chunk = link->data;
-		last_chunk = last_link->data;
 
-		if (chunk->received == chunk->size &&
-		    last_chunk->received == last_chunk->size)
+		/* Split chunk if it is not active and half complete */
+		if (!chunk->udata &&
+		    chunk->received > 0 &&
+		    chunk->received < chunk->size)
+		{
+			AS_HEAVY_DBG_4 ("Splitting half complete chunk (%u, %u, %u) \"%s\"",
+			                chunk->start, chunk->size,
+			                chunk->received, dl->filename);
+
+			/* create the new empty chunk */
+			new_start = chunk->start + chunk->received;
+			new_size  = chunk->size - chunk->received;
+
+			if (!(new_chunk = as_downchunk_create (new_start, new_size)))
+			{
+				/* This is not recoverable if we rely on chunk downloads always
+				 * beginning at chunk->received == 0 so quit here.
+				 */
+				AS_ERR_2 ("Couldn't create chunk (%u,%u)", new_start, new_size);
+				return FALSE;						
+			}
+
+			/* Shorten old chunk. */
+			chunk->size = chunk->received;
+
+			/* Insert new chunk after old one. */
+			new_link = list_prepend (NULL, new_chunk);
+			new_link->next = link->next;
+			new_link->prev = link;
+			link->next = new_link;
+			if (new_link->next)
+				new_link->next->prev = new_link;
+
+			assert (chunk->received == chunk->size);
+			assert (new_chunk->received == 0);
+
+			/* Adjust last_link and link. */
+			last_link = link;
+			link = new_link;
+
+			last_chunk = last_link->data;
+			chunk = link->data;
+		}
+
+		/* Merge last_chunk and chunk if they are either both complete or both
+		 * empty.
+		 */
+		if (last_chunk && !chunk->udata && !last_chunk->udata &&
+		    ((last_chunk->received == last_chunk->size &&
+		     chunk->received == chunk->size) ||
+			(last_chunk->received == 0 && chunk->received == 0)))
 		{	
-			assert (chunk->udata == NULL);
-			assert (last_chunk->udata == NULL);
-
-			AS_HEAVY_DBG_5 ("Merging chunks (%u,%u) and (%u,%u) of \"%s\"",
+			AS_HEAVY_DBG_5 ("Merging %s chunks (%u,%u) and (%u,%u)",
+			                (chunk->received == 0) ? "complete" : "empty",
 			                last_chunk->start, last_chunk->size,
-			                chunk->start, chunk->size, dl->filename);
+			                chunk->start, chunk->size);
 
 			/* increase last chunk by size of chunk */
 			last_chunk->size += chunk->size;
-			last_chunk->received = last_chunk->size;
+			last_chunk->received += chunk->received;
 
 			/* free chunk and remove link */
 			as_downchunk_free (chunk);
@@ -689,9 +768,11 @@ static as_bool merge_chunks (ASDownload *dl)
 			link = last_link;
 		}
 
+		/* Move on to next chunk */
 		last_link = link;
 		link = link->next;
-	}
+		last_chunk = last_link->data;
+	};
 
 	return TRUE;
 }
@@ -699,7 +780,7 @@ static as_bool merge_chunks (ASDownload *dl)
 /* Assing new connections to unused chunks. Split large chunks if there are
  * unused connections.
  */
-static as_bool recalc_chunks (ASDownload *dl)
+static as_bool start_chunks (ASDownload *dl)
 {
 	List *chunk_l;
 	List *conn_l, *tmp_l;
@@ -754,10 +835,14 @@ static as_bool recalc_chunks (ASDownload *dl)
 				chunk->udata = conn;
 				conn->udata2 = chunk;
 
+				/* We always split half complete chunks in consolidate_chunks
+				 * before starting them.
+				 */
+				assert (chunk->received == 0);
+
 				/* use the connection we found with this chunk */
-				if (!as_downconn_start (conn, dl->hash,
-				                        chunk->start + chunk->received,
-				                        chunk->size - chunk->received))
+				if (!as_downconn_start (conn, dl->hash, chunk->start,
+				                        chunk->size))
 				{
 					/* download start failed, remove connection. */
 					AS_DBG_2 ("Failed to start download from %s:%d, removing source.",
@@ -848,9 +933,8 @@ static as_bool recalc_chunks (ASDownload *dl)
 		conn->udata2 = new_chunk;
 
 		/* Start new connection */
-		if (!as_downconn_start (conn, dl->hash,
-		                        new_chunk->start + new_chunk->received,
-		                        new_chunk->size - new_chunk->received))
+		if (!as_downconn_start (conn, dl->hash, new_chunk->start,
+		                        new_chunk->size))
 		{
 			/* download start failed, remove connection. */
 			AS_DBG_2 ("Failed to start download from %s:%d, removing source.",
@@ -925,10 +1009,10 @@ static void download_maintain (ASDownload *dl)
 		return;
 	}
 
-	/* Merge complete chunks. */
-	if (!merge_chunks (dl))
+	/* Clean up chunks. */
+	if (!consolidate_chunks (dl))
 	{
-		AS_ERR_1 ("Merging chunks failed for \"%s\"", dl->filename);
+		AS_ERR_1 ("Consolidating chunks failed for \"%s\"", dl->filename);
 		
 		/* Fail download */
 		download_failed (dl);
@@ -937,21 +1021,16 @@ static void download_maintain (ASDownload *dl)
 		return;
 	}
 
-#if 1
-	{
-	List *l;
-	AS_HEAVY_DBG ("Chunk state after merging:");
-	for (l = dl->chunks; l; l = l->next)
-	{
-		ASDownChunk *chunk = l->data;
-		ASDownConn *conn = chunk->udata;
+#ifdef HEAVY_DEBUG
+	assert (verify_chunks (dl)); /* Remove me */
 
-		AS_HEAVY_DBG_5 ("Chunk: (%7u, %7u, %7u) conn %15s %s",
-		                chunk->start, chunk->size, chunk->received,
-						conn ? net_ip_str (conn->source->host) : "-",
-		                (chunk->received == chunk->size) ? " complete" : "");
-	}
-	}
+	AS_HEAVY_DBG ("Chunk state after consolidating:");
+	dump_chunks (dl);
+
+/*
+	AS_HEAVY_DBG ("Connection state after consolidating:");
+	dump_connections (dl);
+*/
 #endif
 
 	/* Is the download complete? */
@@ -963,10 +1042,10 @@ static void download_maintain (ASDownload *dl)
 	}
 
 	/* Download not complete. Start more chunk downloads. */
-	if (!recalc_chunks (dl))
+	if (!start_chunks (dl))
 	{
 		/* This should be harmless. */
-		AS_WARN_1 ("Recalculating chunks failed for \"%s\"", dl->filename);
+		AS_WARN_1 ("Starting chunks failed for \"%s\"", dl->filename);
 	}
 
 	/* Check if we need more sources */
@@ -1143,6 +1222,42 @@ static as_bool download_finished (ASDownload *dl)
 	/* Download is OK */
 	return download_complete (dl);
 }
+
+/*****************************************************************************/
+
+#ifdef HEAVY_DEBUG
+
+static void dump_chunks (ASDownload *dl)
+{
+	List *l;
+	for (l = dl->chunks; l; l = l->next)
+	{
+		ASDownChunk *chunk = l->data;
+		ASDownConn *conn = chunk->udata;
+
+		AS_HEAVY_DBG_5 ("Chunk: (%7u, %7u, %7u) conn %15s %s",
+		                chunk->start, chunk->size, chunk->received,
+						conn ? net_ip_str (conn->source->host) : "-",
+		                (chunk->received == chunk->size) ? " complete" : "");
+	}
+}
+
+static void dump_connections (ASDownload *dl)
+{
+	List *l;
+	for (l = dl->conns; l; l = l->next)
+	{
+		ASDownConn *conn = l->data;
+
+		AS_HEAVY_DBG_5 ("Connection: %15s, %4u KB, (%7u, %7u), %s",
+		                net_ip_str (conn->source->host),
+		                conn->total_downloaded / 1024,
+		                conn->chunk_start, conn->chunk_size,
+		                as_downconn_state_str (conn));
+	}
+}
+
+#endif 
 
 /*****************************************************************************/
 

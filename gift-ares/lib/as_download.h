@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.5 2004/09/14 09:36:08 mkern Exp $
+ * $Id: as_download.h,v 1.6 2004/09/15 13:02:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -97,6 +97,11 @@ ASDownloadState as_download_state (ASDownload *dl);
 
 /* Add source to download (copies source). */
 as_bool as_download_add_source (ASDownload *dl, ASSource *source);
+
+/*****************************************************************************/
+
+/* Return download state as human readable static string. */
+const char *as_download_state_str (ASDownload *dl);
 
 /*****************************************************************************/
 
