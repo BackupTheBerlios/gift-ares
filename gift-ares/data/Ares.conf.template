@@ -16,6 +16,11 @@ port = 59049
 #
 username = 
 
+#
+# Number of supernodes to connect to.  Be sensible, please.
+#
+sessions = 4
+
 
 [search]
 
