@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.6 2004/12/18 23:04:56 mkern Exp $
+ * $Id: asp_share.c,v 1.7 2004/12/19 21:24:53 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -97,9 +97,6 @@ void *asp_giftcb_share_new (Protocol *p, Share *share)
 /* Called be giFT for us to free custom data. */
 void asp_giftcb_share_free (Protocol *p, Share *share, void *data)
 {
-	/* FIXME: Shouldn't this be triggered for duplicate hashes as mentioned
-	 * at the beginning of the file?
-	 */
 	assert (!share_get_udata (share, PROTO->name));
 }
 
@@ -189,20 +186,16 @@ BOOL asp_giftcb_share_remove (Protocol *p, Share *share, void *data)
 		return FALSE;
 	}
 
-	/* FIXME: giFT allows multiple shares with same hash. */
-	if (ashare->udata != share)
+	/* giFT allows multiple shares with same hash. */
+	if (ashare->udata == share)
 	{
-		AS_ERR ("FIXME: Hash collision on share removal.");
-		as_hash_free (ashash);
-		return FALSE;
-	}
-
-	/* Remove share. */
-	if (!as_shareman_remove (AS->shareman, ashash))
-	{
-		AS_ERR_1 ("Failed to remove share '%s'.", share->path);
-		as_hash_free (ashash);
-		return FALSE;
+		/* Remove share. */
+		if (!as_shareman_remove (AS->shareman, ashash))
+		{
+			AS_ERR_1 ("Failed to remove share '%s'.", share->path);
+			as_hash_free (ashash);
+			return FALSE;
+		}
 	}
 
 	as_hash_free (ashash);

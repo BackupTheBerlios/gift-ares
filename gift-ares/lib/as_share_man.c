@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.12 2004/12/04 15:30:46 mkern Exp $
+ * $Id: as_share_man.c,v 1.13 2004/12/19 21:24:53 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -42,8 +42,7 @@ void as_shareman_free (ASShareMan *man)
 
 /***********************************************************************/
 
-/* Add share to manager. If a share with the same hash is already added it
- * will be replaced with the new share. Takes ownership of share.
+/* Add share to manager. Fails if a share with the same hash already exists.
  */
 as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 {
@@ -52,34 +51,26 @@ as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 	if ((link = as_hashtable_lookup (man->table, share->hash->data,
 	                                 sizeof (share->hash->data))))
 	{
-		/* Free old share and create new one. */
-		ASShare *old_share = link->data;
+		AS_HEAVY_DBG_1 ("Duplicate hash share '%s'",
+		                share->path);
 
-		AS_HEAVY_DBG_2 ("Duplicate hash share. Replacing '%s' with '%s'",
-		                old_share->path, share->path);
-
-		man->size -= ((double)old_share->size) / 1048576;
-		as_share_free (old_share);
-
-		link->data = share;
+		return FALSE;
 	}
-	else
+
+	/* Create new list entry and add it to hash table. */
+	man->shares = list_prepend (man->shares, share);
+
+	if (!as_hashtable_insert (man->table, share->hash->data,
+				  sizeof (share->hash->data),
+				  man->shares))
 	{
-		/* Create new list entry and add it to hash table. */
-		man->shares = list_prepend (man->shares, share);
-
-		if (!as_hashtable_insert (man->table, share->hash->data,
-		                          sizeof (share->hash->data),
-		                          man->shares))
-		{
-			AS_ERR_1 ("Hashtable insert failed for share '%s'",
-			          share->path);
-			assert (0);
-			return FALSE;
-		}
-
-		man->nshares++;
+		AS_ERR_1 ("Hashtable insert failed for share '%s'",
+			  share->path);
+		assert (0);
+		return FALSE;
 	}
+
+	man->nshares++;
 
 	man->size += ((double)share->size) / 1048576;
 
@@ -177,6 +168,9 @@ static int share_send (ASShare *share, Conglobulator *glob)
 {
 	ASPacket *p;
 
+	if (!share)
+		return FALSE;
+
 	if (!(p = as_share_packet (share)))
 		return FALSE;
 
@@ -211,11 +205,10 @@ as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 }
 
 /* Submit list of shares to all connected supernodes and add shares to
- * manager. Takes ownership of list values (shares).
+ * manager. Takes ownership of list values (shares).  Shares in the
+ * list that failed to be added will be freed and replaced by a NULL
+ * pointer.
  *
- * IMPORTANT: If the list contains multiple shares with the same hash
- *            only one of them will be added and the other will be freed
- *            without notice.
  */
 as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares)
 {
@@ -225,11 +218,14 @@ as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares)
 	/* Add shares to manager. */
 	for (link = shares; link; link = link->next)
 	{
-		/* FIXME: If this fails the share will still be added below.
-		 * Cannot easily fix this without modifying passed list.
-		 */
 		if (as_shareman_add (man, link->data))
 			ok++;
+		else
+		{
+			as_share_free (link->data);
+			link->data = NULL;
+		}
+
 		total++;
 	}
 
