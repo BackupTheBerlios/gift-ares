@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.1 2004/10/19 23:41:48 HEx Exp $
+ * $Id: as_upload_man.c,v 1.2 2004/10/24 03:45:59 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,22 +9,12 @@
 
 #include "as_ares.h"
 
-typedef struct {
-	ASHashTable *uploads;
-	List *queue;
-	
-	int max;
-	int nuploads;
-	int nqueued;
-	int bandwidth;
-} ASUploadMan;
-
 struct queue {
 	in_addr_t host;
 	time_t    time;
 };
 
-ASUploadMan as_upload_man_new (void)
+ASUploadMan *as_upman_create (void)
 {
 	ASUploadMan *man = malloc (sizeof (ASUploadMan));
 
@@ -34,21 +24,21 @@ ASUploadMan as_upload_man_new (void)
 	man->uploads = as_hashtable_create_int ();
 	man->queue   = NULL;
 
-	man->max = AS_MAX_UPLOADS;
+	man->max = AS_UPLOAD_MAX_ACTIVE;
 	man->nuploads = man->nqueued = 0;
 	man->bandwidth = 0;
 
 	return man;
 }
 
-as_bool free_upload (ASHashTableEntry *entry, void *udata)
+static as_bool free_upload (ASHashTableEntry *entry, void *udata)
 {
 	as_upload_free (entry->val);
 
 	return TRUE; /* remove */
 }
 
-ASUploadMan as_upload_man_free (ASUploadMan *man)
+void as_upman_free (ASUploadMan *man)
 {
 	as_hashtable_foreach (man->uploads, (ASHashTableForeachFunc)free_upload,
                            NULL);
@@ -60,8 +50,46 @@ ASUploadMan as_upload_man_free (ASUploadMan *man)
 	free (man);
 }
 
+static void queue_remove (ASUploadMan *man, List *link)
+{
+	free (link->data);
+	man->queue = list_remove_link (man->queue, link);
+	man->nqueued--;
+	
+	assert (man->nqueued);
+} 
+
+/* Tidy up the queue, removing stale entries to avoid whoever's at the
+ * head of the queue having to wait too long. A "last entry" may be
+ * specified to ignore beyond, so that we can avoid timing out entries
+ * if later entries haven't pinged us yet.
+ */
+static void tidy_queue (ASUploadMan *man, struct queue *last)
+{
+	List *l, *next;
+	time_t t = time (NULL);
+
+	for (l = man->queue; l; l = next)
+	{
+		struct queue *q = l->data;
+		
+		next = l->next; /* to avoid referencing freed data
+				 * should we choose to remove this
+				 * entry */
+ 
+		if (q == last)
+			break;
+
+		if (q->time + AS_UPLOAD_QUEUE_TIMEOUT < t)
+			continue;
+
+		/* it's stale, remove it */
+		queue_remove (man, l);
+	}
+}
+
 /* returns zero for OK, -1 for not, or queue position */
-int as_upload_man_auth (ASUploadMan *man, in_addr_t host)
+int as_upman_auth (ASUploadMan *man, in_addr_t host)
 {
 	List *l;
 	struct queue *q;
@@ -86,30 +114,69 @@ int as_upload_man_auth (ASUploadMan *man, in_addr_t host)
 	if (!l)
 	{
 		/* not queued; insert at end */
-		q = malloc (sizeof struct queue);
+		q = malloc (sizeof(struct queue));
 
 		if (!q)
 			return -1;
 
 		q->host = host;
-		q->time = time ();
+		q->time = time (NULL);
 		man->queue = list_append (man->queue, q);
 
 		return ++man->nqueued;
 	}
 
+	/* tidy up the queue, then see if there's anyone before us */
+	tidy_queue (man, q);
+
 	if (!l->prev)
 	{
 		/* first in queue: pop it */
-		free (l->data);
-		man->queue = list_remove_link (l);
-		man->nqueued--;
-		
+		queue_remove (man, l);
 		return 0;
 	}
 	
-	q->time = time ();
+	q->time = time (NULL);
 
 	return i;
 }
 
+static as_bool upload_callback (ASUpload *up, ASUploadState state)
+{
+	ASUploadMan *man = AS->upman;
+
+	switch (state)
+	{
+	case UPLOAD_COMPLETED:
+	case UPLOAD_CANCELLED:
+	{
+		void *ret;
+		ret = as_hashtable_remove_int (man->uploads, (int)(up->c->host));
+		assert (ret);
+		man->nuploads--;
+
+		assert (man->uploads >= 0);
+		break;
+	}
+	default:
+		break;
+	}
+
+	return TRUE;
+}
+
+ASUpload *as_upman_start (ASUploadMan *man, TCPC *c, ASShare *share, 
+			  ASHttpHeader *req)
+{
+	ASUpload *up = as_upload_new (c, share, req,
+				      (ASUploadStateCb)upload_callback);
+
+	if (!up)
+		return NULL;
+
+	as_hashtable_insert_int (man->uploads, (int)(c->host), up);
+
+	man->nuploads++;
+
+	return up;
+}

@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.3 2004/10/20 00:58:43 HEx Exp $
+ * $Id: as_upload.c,v 1.4 2004/10/24 03:45:59 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,9 +18,11 @@
 /*****************************************************************************/
 
 static as_bool send_reply (ASUpload *up);
+static as_bool send_reply_queued (ASUpload *up, int pos);
 static void send_file (int fd, input_id input, ASUpload *up);
 
-ASUpload *as_upload_new (TCPC *c, ASShare *share, ASHttpHeader *req)
+ASUpload *as_upload_new (TCPC *c, ASShare *share, ASHttpHeader *req,
+			 ASUploadStateCb callback)
 {
 	ASUpload *up = malloc (sizeof(ASUpload));
 	FILE *file;
@@ -31,6 +33,7 @@ ASUpload *as_upload_new (TCPC *c, ASShare *share, ASHttpHeader *req)
 
 	up->c = c;
 	up->share = share;
+	up->cb = callback;
 
 	range = as_http_header_get_field (req, "Range");
 
@@ -65,6 +68,19 @@ ASUpload *as_upload_new (TCPC *c, ASShare *share, ASHttpHeader *req)
 	}
 
 	up->sent = 0;
+
+	if (AS->upman)
+	{
+		int pos = as_upman_auth (AS->upman, c->host);
+
+		if (pos)
+		{
+			send_reply_queued (up, pos);
+			free (up);
+
+			return NULL;
+		}
+	}
 
 	file = fopen (share->path, "rb");
 
@@ -149,6 +165,19 @@ static void set_header_b6mi (ASHttpHeader *request)
         as_packet_free (p);
 }
 
+static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
+{
+	char buf[32];
+
+	as_http_header_set_field (reply, "Server", AS_HTTP_SERVER_NAME);
+	set_header_b6mi (reply);
+
+	sprintf (buf, "%08X", ntohl (net_local_ip (up->c->fd, NULL)));
+	as_http_header_set_field (reply, "X-MyLIP", buf);
+	if (AS->netinfo->nick)
+		as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nick);
+}
+
 static as_bool send_reply (ASUpload *up)
 {
 	ASHttpHeader *reply;
@@ -171,19 +200,48 @@ static as_bool send_reply (ASUpload *up)
 	sprintf (buf, "%u", up->stop - up->start);
 	as_http_header_set_field (reply, "Content-Length", buf);
 
-	as_http_header_set_field (reply, "Server", AS_HTTP_SERVER_NAME);
-	set_header_b6mi (reply);
-
-	sprintf (buf, "%08X", ntohl (net_local_ip (up->c->fd, NULL)));
-	as_http_header_set_field (reply, "X-MyLIP", buf);
-	if (AS->netinfo->nick)
-		as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nick);
+	set_common_headers (up, reply);
 
 	str = as_http_header_compile (reply);
 
 #if 0
 	AS_DBG_1("%s", str->str);
 #endif
+	tcp_write (up->c, str->str, str->len);
+	string_free (str);
+	as_http_header_free (reply);
+
+	return TRUE;
+}
+
+static as_bool send_reply_queued (ASUpload *up, int pos)
+{
+	ASHttpHeader *reply;
+	String *str;
+	char buf[128];
+	ASUploadMan *man = AS->upman;
+
+	assert (man && pos);
+
+	reply = as_http_header_reply (HTHD_VER_11,
+				      503);
+
+	set_common_headers (up, reply);
+
+	as_http_header_set_field (reply, "X-MyLIP", buf);
+	
+	str = as_http_header_compile (reply);
+
+	{
+		sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
+			 pos, man->nqueued, man->max,
+			 AS_UPLOAD_QUEUE_MIN, AS_UPLOAD_QUEUE_MAX);
+
+		as_http_header_set_field (reply, "X-Queued", buf);
+
+		AS_DBG_2 ("queued %s: %s", net_ip_str (up->c->host), buf); 
+	}
+
 	tcp_write (up->c, str->str, str->len);
 	string_free (str);
 	as_http_header_free (reply);
@@ -200,6 +258,8 @@ static void send_file (int fd, input_id input, ASUpload *up)
         {
                 AS_ERR_3 ("net_sock_error %d after %u bytes for upload to %s",
                                    errno, up->sent, net_ip_str (up->c->host));
+		(*up->cb) (up, UPLOAD_CANCELLED);
+
 		as_upload_free (up);
 		
                 return;
@@ -217,6 +277,7 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	if (in < wanted)
 	{
 		AS_DBG_1 ("read failed from %s", up->share->path);
+		(*up->cb) (up, UPLOAD_CANCELLED);
 
 		as_upload_free (up);
 		return;
@@ -228,6 +289,7 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	{
 		AS_WARN_2 ("failed to write %d bytes to %s",
 			   in, net_ip_str (up->c->host));
+		(*up->cb) (up, UPLOAD_CANCELLED);
 
 		as_upload_free (up);
 		return;
@@ -240,6 +302,7 @@ static void send_file (int fd, input_id input, ASUpload *up)
 
 		if (fseek (up->file, -((off_t)(in - out)), SEEK_CUR) < 0)
 		{
+			(*up->cb) (up, UPLOAD_CANCELLED);
 			AS_ERR ("rewind failed");
 			as_upload_free (up);
 			return;
@@ -254,6 +317,8 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	{
 		AS_WARN_3 ("finished uploading %d bytes of '%s' to %s",
 			   up->sent, up->share->path, net_ip_str (up->c->host));
+
+		(*up->cb) (up, UPLOAD_COMPLETED);
 
 		as_upload_free (up);
 		return;

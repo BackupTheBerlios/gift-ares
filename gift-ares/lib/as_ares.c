@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.15 2004/10/10 18:55:13 mkern Exp $
+ * $Id: as_ares.c,v 1.16 2004/10/24 03:45:59 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -38,6 +38,7 @@ as_bool as_init ()
 	AS->netinfo   = NULL;
 	AS->searchman = NULL;
 	AS->downman   = NULL;
+	AS->upman     = NULL;
 	AS->pushman   = NULL;
 	AS->shareman  = NULL;
 	AS->server    = NULL;
@@ -113,6 +114,13 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+	if (!(AS->upman = as_upman_create ()))
+	{
+		AS_ERR ("Failed to create upload manager");
+		as_cleanup ();
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -125,6 +133,7 @@ as_bool as_cleanup ()
 
 	AS_DBG ("Cleaning up Ares library...");
 
+	as_upman_free (AS->upman);
 	as_downman_free (AS->downman);
 	as_pushman_free (AS->pushman); /* Don't free before downman */
 	as_searchman_free (AS->searchman);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.46 2004/10/19 23:48:14 HEx Exp $
+ * $Id: as_ares.h,v 1.47 2004/10/24 03:45:59 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -129,6 +129,7 @@ typedef int            as_bool;
 #include "as_share.h"
 #include "as_share_man.h"
 #include "as_upload.h"
+#include "as_upload_man.h"
 
 /*****************************************************************************/
 
@@ -180,6 +181,16 @@ typedef int            as_bool;
 /* Filename prefix for incomplete files */
 #define AS_DOWNLOAD_INCOMPLETE_PREFIX "___ARESTRA___"
 
+/* Minimum and maximum periods between queue pings, in seconds */
+#define AS_UPLOAD_QUEUE_MIN     60
+#define AS_UPLOAD_QUEUE_MAX     180
+
+/* How long before we remove an entry from the queue, in seconds */ 
+#define AS_UPLOAD_QUEUE_TIMEOUT 180
+
+/* Maximum number of simultaneous uploads */
+#define AS_UPLOAD_MAX_ACTIVE  4
+
 /* Timeout for tcp connect to firewalled source's supernode. */
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)
 
@@ -209,6 +220,9 @@ typedef struct
 
 	/* download manager */
 	ASDownMan *downman;
+
+	/* upload manager */
+	ASUploadMan *upman;
 
 	/* push manager */
 	ASPushMan *pushman;

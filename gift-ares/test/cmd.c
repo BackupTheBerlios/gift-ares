@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.36 2004/10/24 01:19:06 HEx Exp $
+ * $Id: cmd.c,v 1.37 2004/10/24 03:46:11 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -39,6 +39,7 @@ COMMAND_FUNC (dl_cancel);
 COMMAND_FUNC (share);
 COMMAND_FUNC (share_stats);
 COMMAND_FUNC (network_stats);
+COMMAND_FUNC (upload_stats);
 COMMAND_FUNC (exec);
 
 COMMAND_FUNC (quit);
@@ -134,6 +135,10 @@ commands[] =
 	COMMAND (network_stats,
 	         "",
 	         "Show stats about the network.")
+
+	COMMAND (upload_stats,
+	         "",
+	         "Show stats about uploads.")
 
 	COMMAND (exec,
 		 "<file>",
@@ -727,6 +732,14 @@ COMMAND_FUNC (network_stats)
 		list_length (AS->sessman->connected), AS->netinfo->users);
 	printf ("%u total files, %u Gb\n",
 		AS->netinfo->files, AS->netinfo->size);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (upload_stats)
+{
+	printf ("%u uploads (%u max), %u queued\n",
+		AS->upman->nuploads, AS->upman->max, AS->upman->nqueued);
 
 	return TRUE;
 }

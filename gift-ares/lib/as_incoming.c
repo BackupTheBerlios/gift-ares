@@ -1,5 +1,5 @@
 /*
- * $Id: as_incoming.c,v 1.6 2004/10/03 17:37:49 HEx Exp $
+ * $Id: as_incoming.c,v 1.7 2004/10/24 03:45:59 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -41,7 +41,8 @@ int as_incoming_http (ASHttpServer *server, TCPC *tcpcon,
 
 	as_hash_free (hash);
 
-	return !!as_upload_new (tcpcon, share, request);
+	assert (AS->upman);
+	return !!as_upman_start (AS->upman, tcpcon, share, request);
 }
 
 /*****************************************************************************/
