@@ -1,385 +1,220 @@
 /*
- * $Id: as_list.c,v 1.1 2004/08/20 11:55:33 HEx Exp $
+ * $Id: as_list.c,v 1.2 2004/08/20 19:22:00 mkern Exp $
  *
- * Copyright (C) 2001-2003 giFT project (gift.sourceforge.net)
+ * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
+ * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2, or (at your option) any
- * later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * All rights reserved.
  */
 
-#include "libgift.h"
-
-#include "list.h"
+#include "as_list.h"
 
 /*****************************************************************************/
 
-List *list_nth (List *list, int n)
+/* insert new link between prev and next, returns new link */
+static List *insert_new_link (List *prev, List *next, void *data)
 {
-	int dir;
+	List *new_link;
 
-	if (!list || n == 0)
-		return list;
+	new_link = malloc (List);
+	assert (new_link != NULL);
 
-	/*
-	 * Translate n to a direction component indicating the stepping for n to
-	 * reach 0.  That is, if we need to proceed forward in the list (n > 0),
-	 * dir must be -1.
-	 */
-	dir = 0 - (CLAMP (n, -1, 1));
-	assert (dir != 0);
+	new_link->data = data;
 
-	for (; n != 0; n += dir)
+	if (prev == NULL && next == NULL)
 	{
-		/* iterate the list according to `dir' making sure to bail if n
-		 * corresponds to a list index which is not present in this list */
-		if (!(list = ((dir < 0) ? (list_next (list)) : (list_prev (list)))))
-			break;
+		new_link->prev = NULL;
+		new_link->next = NULL;
 	}
-
-	return list;
-}
-
-void *list_nth_data (List *list, int n)
-{
-	List *nth;
-
-	if (!(nth = list_nth (list, n)))
-		return NULL;
-
-	return nth->data;
-}
-
-List *list_last (List *list)
-{
-	List *ptr;
-
-	if (!list)
-		return NULL;
-
-	for (ptr = list; ptr->next; ptr = ptr->next);
-
-	return ptr;
-}
-
-int list_length (List *list)
-{
-	int len;
-
-	if (!list)
-		return 0;
-
-	for (len = 0; list; list = list_next (list))
-		len++;
-
-	return len;
-}
-
-/*****************************************************************************/
-
-static List *list_new_entry (List *list, void *data)
-{
-	List *entry;
-
-	if ((entry = malloc (sizeof (List))))
+	else if (prev == NULL)
 	{
-		entry->data = data;
-		entry->prev = NULL;
-		entry->next = NULL;
+		assert (next->prev == NULL);
+
+		new_link->prev = NULL;
+		new_link->next = next;
+		next->prev = new_link;
 	}
-
-	return entry;
-}
-
-static List *list_append_link (List *list, List *link)
-{
-	List *tail;
-
-	if (!link)
-		return list;
-
-	if (!list)
-		return link;
-
-	tail = list_last (list);
-	assert (tail != NULL);
-
-	link->prev = tail;
-	tail->next = link;
-
-	return list;
-}
-
-List *list_append (List *list, void *data)
-{
-	List *entry;
-
-	entry = list_new_entry (list, data);
-	assert (entry != NULL);
-
-	return list_append_link (list, entry);
-}
-
-static List *list_prepend_link (List *list, List *link)
-{
-	if (!link)
-		return list;
-
-	if (!list)
-		return link;
-
-	list->prev = link;
-	link->next = list;
-
-	return link;
-}
-
-List *list_prepend (List *list, void *data)
-{
-	List *entry;
-
-	entry = list_new_entry (list, data);
-	assert (entry != NULL);
-
-	return list_prepend_link (list, entry);
-}
-
-List *list_insert (List *list, int index, void *data)
-{
-	List *entry;
-	List *nth;
-
-	/* handle the easy conditions :) */
-	if (!list || index <= 0)
-		return list_prepend (list, data);
-
-	nth = list_nth (list, index);
-
-	if (nth && !nth->prev)             /* beginning of list */
-		return list_prepend (list, data);
-	else if (!nth)                     /* end of list */
-		return list_append (list, data);
-
-	/* middle of list */
-	entry = list_new_entry (list, data);
-	assert (entry != NULL);
-
-	entry->next = nth;
-	entry->prev = nth->prev;
-
-	nth->prev->next = entry;
-	nth->prev       = entry;
-
-	return list;
-}
-
-/*****************************************************************************/
-
-static int list_sort_default (char *a, char *b)
-{
-	return strcmp (a, b);
-}
-
-List *list_insert_sorted (List *list, CompareFunc func, void *data)
-{
-	List *ptr;
-	int   index = 0;
-
-	if (!list)
-		return list_insert (list, 0, data);
-
-	if (!func)
-		func = (CompareFunc) list_sort_default;
-
-	for (ptr = list; ptr; ptr = list_next (ptr), index++)
+	else if (next == NULL)
 	{
-		if (func (ptr->data, data) < 0)
-			continue;
+		assert (prev->next == NULL);
 
-		return list_insert (list, index, data);
+		new_link->prev = prev;
+		new_link->next = NULL;
+		prev->next = new_link;
 	}
-
-	return list_append (list, data);
-}
-
-/*****************************************************************************/
-
-List *list_copy (List *list)
-{
-	List *new_list = NULL;
-	List *ptr;
-
-	for (ptr = list; ptr; ptr = list_next (ptr))
-		new_list = list_append (new_list, ptr->data);
-
-	return new_list;
-}
-
-/*****************************************************************************/
-
-static List *list_unlink_link (List *list, List *link)
-{
-	List *prev;
-	List *next;
-
-	if (!list || !link)
-		return list;
-
-	prev = link->prev;
-	next = link->next;
-
-	if (prev)
-		prev->next = next;
 	else
-		list = next;
+	{
+		assert (prev->next == next->prev);
 
-	if (next)
-		next->prev = prev;
+		new_link->prev = prev;
+		new_link->next = next;
+		prev->next = new_link;
+		next->prev = new_link;
+	}
 
-	return list;
+	return new_link;
 }
 
-List *list_remove_link (List *list, List *link)
+/*****************************************************************************/
+
+List *list_append (List *head, void *data)
 {
-	list = list_unlink_link (list, link);
-	free (link);
-
-	return list;
+	if (!head)
+		return insert_new_link (NULL, NULL, data)
+	
+	insert_new_link (list_last (head), NULL, data)
+	return head;
 }
 
-List *list_remove (List *list, void *data)
+List *list_prepend (List *head, void *data)
+{
+	return insert_new_link (NULL, head, data);
+}
+
+List *list_insert (List *head, int index, void *data)
+{
+	List *nth;
+
+	assert (index >= 0);
+
+	if (!head || index == 0)
+		return list_prepend (head, data);
+
+	if ((nth = list_nth (head, index)))
+		insert_new_link (nth, nth->next, data);
+	else
+		list_append (head, data); /* O(n*2) total! */
+
+	return head;
+}
+
+List *list_insert_sorted (List *head, CompareFunc func, void *data)
 {
 	List *link;
 
-	if (!list)
-		return NULL;
+	assert (func);
 
-	link = list_find (list, data);
+	if (!head)
+		return list_prepend (head, data);
 
-	return list_remove_link (list, link);
-}
+	if (func (head->data, data) >= 0)
+		return list_prepend (head, data);
 
-/*****************************************************************************/
-
-List *list_free (List *list)
-{
-	List *ptr = list;
-	List *next;
-
-	if (!list)
-		return NULL;
-
-	while (ptr)
+	for (link = head; link->next; link = link->next)
 	{
-		next = ptr->next;
-		free (ptr);
-		ptr = next;
-	}
-
-	return NULL;
-}
-
-/*****************************************************************************/
-
-static int find_custom_default (void *a, void *b)
-{
-	return (a != b);
-}
-
-List *list_find_custom (List *list, void *data, CompareFunc func)
-{
-	if (!func)
-		func = (CompareFunc) find_custom_default;
-
-	for (; list; list = list_next (list))
-		if (func (list->data, data) == 0)
-			return list;
-
-	return NULL;
-}
-
-List *list_find (List *list, void *data)
-{
-	return list_find_custom (list, data, NULL);
-}
-
-/*****************************************************************************/
-/* copied from GLib w/ modifications */
-
-static List *list_sort_merge (List *l1, List *l2, CompareFunc compare_func)
-{
-	List list, *l, *lprev;
-
-	l = &list;
-	lprev = NULL;
-
-	while (l1 && l2)
-    {
-		if (compare_func (l1->data, l2->data) < 0)
-        {
-			l->next = l1;
-			l = l->next;
-			l->prev = lprev;
-			lprev = l;
-			l1 = l1->next;
-        }
-		else
+		if (func (link->next->data, data) >= 0)
 		{
-			l->next = l2;
-			l = l->next;
-			l->prev = lprev;
-			lprev = l;
-			l2 = l2->next;
-        }
-    }
-	l->next = l1 ? l1 : l2;
-	l->next->prev = l;
+			insert_new_link (link, link->next, data);
+			return head;
+		}
+	}
 
-	return list.next;
+	/* insert as last element */
+	insert_new_link (link, NULL, data);
+
+	return head;
 }
 
-List *list_sort (List *list, CompareFunc compare_func)
+/* Make a copy of the entire list. Both lists will point to the same usre
+ * data.
+ */
+List *list_copy (List *head)
 {
-	List *l1, *l2;
+	List *new_head;
+	List *new_link;
 
-	if (!list)
+	if (!head)
 		return NULL;
-	if (!list->next)
-		return list;
 
-	l1 = list;
-	l2 = list->next;
+	new_head = new_link = insert_new_link (NULL, NULL, head->data);
 
-	while ((l2 = l2->next) != NULL)
-    {
-		if ((l2 = l2->next) == NULL)
-			break;
-		l1 = l1->next;
-    }
-	l2 = l1->next;
-	l1->next = NULL;
+	for (head = head->next; head; head = head->next)
+		new_link = insert_new_link (new_link, NULL, head->data)
 
-	return list_sort_merge (list_sort (list, compare_func),
-	                        list_sort (l2,   compare_func),
-	                        compare_func);
+	return new_head;
 }
 
 /*****************************************************************************/
 
-void list_foreach (List *list, ListForeachFunc func, void *udata)
+/* Search and remove link containing data */
+List *list_remove (List *head, void *data)
 {
-	List *ptr;
+	return list_remove_link (head, list_find (head, data));
+}
 
-	for (ptr = list; ptr; ptr = list_next (ptr))
+/* Same as list_remove but you have to pass the correct link instead of it
+ * being searched 
+ */
+List *list_remove_link (List *head, List *link)
+{
+	if (!head)
+		return NULL;
+
+	if (!link)
+		return head;
+
+	if (link == head)
+		head = link->next;
+
+	if (link->prev)
+		link->prev->next = link->next;
+
+	if (link->next)
+		link->next->prev = link->prev;
+
+	free (link);
+
+	return head;	
+}
+
+/* Free the entire list. Doesn't touch any user data. */
+List *list_free (List *head)
+{
+	List *link;
+
+	while (head)
 	{
-		(*func) (ptr->data, udata);
+		link = head;
+		head = head->next;
+		free (link);
 	}
+
+	return NULL;
+}
+
+/*****************************************************************************/
+
+/* Find the first link which points to data */
+List *list_find (List *head, void *data)
+{
+	for (; head; head = head->next)
+		if (head->data == data)
+			return head;
+
+	return NULL;
+}
+
+/* Find the first link for which func returns 0 */
+List *list_find_custom (List *head, void *data, CompareFunc func)
+{
+	assert (func);
+	
+	for (; head; head = head->next)
+		if (func (head->data, data) == 0)
+			return head;
+
+	return NULL;
+}
+
+/*****************************************************************************/
+
+/* Iterate through the list and call func for each node */
+void list_foreach (List *head, ListForeachFunc func, void *udata)
+{
+	assert (func);
+
+	for (; head; head = head->next)
+		func (head->data, udata);
 }
 
 static int remove_free (void *data, void *udata)
@@ -388,83 +223,184 @@ static int remove_free (void *data, void *udata)
 	return 1;
 }
 
-List *list_foreach_remove (List *list, ListForeachFunc func, void *udata)
+/* Iterate through the entire list and remove all links for which func returns
+ * TRUE. If func is NULL all nodes are removed and the data member is freed.
+ */
+List *list_foreach_remove (List *head, ListForeachFunc func, void *udata)
 {
-	List *ptr;
+	List *link;
 	List *next;
-
-	if (!list)
-		return list;
 
 	if (!func)
 		func = (ListForeachFunc) remove_free;
 
-	for (ptr = list; ptr; )
+	for (link = head; link;)
 	{
-		next = ptr->next;
+		next = link->next;
 
-		if ((*func) (ptr->data, udata))
-			list = list_remove_link (list, ptr);
+		if (func (link->data, udata)) 
+			list_remove_link (head, link);
 
-		ptr = next;
+		link = next;
 	}
 
-	return list;
+	return head;
 }
 
 /*****************************************************************************/
 
-#if 0
-static int rfunc (char *str, void *udata)
+/* Return the link at the nth postition */
+List *list_nth (List *head, int nth)
 {
-	printf ("str = %s\n", str);
-	return TRUE;
+	assert (nth >= 0);
+
+	if (!head)
+		return NULL;
+
+	for (; nth > 0 && head->next; nth--)
+		head = head->next;
+
+	return head;
 }
 
-int main (int argc, char **argv)
+/* Same as list_nth but instead of the link the user data is returne */
+void *list_nth_data (List *head, int nth)
 {
-	List *list = NULL;
+	List *link;
 
-	list = list_append (list, "foo");
-	list = list_append (list, "bar");
-	list = list_append (list, "baz");
+	if ((link = list_nth (head, nth)))
+		return link->data;
 
-	list = list_foreach_remove (list, LIST_FOREACH(rfunc), NULL);
-	assert (list == NULL);
-
-	return 0;
-}
-#endif
-
-#if 0
-static int moveall (char *a, List **newlist)
-{
-	if (strncmp (a, "audio", 5) == 0)
-		*newlist = list_prepend (*newlist, a);
-
-	return TRUE;
+	return NULL;
 }
 
-static int removeall (char *a, void *udata)
+/* Walk through the entire list and return last link. */
+List *list_last (List *head)
 {
-	return TRUE;
+	if (!head)
+		return NULL;
+
+	for (; head->next; head = head->next);
+
+	return head;
 }
 
-int main (int argc, char **argv)
+/* Return the length of the list by walking through it. */
+int list_length (List *head)
 {
-	List *list    = NULL;
-	List *newlist = NULL;
-	int   i       = 1000;
+	int i;
+		
+	for (i = 0; head; head = head->next, i++);
 
-	while (i--)
-		list = list_prepend (list, "audio/x-mpeg");
-
-	list = list_foreach_remove (list, (ListForeachFunc)moveall, &newlist);
-	assert (list == NULL);
-
-	newlist = list_foreach_remove (newlist, (ListForeachFunc)removeall, NULL);
-	assert (newlist == NULL);
-
-	return 0;
+	return i;
 }
-#endif
+
+/*****************************************************************************/
+
+/*
+ * Copyright 2001 Simon Tatham.
+ * 
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * Somewhat modifed.
+ */
+
+List *list_sort (List *head, CompareFunc func)
+{
+	List *p, *q, *e, *tail, *oldhead;
+    int insize, nmerges, psize, qsize, i;
+
+    if (!head)
+		return NULL;
+
+	insize = 1;
+
+	/* iterative merge sort */
+	while (1)
+	{
+		p = head;
+		head = NULL;
+		tail = NULL;
+
+		nmerges = 0;  /* count number of merges we do in this pass */
+
+		while (p)
+		{
+			nmerges++;  /* there exists a merge to be done */
+			/* step `insize' places along from p */
+			q = p;
+			psize = 0;
+			for (i = 0; i < insize; i++)
+			{
+				psize++;
+				q = q->next;
+				if (!q)	break;
+            }
+
+			/* if q hasn't fallen off end, we have two lists to merge */
+			qsize = insize;
+
+			/* now we have two lists; merge them */
+			while (psize > 0 || (qsize > 0 && q))
+			{
+				/* decide whether next element of merge comes from p or q */
+				if (psize == 0)
+				{
+					/* p is empty; e must come from q. */
+					e = q; q = q->next; qsize--;
+				}
+				else if (qsize == 0 || !q)
+				{
+					/* q is empty; e must come from p. */
+					e = p; p = p->next; psize--;
+				}
+				else if (func (p,q) <= 0)
+				{
+					/* First element of p is lower (or same);
+					 * e must come from p. */
+					e = p; p = p->next; psize--;
+				}
+				else
+				{
+					/* First element of q is lower; e must come from q. */
+					e = q; q = q->next; qsize--;
+				}
+
+				/* add the next element to the merged list */
+				if (tail)
+					tail->next = e;
+				else
+					head = e;
+				
+				/* Maintain reverse pointers in a doubly linked list. */
+				e->prev = tail;
+
+				tail = e;
+			}
+	
+			/* now p has stepped `insize' places along, and q has too */
+			p = q;
+		}
+
+		tail->next = NULL;
+
+		/* If we have done only one merge, we're finished. */
+		if (nmerges <= 1)   /* allow for nmerges==0, the empty list case */
+			return head;
+
+		/* Otherwise repeat, merging lists twice the size */
+		insize *= 2;
+	}
+}
+
+/*****************************************************************************/
