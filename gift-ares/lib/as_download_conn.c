@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.15 2004/10/26 19:45:10 mkern Exp $
+ * $Id: as_download_conn.c,v 1.16 2004/10/28 14:00:39 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -219,13 +219,36 @@ void as_downconn_cancel (ASDownConn *conn)
 
 /*****************************************************************************/
 
-/* Returns total average speed of this source in bytes/sec */
-unsigned int as_downconn_speed (ASDownConn *conn)
+/* Returns average speed of this source collected from past requests in
+ * bytes/sec.
+ */
+unsigned int as_downconn_hist_speed (ASDownConn *conn)
 {
 	if (conn->hist_time == 0)
 		return 0;
 
 	return (conn->hist_downloaded / conn->hist_time);
+}
+
+/* Returns average speed of this source collected from past requests and the
+ * currently running one in bytes/sec.
+ */
+unsigned int as_downconn_speed (ASDownConn *conn)
+{
+	unsigned int speed = 0;
+
+	if (conn->hist_time > 0)
+		speed += conn->hist_downloaded / conn->hist_time;
+
+	if (conn->request_time > 0)
+	{
+		time_t dt = time (NULL) - conn->request_time;
+		
+		if (dt > 0)
+			speed += conn->curr_downloaded / dt;
+	}
+
+	return speed;
 }
 
 /*****************************************************************************/

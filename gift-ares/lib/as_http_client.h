@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.h,v 1.3 2004/09/12 23:59:07 mkern Exp $
+ * $Id: as_http_client.h,v 1.4 2004/10/28 14:00:39 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,7 +20,7 @@
 /* size of download data buffer,
  * must be large enough to contain http reply header
  */
-#define HTCL_DATA_BUFFER_SIZE	4096
+#define HTCL_DATA_BUFFER_SIZE (1024 * 16)
 
 /*****************************************************************************/
 

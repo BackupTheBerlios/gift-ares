@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.25 2004/10/26 19:45:09 mkern Exp $
+ * $Id: as_download.c,v 1.26 2004/10/28 14:00:39 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -493,10 +493,10 @@ static int conn_cmp_func (ASDownConn *a, ASDownConn *b)
 	else if (!a->udata2 && b->udata2)
 		return -1;
 
-	/* Then sort by bandwidth */
-	if (as_downconn_speed (a) < as_downconn_speed (b))
+	/* Then sort by bandwidth by historical speed */
+	if (as_downconn_hist_speed (a) < as_downconn_hist_speed (b))
 		return 1;
-	else if (as_downconn_speed (a) > as_downconn_speed (b))
+	else if (as_downconn_hist_speed (a) > as_downconn_hist_speed (b))
 		return -1;
 
 	return 0;
@@ -1070,12 +1070,13 @@ static as_bool consolidate_chunks (ASDownload *dl)
 static as_bool start_chunks (ASDownload *dl)
 {
 	List *chunk_l;
-	List *conn_l, *tmp_l;
+	List *conn_l, *tmp_l, *slow_conn_l;
 	ASDownChunk *chunk, *new_chunk;
-	ASDownConn *conn;
+	ASDownConn *conn, *slow_conn;
 	time_t now = time (NULL);
 	size_t remaining, new_start, new_size;
 	int active_conns, pending_conns, max_new_conns;
+	unsigned int speed;
 
 	if (!(conn_l = dl->conns))
 		return TRUE; /* nothing to do */
@@ -1155,6 +1156,7 @@ static as_bool start_chunks (ASDownload *dl)
 				                conn->source->port);
 
 				/* move on to next chunk */
+				conn_l = conn_l->next;
 				break;
 			}
 
@@ -1229,9 +1231,9 @@ static as_bool start_chunks (ASDownload *dl)
 		                        new_chunk->size))
 		{
 			/* download start failed, remove connection. */
-			AS_DBG_2 ("Failed to start download from %s:%d, removing source.",
-			          net_ip_str (conn->source->host),
-			          conn->source->port);
+			AS_WARN_2 ("Failed to start download from %s:%d, removing source.",
+			           net_ip_str (conn->source->host),
+			           conn->source->port);
 
 			as_downchunk_free (new_chunk);
 			as_downconn_free (conn);
@@ -1240,8 +1242,11 @@ static as_bool start_chunks (ASDownload *dl)
 			dl->conns = list_remove_link (dl->conns, conn_l);
 			conn_l = tmp_l;
 
-			/* try next connection */
-			continue;
+			/* We now have a chunk in the list which has no source. Fixing
+			 * this here would be complicated so we break and leave it to
+			 * a later maintenance timer invokation.
+			 */
+			break;
 		}
 
 		max_new_conns--;
@@ -1266,94 +1271,120 @@ static as_bool start_chunks (ASDownload *dl)
 		conn_l = conn_l->next;
 	}
 
+	/* If there are still unused sources left at this point we are in endgame 
+	 * mode. Replace slow connections with unused faster ones. The 
+	 * max_new_conns check prevents looping through a lot of unused sources
+	 * if we are not yet in endgame mode.
+	 */
+	while (conn_l && max_new_conns > 0)
+	{
+		conn = conn_l->data;
+
+		/* if we see a used connection we can stop since there are no more
+		 * unused ones
+		 */
+		if (conn->udata2)
+			break;
+
+		/* Skip queued sources. */
+		if (conn->state == DOWNCONN_QUEUED && conn->queue_next_try > now)
+		{
+			conn_l = conn_l->next;
+			continue;
+		}
+		
+		/* Find slowest connection to replace. Ideally we would start at the
+		 * end of the list since that's where the slowest connections are. Use
+		 * current b/w of sources instead of historical one so we have a value
+		 * other than 0 for first time requests.
+		 */
+		speed = 0xFFFFFFFF;
+		slow_conn_l = NULL;
+
+		for (tmp_l = conn_l->next; tmp_l; tmp_l = tmp_l->next)
+		{
+			slow_conn = tmp_l->data;
+
+			if (slow_conn->udata2 && as_downconn_speed (slow_conn) < speed)
+			{
+				speed = as_downconn_speed (slow_conn);
+				slow_conn_l = tmp_l;
+			}
+		}
+
+		/* Changing the connection must be worth it so only do it if we
+		 * can become at least 1 kb/s faster.
+		 */
+		if (!slow_conn_l || speed + 1024 >= as_downconn_speed (conn))
+			break;
+
+		slow_conn = slow_conn_l->data;
+
+		AS_HEAVY_DBG_3 ("Removing slow source %s (%2.2f kb/s) for potentially faster %2.2f kb/s",
+		                net_ip_str (slow_conn->source->host),
+		                (float)speed / 1024,
+		                (float)as_downconn_speed (conn) / 1024);
+
+		/* cancel slow connection */
+		as_downconn_cancel (slow_conn);
+
+		/* disassociate chunk */
+		chunk = slow_conn->udata2;
+		slow_conn->udata2 = NULL;
+		chunk->udata = NULL;
+
+		/* Remove old connection, don't need it anymore. This is safe because
+		 * the old connection comes after conn_l.
+		 */
+		dl->conns = list_remove_link (dl->conns, slow_conn_l);
+		as_downconn_free (slow_conn);
+
+		/* Start chunk again with faster connection. This is the only point
+		 * where we start a chunk without chunk->received being 0.
+		 */
+		chunk->udata = conn;
+		conn->udata2 = chunk;
+
+		if (!as_downconn_start (conn, dl->hash,
+		                        chunk->start + chunk->received,
+		                        chunk->size - chunk->received))
+		{
+			/* Download start failed, remove connection. This leaves the chunk
+			 * list in a non-consolidated state which is bad form but still
+			 * works since consolidate_chunks will be called later before we
+			 * do anything else.
+			 */
+			AS_WARN_2 ("Failed to start replacement download from %s:%d, removing source.",
+			           net_ip_str (conn->source->host),
+			           conn->source->port);
+
+			/* We removed a slow connection and couldn't replace it. */
+			max_new_conns++;
+
+			as_downconn_free (conn);
+			chunk->udata = NULL;
+
+			tmp_l = conn_l->next;
+			dl->conns = list_remove_link (dl->conns, conn_l);
+			conn_l = tmp_l;
+
+			/* What we should do now is use the next unused source for the
+			 * chunk we just disconnected and couldn't reconnect. Since that
+			 * would become pretty ugly to do here and this is an unlikely
+			 * error case we just break the loop and let the maintenance timer
+			 * handle it later.
+			 */
+			break;
+		}
+
+		conn_l = conn_l->next;
+	}
+
 	/* Get entire connection list in order. A bit inefficient. Would be better
 	 * to have two connection lists, one unsorted for used and one sorted for
 	 * unused connections.
 	 */
 	dl->conns = list_sort (dl->conns, (CompareFunc) conn_cmp_func);
-
-	return TRUE;
-}
-
-/* Cancel and remove slow sources if there are faster unused ones. In order
- * to not get in the way of normal connection reassignements it starts with
- * the second unused connection to determine availability of better
- * connections.
- *
- * FIXME: Not a very good solution. In endgame mode the first may be a better
- *        and unused connection. The problems is that we do not know at this
- *        point if we are in endgame mode or not. Another problem is that a
- *        connection has zero b/w until it has completed at least one request.
- *        We might remove such connections even though they are perfectly
- *        fine.
- *
- * Warning: Leaves connection list in unsorted state since it expects a call
- *          to start_chunks afterwards. Chunks also need to be consolidated
- *          aferwards.
- */
-static as_bool remove_slow_conns (ASDownload *dl)
-{
-	List *conn_l, *f_conn_l;
-	ASDownConn *conn, *f_conn;
-	ASDownChunk *chunk;
-	unsigned int speed;
-	time_t now = time (NULL);
-
-	/* Skip first connection. */
-	if ((f_conn_l = dl->conns))
-		f_conn_l = f_conn_l->next;
-
-	for (; f_conn_l; f_conn_l = f_conn_l->next)
-	{
-		f_conn = f_conn_l->data;
-
-		/* if we see a used connection we can stop since there are no more
-		 * unused ones
-		 */
-		if (f_conn->udata2)
-			break;
-
-		/* Skip queued sources. */
-		if (f_conn->state == DOWNCONN_QUEUED && f_conn->queue_next_try > now)
-			continue;
-		
-		/* find a slower connection to replace */
-		speed = as_downconn_speed (f_conn);
-
-		for (conn_l = f_conn_l; conn_l; conn_l = conn_l->next)
-		{
-			conn = conn_l->data;
-
-			/* Changing the connection must be worth it so only do it if we
-			 * can become at least 1 kb/s faster.
-			 */
-			if (conn->udata2 && as_downconn_speed (conn) + 1024 < speed)
-				break;
-		}
-
-		/* break if there are no more slower connections */
-		if (!conn_l)
-			break;
-
-		AS_HEAVY_DBG_3 ("Removing slow source %s (%2.2f kb/s) for potentially faster %2.2f kb/s",
-		                net_ip_str (conn->source->host),
-		                (float)as_downconn_speed (conn) / 1024,
-		                (float)speed / 1024);
-
-		/* cancel slow connection */
-		as_downconn_cancel (conn);
-
-		/* disassociate chunk */
-		chunk = conn->udata2;
-		conn->udata2 = NULL;
-		chunk->udata = NULL;
-
-		/* Remove old connection, don't need it anymore. This is safe because
-		 * the old connection comes after f_conn_l.
-		 */
-		dl->conns = list_remove_link (dl->conns, conn_l);
-		as_downconn_free (conn);	
-	}
 
 	return TRUE;
 }
@@ -1388,13 +1419,6 @@ static void download_maintain (ASDownload *dl)
 
 		assert (0);
 		return;
-	}
-
-	/* Kill off low connections in endgame mode. */
-	if (!remove_slow_conns (dl))
-	{
-		/* Not too serious. */
-		AS_ERR_1 ("Removing slow connections for \"%s\"", dl->filename);
 	}
 
 	/* Clean up chunks. */
@@ -1729,8 +1753,8 @@ static void verify_connections (ASDownload *dl)
 		}
 
 		/* b/w must be descending. */
-		assert (as_downconn_speed (conn) <= bw);
-		bw = as_downconn_speed (conn);
+		assert (as_downconn_hist_speed (conn) <= bw);
+		bw = as_downconn_hist_speed (conn);
 	}
 }
 #endif
