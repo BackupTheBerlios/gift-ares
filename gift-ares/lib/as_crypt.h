@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.6 2004/09/08 17:15:34 mkern Exp $
+ * $Id: as_crypt.h,v 1.7 2004/09/22 03:35:32 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -70,6 +70,11 @@ void as_decrypt_b6st (as_uint8 *data, int len);
 void as_encrypt_b6mi (as_uint8 *data, int len);
 
 void as_decrypt_b6mi (as_uint8 *data, int len);
+
+/* encrypt/decrypt push request */
+void as_encrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port);
+
+void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port);
 
 /*****************************************************************************/
 
