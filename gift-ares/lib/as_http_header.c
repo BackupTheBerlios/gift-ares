@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_header.c,v 1.4 2004/10/03 18:00:20 mkern Exp $
+ * $Id: as_http_header.c,v 1.5 2004/11/20 03:02:54 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -274,7 +274,7 @@ String *as_http_header_compile (ASHttpHeader *header)
 	if (!header)
 		return NULL;
 
-	if (! (str = string_new (NULL, 0, 0, FALSE)))
+	if (! (str = string_new (NULL, 0, 0, TRUE)))
 		return NULL;
 
 	/* compile first line */
