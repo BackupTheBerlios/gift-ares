@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.27 2004/09/11 18:13:27 mkern Exp $
+ * $Id: as_ares.h,v 1.28 2004/09/13 01:01:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,7 +92,13 @@ typedef int            as_bool;
 #include "as_http_header.h"
 #include "as_http_client.h"
 #include "as_http_server.h"
+#include "as_download_chunk.h"
+#include "as_download_conn.h"
+#include "as_download_1.h"
+
+/*
 #include "as_download.h"
+*/
 
 /*****************************************************************************/
 
@@ -128,6 +134,9 @@ typedef int            as_bool;
 
 /* Minimum chunk size in bytes */
 #define AS_DOWNLOAD_MIN_CHUNK_SIZE (64*1024)
+
+/* Number of request fails after which a source is removed */
+#define AS_DOWNLOAD_SOURCE_MAX_FAIL (3)
 
 /*****************************************************************************/
 

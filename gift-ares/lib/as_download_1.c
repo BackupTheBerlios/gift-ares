@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.c,v 1.3 2004/09/11 18:34:30 mkern Exp $
+ * $Id: as_download_1.c,v 1.4 2004/09/13 01:01:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,10 @@
  */
 
 #include "as_ares.h"
+
+#ifdef WIN32
+#include <io.h> /* _chsize and friends */
+#endif
 
 /*****************************************************************************/
 
@@ -24,7 +28,7 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state);
 static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
                              unsigned int len);
 
-static void stop_all_chunks (ASDownload *dl);
+static void stop_all_connections (ASDownload *dl);
 
 static void download_maintain (ASDownload *dl);
 
@@ -75,7 +79,7 @@ ASDownload *as_download_create (ASDownloadStateCb state_cb)
 /* Stop and free download. */
 void as_download_free (ASDownload *dl)
 {
-	Link *l;
+	List *l;
 
 	if (!dl)
 		return;
@@ -88,11 +92,11 @@ void as_download_free (ASDownload *dl)
 		fclose (dl->fp);
 
 	for (l = dl->conns; l; l = l->next)
-		as_downconn_free (dl->conns);
+		as_downconn_free (l->data);
 	list_free (dl->conns);
 
 	for (l = dl->chunks; l; l = l->next)
-		as_downchunk_free (dl->chunks);
+		as_downchunk_free (l->data);
 	list_free (dl->chunks);
 
 	free (dl);
@@ -123,7 +127,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 	/* open file */
 	dl->filename = stringf_dup ("%s%s", INCOMPLETE_PREFIX, filename);
 
-	if (!(fp = fopen (dl->filename, "wb")))
+	if (!(dl->fp = fopen (dl->filename, "wb")))
 	{
 		AS_ERR_1 ("Unable to open download file \"%s\" for writing",
 		          dl->filename);
@@ -154,7 +158,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 		return FALSE;
 
 	/* start things off */
-	download_maintain ();
+	download_maintain (dl);
 
 	return TRUE;
 }
@@ -181,7 +185,7 @@ as_bool as_download_cancel (ASDownload *dl)
 	AS_DBG_1 ("Cancelling download \"%s\"", dl->filename);
 
 	/* stop all connections */
-	stop_all_chunks (dl);
+	stop_all_connections (dl);
 
 	/* close fd */
 	if (dl->fp)
@@ -213,7 +217,7 @@ as_bool as_download_pause (ASDownload *dl)
 	AS_DBG_1 ("Pausing download \"%s\"", dl->filename);
 
 	/* Stop all active chunk downloads. */
-	stop_all_chunks (dl);
+	stop_all_connections (dl);
 
 	if (!download_set_state (dl, DOWNLOAD_PAUSED, TRUE))
 		return FALSE;
@@ -233,7 +237,7 @@ as_bool as_download_queue (ASDownload *dl)
 	AS_DBG_1 ("Queuing download \"%s\"", dl->filename);
 
 	/* Stop all active chunk downloads. */
-	stop_all_chunks (dl);
+	stop_all_connections (dl);
 
 	if (!download_set_state (dl, DOWNLOAD_QUEUED, TRUE))
 		return FALSE;
@@ -270,7 +274,7 @@ ASDownloadState as_download_state (ASDownload *dl)
 /* Add source to download (copies source). */
 as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 {	
-	Link *l;
+	List *l;
 	ASDownConn *conn;
 
 	/* Sources can be added in any state but we need to make sure there are
@@ -290,21 +294,56 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 	if (!(conn = as_downconn_create (source, conn_state_cb, conn_data_cb)))
 		return FALSE;
 
+	/* point udata1 to download, we will use udata2 for the chunk */
+	conn->udata1 = dl;
+
 	dl->conns = list_prepend (dl->conns, conn);
 
 	/* check if the source should be used now */
-	download_maintain ();
+	if (dl->state == DOWNLOAD_ACTIVE)
+		download_maintain (dl);
 
 	return TRUE;
 }
 
 /*****************************************************************************/
 
+static as_bool disassociate_conn (ASDownConn *conn)
+{
+	ASDownload *dl = conn->udata1;
+	ASDownChunk *chunk = conn->udata2;
+
+	/* disassociate chunk */
+	conn->udata2 = NULL;
+	chunk->udata = NULL;
+
+	/* remove connection if it failed too often */
+	if (conn->fail_count >= AS_DOWNLOAD_SOURCE_MAX_FAIL)
+	{
+		AS_DBG_3 ("Removing source %s:%d after it failed %d times",
+		          net_ip_str (conn->source->host), conn->source->port,
+		          conn->fail_count);
+
+		/* remove connection */
+		as_downconn_free (conn);
+		dl->conns = list_remove (dl->conns, conn);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 /* Called for every state change. Return FALSE if the connection was freed and
  * must no longer be accessed.
  */
 static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 {
+	ASDownload *dl = conn->udata1;
+	ASDownChunk *chunk = conn->udata2;
+
+	assert (chunk);
+	assert (dl);
+
 	switch (state)
 	{
 	case DOWNCONN_UNUSED:
@@ -314,12 +353,45 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 		/* Chunk used by connection may not be in chunk list at this point.
 		 * See recalc_chunks. 
 		 */
+		AS_HEAVY_DBG_4 ("Connecting to %s:%d for chunk (%u,%u).",
+		                net_ip_str (conn->source->host), conn->source->port,
+		                chunk->start, chunk->size);
 		break;
 
 	case DOWNCONN_TRANSFERRING:
-	case DOWNCONN_FAILED:
+		AS_HEAVY_DBG_4 ("Transfering chunk (%u,%u) from %s:%d.", chunk->start,
+		                chunk->size, net_ip_str (conn->source->host),
+		                conn->source->port);
+		break;
+
 	case DOWNCONN_COMPLETE:
+		assert (chunk->received <= chunk->size);
+
+		AS_HEAVY_DBG_4 ("Chunk (%u,%u) from %s:%d complete.", chunk->start,
+		                chunk->size, net_ip_str (conn->source->host),
+		                conn->source->port);
+
+		disassociate_conn (conn);
+		download_maintain (dl);
+		break;
+
+	case DOWNCONN_FAILED:
+		AS_HEAVY_DBG_4 ("Chunk (%u,%u) from %s:%d failed.", chunk->start,
+		                chunk->size, net_ip_str (conn->source->host),
+		                conn->source->port);
+
+		disassociate_conn (conn);
+		download_maintain (dl);
+		break;
+
 	case DOWNCONN_QUEUED:
+
+		AS_HEAVY_DBG_4 ("Queued by %s:%d, pos: %d, length: %d.",
+		                net_ip_str (conn->source->host), conn->source->port,
+		                conn->queue_pos, conn->queue_len);
+
+		disassociate_conn (conn);
+		download_maintain (dl);
 		break;
 	}
 
@@ -332,35 +404,98 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
                              unsigned int len)
 {
+	ASDownload *dl = conn->udata1;
+	ASDownChunk *chunk = conn->udata2;
+
+	assert (len > 0);
+	assert (chunk);
+	assert (dl);
+	assert (dl->fp);
+	assert (chunk->size - chunk->received <= conn->chunk_size);
+
+	/* seek to correct place in file */
+	if (fseek (dl->fp, chunk->start + chunk->received, SEEK_SET) != 0)
+	{
+		AS_ERR_1 ("Seek failed for download \"%s\". Pausing.", dl->filename);
+		as_download_pause (dl);	
+		return FALSE;
+	}
+
+	/* make sure we are not writing past the chunk end */
+	if (len > chunk->size - chunk->received)
+	{
+		len = chunk->size - chunk->received;
+		AS_HEAVY_DBG_1 ("Got more data than needed for chunk, truncated to %u.",
+		                len);
+	}
+
+	/* write the data */
+	if (fwrite (data, 1, len, dl->fp) != len)
+	{
+		AS_ERR_1 ("Write failed for download \"%s\". Pausing.", dl->filename);
+		as_download_pause (dl);	
+		return FALSE;
+	}
+
+	chunk->received += len;
+	assert (chunk->received <= chunk->size);
+
+	/* chunk complete? */
+	if (chunk->received == chunk->size)
+	{
+		AS_HEAVY_DBG_4 ("Chunk (%u,%u) from %s:%d complete.", chunk->start,
+		                chunk->size, net_ip_str (conn->source->host),
+		                conn->source->port);
+
+		/* cancel connection and disassociate chunk */
+
+/* FIXME: only cancel if we don't want connection to persist */
+		as_downconn_cancel (conn);
+		conn->udata2 = NULL;
+		chunk->udata = NULL;
+
+		/* clean up / start new connections / etc */
+		download_maintain (dl);
+
+		/* don't return TRUE after the connection might have been reused */
+		return FALSE;
+	}
 
 	return TRUE;
 }
 
 /*****************************************************************************/
 
-/* Cancels all chunks */
-static void stop_all_chunks (ASDownload *dl)
+/* Cancels connections and disassociates them from chunks */
+static void stop_all_connections (ASDownload *dl)
 {
-	List *chunk_l;
+	List *conn_l;
 	ASDownChunk *chunk;
 	ASDownConn *conn;
 
-	for (chunk_l = dl->chunks; chunk_l; chunk_l = chunk_l->next)
+	/* loop through connections so we can also close those which are
+	 * persistent but not currently associated with a chunk.
+	 */
+	for (conn_l = dl->conns; conn_l; conn_l = conn_l->next)
 	{
-		if (!(chunk = chunk_l->data))
-			continue;
+		conn = conn_l->data;
 
-		/* cancel transfer */
-		conn = chunk->udata;
+		/* cancel connection */
 		as_downconn_cancel (conn);
-		chunk->udata = NULL;
+
+		/* if there is a chunk disassociate it */
+		if ((chunk = conn->udata2))
+		{
+			conn->udata2 = NULL;
+			chunk->udata = NULL;
+		}
 	}
 }
 
 /* Verify chunk list is consistent */
 static as_bool verify_chunks (ASDownload *dl)
 {
-	Link *link, next_link;
+	List *link;
 	ASDownChunk *chunk, *next_chunk;
 
 	link = dl->chunks; 
@@ -374,9 +509,7 @@ static as_bool verify_chunks (ASDownload *dl)
 
 	while (link)
 	{
-		next_link = link->next;
 		chunk = link->data;
-		next_chunk = next_link->data;
 
 		/* chunk cannot have received more than its size  */
 		if (chunk->received > chunk->size)
@@ -397,8 +530,10 @@ static as_bool verify_chunks (ASDownload *dl)
 		/* next chunk must begin at end of this chunk or it must be the end of
 		 * the file.
 		 */
-		if (next_chunk)
+		if (link->next)
 		{
+			next_chunk = link->next->data;
+
 			if (chunk->start + chunk->size != next_chunk->start)
 			{
 				AS_ERR_2 ("Start of next chunk is %u, should be %u.",
@@ -425,7 +560,7 @@ static as_bool verify_chunks (ASDownload *dl)
 /* Merge complete chunks. */
 static as_bool merge_chunks (ASDownload *dl)
 {
-	Link *link, last_link;
+	List *link, *last_link;
 	ASDownChunk *chunk, *last_chunk;
 
 	last_link = dl->chunks; 
@@ -471,7 +606,7 @@ static as_bool merge_chunks (ASDownload *dl)
 static as_bool recalc_chunks (ASDownload *dl)
 {
 	List *chunk_l;
-	List *conn_l, tmp_l;
+	List *conn_l, *tmp_l;
 	ASDownChunk *chunk, *new_chunk;
 	ASDownConn *conn;
 	time_t now = time (NULL);
@@ -495,18 +630,25 @@ static as_bool recalc_chunks (ASDownload *dl)
 		{
 			conn = conn_l->data;
 
-			if (!as_downconn_in_use (conn) &&
+			if (!conn->udata2 &&
 			    (conn->state != DOWNCONN_QUEUED || conn->queue_next_try <= now))
 			{
+				/* associate chunk with connection */
+				chunk->udata = conn;
+				conn->udata2 = chunk;
+
 				/* use the connection we found with this chunk */
-				if (!as_downconn_start (conn, dl->hash, chunk)
+				if (!as_downconn_start (conn, dl->hash,
+				                        chunk->start + chunk->received,
+				                        chunk->size - chunk->received))
 				{
 					/* download start failed, remove connection. */
 					AS_DBG_2 ("Failed to start download from %s:%d, removing source.",
-					          net_ip_str (conn->source->ip),
+					          net_ip_str (conn->source->host),
 					          conn->source->port);
 
 					as_downconn_free (conn);
+					chunk->udata = NULL;
 
 					tmp_l = conn_l->next;
 					dl->conns = list_remove_link (dl->conns, conn_l);
@@ -515,9 +657,6 @@ static as_bool recalc_chunks (ASDownload *dl)
 					/* try next connection */
 					continue;
 				}
-
-				/* associate chunk with connection */
-				chunk->udata = conn;
 
 				AS_HEAVY_DBG_5 ("Started unused chunk (%u,%u) of \"%s\" with %s:%d",
 			                    chunk->start, chunk->size, dl->filename,
@@ -542,7 +681,8 @@ static as_bool recalc_chunks (ASDownload *dl)
 	{
 		conn = conn_l->data;
 
-		if (as_downconn_in_use (conn) ||
+		/* skip active and queued connections */
+		if (conn->udata2 ||
 		    (conn->state == DOWNCONN_QUEUED && conn->queue_next_try > now))
 		{
 			conn_l = conn_l->next;
@@ -562,10 +702,9 @@ static as_bool recalc_chunks (ASDownload *dl)
 			}
 		}
 
-		assert (tmp_l);
 		chunk_l = tmp_l;
 
-		if (remaining <= AS_DOWNLOAD_MIN_CHUNK_SIZE * 2)
+		if (!chunk_l || remaining <= AS_DOWNLOAD_MIN_CHUNK_SIZE * 2)
 		{
 			/* No more chunks to break up */
 			break;
@@ -585,12 +724,18 @@ static as_bool recalc_chunks (ASDownload *dl)
 			return FALSE;						
 		}
 
+		/* associate new chunk with connection */
+		new_chunk->udata = conn;
+		conn->udata2 = new_chunk;
+
 		/* Start new connection */
-		if (!as_downconn_start (conn, dl->hash, chunk)
+		if (!as_downconn_start (conn, dl->hash,
+		                        new_chunk->start + new_chunk->received,
+		                        new_chunk->size - new_chunk->received))
 		{
 			/* download start failed, remove connection. */
 			AS_DBG_2 ("Failed to start download from %s:%d, removing source.",
-			          net_ip_str (conn->source->ip),
+			          net_ip_str (conn->source->host),
 			          conn->source->port);
 
 			as_downchunk_free (new_chunk);
@@ -604,18 +749,17 @@ static as_bool recalc_chunks (ASDownload *dl)
 			continue;
 		}
 
-		/* associate new chunk with connection */
-		new_chunk->udata = conn;
-
 		AS_HEAVY_DBG_5 ("Started new chunk (%u,%u) of \"%s\" with %s:%d",
 	                    new_chunk->start, new_chunk->size, dl->filename,
 		                net_ip_str (conn->source->host),
 		                conn->source->port);
 
-		/* Shorten old chunk. WARNING: ASDownConn needs to be prepared for
-		 * this to happend at any time (it shouldn't take any action though).
-		 */
+		/* Shorten old chunk. */
 		chunk->size -= new_size;
+
+		AS_HEAVY_DBG_4 ("Reduced old chunk from (%u,%u) to (%u,%u)",
+	                    chunk->start, chunk->size + new_size,
+	                    chunk->start, chunk->size);
 
 		/* Insert new chunk after old one */
 		tmp_l = list_prepend (NULL, new_chunk);
@@ -641,10 +785,10 @@ static as_bool recalc_chunks (ASDownload *dl)
  */
 static void download_maintain (ASDownload *dl)
 {
-	if (dl->state != DOWNCONN_ACTIVE)
+	if (dl->state != DOWNLOAD_ACTIVE)
 	{
 		/* Must not happen. */
-		assert (dl->state == DOWNCONN_ACTIVE);
+		assert (dl->state == DOWNLOAD_ACTIVE);
 		return;
 	}
 
@@ -673,7 +817,7 @@ static void download_maintain (ASDownload *dl)
 	}
 
 	/* Is the download complete? */
-	if (((ASDownChunk)dl->chunks->data)->received == dl->size)
+	if (((ASDownChunk *)dl->chunks->data)->received == dl->size)
 	{
 		/* Download complete */
 		download_finished (dl);
@@ -686,6 +830,14 @@ static void download_maintain (ASDownload *dl)
 		/* This should be harmless. */
 		AS_WARN_1 ("Recalculating chunks failed for \"%s\"", dl->filename);
 	}
+
+	/* Check if we need more sources */
+	if (dl->conns == NULL)
+	{
+		/* TODO: start source search  */
+		AS_ERR_1 ("FIXME: No more sources for \"%s\". Make me find more.",
+		          dl->filename);
+	}
 }
 
 /*****************************************************************************/
@@ -695,7 +847,7 @@ static as_bool download_failed (ASDownload *dl)
 	AS_DBG_1 ("Failed download \"%s\"", dl->filename);
 
 	/* Stop all chunk downloads if there are still any */
-	stop_all_chunks (dl);
+	stop_all_connections (dl);
 
 	/* close fd */
 	if (dl->fp)
@@ -734,7 +886,7 @@ static as_bool download_complete (ASDownload *dl)
 	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
 	{
 		char *completed_name = dl->filename + strlen (INCOMPLETE_PREFIX);
-		char *new_name = strdup (complete_name);
+		char *new_name = strdup (completed_name);
 		int i = 0;
 		struct stat st;
 
@@ -746,8 +898,8 @@ static as_bool download_complete (ASDownload *dl)
 			{
 				if (rename (dl->filename, new_name) >= 0)
 				{
-					AS_DBG ("Moved complete file \"%s\" to \"%s\"",
-					        dl->filename, new_name);
+					AS_DBG_2 ("Moved complete file \"%s\" to \"%s\"",
+					          dl->filename, new_name);
 
 					/* update download filename */
 					free (dl->filename);
@@ -770,7 +922,7 @@ static as_bool download_complete (ASDownload *dl)
 	}
 	else
 	{
-		AS_WARN_1 ("Complete file \"%s\" has no prefix. No renaming performed.".
+		AS_WARN_1 ("Complete file \"%s\" has no prefix. No renaming performed.",
 		           dl->filename);
 	}
 
@@ -785,14 +937,21 @@ static as_bool download_complete (ASDownload *dl)
 static as_bool download_finished (ASDownload *dl)
 {
 	ASHash *hash;
+#ifdef WIN32
+	int fd;
+#endif
 
 	AS_DBG_1 ("Verifying download \"%s\"", dl->filename);
 
 	/* Do some sanity checks */
 	assert (dl->chunks->next == NULL);
-	assert (((ASDownChunk *)dl->chunks->data)->size == dl->size);
 	assert (((ASDownChunk *)dl->chunks->data)->udata == NULL);
+	assert (((ASDownChunk *)dl->chunks->data)->size == dl->size);
 	assert (dl->fp != NULL);
+
+	/* Close file pointer */
+	fclose (dl->fp);
+	dl->fp = NULL;
 
 	/* raise callback */
 	if (!download_set_state (dl, DOWNLOAD_VERIFYING, TRUE))
@@ -801,15 +960,18 @@ static as_bool download_finished (ASDownload *dl)
 	/* Truncate incomplete file to correct size removing the state data at
 	 * the end.
 	 */
-	if (ftruncate (dl->fp, dl->size) < 0)
+#ifndef WIN32
+	if (truncate (dl->filename, dl->size) < 0)
+#else
+	if ((fd = _open (dl->filename, _O_BINARY | _O_WRONLY)) < 0 ||
+	    _chsize (fd, dl->size) != 0 ||
+	    _close (fd) != 0)
+#endif
 	{
-		AS_ERR_1 ("Failed to truncate complete download \"%s\"");
+		AS_ERR_1 ("Failed to truncate complete download \"%s\"",
+		          dl->filename);
 		/* File is probably still useful so continue. */
 	}
-
-	/* Close file pointer */
-	fclose (dl->fp);
-	dl->fp = NULL;
 
 	/* Hash file and compare hashes.
 	 * TODO: Make non-blocking.

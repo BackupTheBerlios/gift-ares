@@ -29,7 +29,11 @@ OBJECTS = \
 	as_http_header.o \
 	as_http_client.o \
 	as_http_server.o \
-	as_download.o
+	as_download_chunk.o \
+	as_download_conn.o \
+	as_download_1.o
+
+#	as_download.o
 
 all: libares.a($(OBJECTS))
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.5 2004/09/11 18:34:30 mkern Exp $
+ * $Id: as_download_conn.c,v 1.6 2004/09/13 01:01:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,7 +31,9 @@ static as_bool downconn_set_state (ASDownConn *conn, ASDownConnState state,
 
 static void downconn_reset (ASDownConn *conn)
 {
-	conn->chunk = NULL;
+	conn->chunk_start = 0;
+	conn->chunk_size = 0;
+	as_hash_free (conn->hash);
 	conn->hash = NULL;
 }
 
@@ -48,10 +50,11 @@ ASDownConn *as_downconn_create (ASSource *source, ASDownConnStateCb state_cb,
 	if (!(conn = malloc (sizeof (ASDownConn))))
 		return NULL;
 
-	conn->source = as_source_copy (source);
-	conn->chunk  = NULL;
-	conn->hash   = NULL;
-	conn->client = NULL;
+	conn->source      = as_source_copy (source);
+	conn->hash        = NULL;
+	conn->chunk_start = 0;
+	conn->chunk_size  = 0;
+	conn->client      = NULL;
 
 	conn->queue_pos      = 0;
 	conn->queue_len      = 0;
@@ -60,12 +63,14 @@ ASDownConn *as_downconn_create (ASSource *source, ASDownConnStateCb state_cb,
 
 	conn->total_downloaded = 0;
 	conn->average_speed    = 0;
+	conn->fail_count       = 0;
 
 	conn->state    = DOWNCONN_UNUSED;
 	conn->state_cb = state_cb;
 	conn->data_cb  = data_cb;
 
-	conn->udata = NULL;
+	conn->udata1 = NULL;
+	conn->udata2 = NULL;
 
 	return conn;
 }
@@ -77,7 +82,6 @@ void as_downconn_free (ASDownConn *conn)
 		return;
 
 	as_downconn_cancel (conn);
-	assert (conn->chunk == NULL);
 	assert (conn->hash == NULL);
 
 	as_source_free (conn->source);
@@ -88,9 +92,9 @@ void as_downconn_free (ASDownConn *conn)
 
 /*****************************************************************************/
 
-/* Associate this connection with chunk and hash and start download of file */
-as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
-                           ASDownChunk *chunk)
+/* Start this download from this connection with specified piece and hash. */
+as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
+                           size_t size)
 {
 	if (conn->state == DOWNCONN_CONNECTING ||
 	    conn->state == DOWNCONN_TRANSFERRING)
@@ -99,11 +103,14 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 		return FALSE;
 	}
 
-	assert (conn->chunk == NULL);
+	assert (start >= 0);
+	assert (size > 0);
 	assert (conn->hash == NULL);
+
 	/* assign new chunk and hash */
-	conn->chunk = chunk;
-	conn->hash  = hash;
+	conn->chunk_start = start;
+	conn->chunk_size  = size;
+	conn->hash        = as_hash_copy (hash);
 
 	if (!conn->client)
 	{
@@ -125,15 +132,16 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 			AS_ERR_2 ("UNSUPPORTED: tried to use firewalled source %s:%d",
 			          net_ip_str (conn->source->host), conn->source->port);
 
-			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+			conn->fail_count++;
 			downconn_reset (conn);
+			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
 			
 			return FALSE;
 #endif
 		}
 
 		/* create http client for direct connection */
-		conn->client = as_http_client_create (net_ip (conn->source->host),
+		conn->client = as_http_client_create (net_ip_str (conn->source->host),
 		                                      conn->source->port,
 		                                      downconn_http_callback);
 
@@ -142,11 +150,14 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 			AS_ERR_2 ("Failed to create http client for %s:%d",
 			          net_ip_str (conn->source->host), conn->source->port);
 
-			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+			conn->fail_count++;
 			downconn_reset (conn);
+			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
 
 			return FALSE;
 		}
+
+		conn->client->udata = conn;
 	}
 
 	/* make request */
@@ -155,8 +166,9 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 		AS_ERR_2 ("Failed to send http request to %s:%d",
 		          net_ip_str (conn->source->host), conn->source->port);
 
-		downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+		conn->fail_count++;
 		downconn_reset (conn);
+		downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
 
 		return FALSE;
 	}
@@ -168,22 +180,16 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 	return TRUE;
 }
 
-/* Stop current download and disassociate from chunk and hash. Does not raise
- * callback. State is set to DOWNCONN_UNUSED. 
+/* Stop current download. Does not raise callback. State is set to
+ * DOWNCONN_UNUSED. 
  */
 void as_downconn_cancel (ASDownConn *conn)
 {
 	if (conn->client)
 		as_http_client_cancel (conn->client);
 
-	downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
 	downconn_reset (conn);
-}
-
-/* Returns TRUE if connection is associated with a chunk. */
-as_bool as_downconn_in_use (ASDownConn *conn)
-{
-	return (conn->chunk != NULL);
+	downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
 }
 
 /*****************************************************************************/
@@ -254,7 +260,6 @@ static as_bool downconn_request (ASDownConn *conn)
 	char *encoded;
 	size_t start, end;
 
-	assert (conn->chunk);
 	assert (conn->hash);
 
 	/* create uri and request */
@@ -266,14 +271,14 @@ static as_bool downconn_request (ASDownConn *conn)
 		return FALSE;
 
 	/* add range header (http range is inclusive) */
-	assert (conn->chunk->size > 0);
-	start = conn->chunk->start + conn->chunk->received;
-	end   = conn->chunk->start + conn->chunk->size - 1;
+	assert (conn->chunk_size > 0);
+	start = conn->chunk_start;
+	end   = conn->chunk_start + conn->chunk_size - 1;
 	assert (start < end);
 
 	snprintf(buf, sizeof (buf), "bytes=%u-%u", start, end);
-	as_http_header_set_field (request, "Range", range);
-	AS_HEAYV_DBG_3 ("Requesting range %s from %s:%d", range,
+	as_http_header_set_field (request, "Range", buf);
+	AS_HEAVY_DBG_3 ("Requesting range %s from %s:%d", buf,
 	                net_ip_str (conn->source->host), conn->source->port);
 
 	/* add special ares headers */
@@ -309,42 +314,30 @@ static as_bool handle_reply (ASHttpClient *client)
 	case 200:
 	case 206:
 	{
-		int start, stop, size;
+		unsigned int start, stop, size;
 
 		/* Check that range is ok. */
 		p = as_http_header_get_field (client->reply, "Content-Range");
 
-		if (p  && sscanf (p, "bytes=%d-%d/%d", &start, &stop, &size) == 3)
+		if (p  && sscanf (p, "bytes=%u-%u/%u", &start, &stop, &size) == 3)
 		{
-			if (start != conn->chunk->start)
+			if (start != conn->chunk_start)
 			{
 				AS_WARN_4 ("Invalid range start from %s:%d. "
 				           "Got %d, expected %d. Aborting.",
 				           net_ip_str (conn->source->host),
 			               conn->source->port,
-						   start, conn->chunk->start);
+						   start, conn->chunk_start);
 				break;
 			}
 
-			if (stop - start + 1 != size ||
-			    size != conn->client->content_length)
+			if (stop - start + 1 != conn->chunk_size)
 			{
-				AS_WARN_5 ("Inconsistent range header from %s. "
-				           "start: %d, stop: %d, size: %d, content-length: %d. "
-						   "Aborting.",
-				           net_ip_str (conn->source->host),
-			               start, stop, size, conn->client->content_length);
-				break;		
-			}
-
-			if (size != conn->chunk->size - conn->chunk->received)
-			{
-				AS_WARN_5 ("Got different range than request from %s:%d."
+				AS_WARN_4 ("Got different range than request from %s:%d."
 				           "Requested size: %d, received: %d. Continuing anyway.",
 				           net_ip_str (conn->source->host),
 			               conn->source->port,
-						   conn->chunk->size - conn->chunk->received,
-						   size);
+						   conn->chunk_size, stop - start + 1);
 			}
 
 			/* we are in business */
@@ -388,11 +381,11 @@ static as_bool handle_reply (ASHttpClient *client)
 		conn->queue_last_try = time (NULL);
 		conn->queue_next_try = conn->queue_last_try + retry * ESECONDS;
 
-		/* Disassociate from chunk since the next request might be for a
-		 * different chunk. Only do it if callback hasn't freed us.
+		/* Reset connection since the next request might be for a different
+		 * chunk.
 		 */
-		if (downconn_set_state (conn, DOWNCONN_QUEUED, TRUE))
-			downconn_reset (conn);
+		downconn_reset (conn);
+		downconn_set_state (conn, DOWNCONN_QUEUED, TRUE);
 
 		return TRUE; /* this will keep the connection open, with any luck */
 	}
@@ -405,8 +398,13 @@ static as_bool handle_reply (ASHttpClient *client)
 	}
 
 	/* Do not continue with request */
-	if (downconn_set_state (conn, DOWNCONN_FAILED, TRUE))
-		downconn_reset (conn);
+	conn->fail_count++;
+	downconn_reset (conn);
+
+	/* manually reset http client since the callback may reuse us. */
+	as_http_client_cancel (conn->client);
+
+	downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
 
 	return FALSE; /* abort request and close connection */
 }
@@ -418,14 +416,12 @@ static int downconn_http_callback (ASHttpClient *client,
 
 	switch (code)
 	{
-	case HTCL_CB_REQUESTING:
-		break;
-
 	case HTCL_CB_CONNECT_FAILED:
 	case HTCL_CB_REQUEST_FAILED:
+		conn->fail_count++;
+		downconn_reset (conn);
 		/* this may free us */
-		if (downconn_set_state (conn, DOWNCONN_FAILED, TRUE))
-			downconn_reset (conn);
+		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
 
 		return FALSE;
 
@@ -433,30 +429,44 @@ static int downconn_http_callback (ASHttpClient *client,
 		return handle_reply (client);
 
 	case HTCL_CB_DATA:
+		/* This may be called in the case of an non-empty queued reply,
+		 * ignore it.
+		 */
+		if (conn->state == DOWNCONN_QUEUED)
+			return TRUE;
+
 		assert (conn->state == DOWNCONN_TRANSFERRING);
 
-		if (data_cb)
-			data_cb (conn, conn->client->data, conn->client->data_len);
+		conn->total_downloaded += client->data_len;
+
+		if (conn->data_cb)
+			conn->data_cb (conn, client->data, client->data_len);
 
 		return TRUE;
 
 	case HTCL_CB_DATA_LAST:
-		assert (conn->state == DOWNCONN_TRANSFERRING);
+		/* This is also called for the empty queued reply, ignore it */
+		if (conn->state == DOWNCONN_QUEUED)
+			return TRUE;
 
+		assert (conn->state == DOWNCONN_TRANSFERRING);
+		
 		AS_HEAVY_DBG_4 ("HTCL_CB_DATA_LAST (%d/%d) from %s:%d",
 		                conn->client->content_received,
 		                conn->client->content_length,
 		                net_ip_str (conn->source->host), conn->source->port);
 
-		if (client->data_len > 0 && data_cb)
+		conn->total_downloaded += client->data_len;
+
+		if (client->data_len > 0 && conn->data_cb)
 		{
-			if (!data_cb (conn, conn->client->data, conn->client->data_len))
-				return FALSE; /* connection was free by callback */
+			if (!conn->data_cb (conn, client->data, client->data_len))
+				return FALSE; /* connection was freed by callback */
 		}
 
+		downconn_reset (conn);
 		/* this may free us */
-		if (downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE))
-			downconn_reset (conn);
+		downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE);
 
 		return TRUE; /* try to keep connection alive */
 	}

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.17 2004/09/10 11:21:05 mkern Exp $
+ * $Id: cmd.c,v 1.18 2004/09/13 01:02:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -399,8 +399,99 @@ COMMAND_FUNC (clear)
 
 /*****************************************************************************/
 
+as_bool download_cb (ASDownload *dl, ASDownloadState state)
+{
+	switch (state)
+	{
+	case DOWNLOAD_ACTIVE:
+		printf ("Download ACTIVE: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_QUEUED:
+		printf ("Download QUEUED: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_PAUSED:
+		printf ("Download PAUSED: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_COMPLETE:
+		printf ("Download COMPLETE: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_FAILED:
+		printf ("Download FAILED: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_CANCELLED:
+		printf ("Download CANCELLED: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_VERIFYING:
+		printf ("Download VERIFYING: %s\n", dl->filename);
+		break;
+	}
+
+	return TRUE;
+}
+
+/* max number of sources added to download */
+#define NUM_SOURCES 100
+
 COMMAND_FUNC (dl)
 {
+#if 1
+	int rnum;
+	int i;
+	ASResult *r;
+	ASDownload *dl;
+	List *l;
+
+	if (argc < 2)
+		return FALSE;
+
+	rnum = atoi (argv[1]);
+
+	if (!(r = list_nth_data (results, rnum)))
+	{
+		printf ("Invalid result number\n");
+		return TRUE;
+	}
+
+	if (!(dl = as_download_create (download_cb)))
+	{
+		printf ("Download creation failed\n");
+		return TRUE;
+	}
+
+	/* add all sources of all results with the same hash */
+	for (i = 0, l = results; l && i < NUM_SOURCES; l = l->next)
+	{
+		ASResult *res  = l->data;
+
+		if (as_hash_equal (res->hash, r->hash))
+		{
+			as_download_add_source (dl, res->source);
+			i++;
+		}
+	}
+
+	if (i == 0)
+	{
+		printf ("Failed to add any sources\n");
+		as_download_free (dl);
+		return TRUE;
+	}
+
+	printf ("Added %d sources to download\n", i);
+
+	/* start download */
+	if (!as_download_start (dl, r->hash, r->filesize, r->filename))
+	{
+		printf ("Download start failed\n");
+		as_download_free (dl);
+		return TRUE;
+	}
+
+	printf ("Download of \"%s\" started\n", r->filename);
+
+	return TRUE;
+
+#else
 	int rnum;
 	int i;
 	char *str;
@@ -425,10 +516,12 @@ COMMAND_FUNC (dl)
 	as_download_start (dl);
 
 	return TRUE;
+#endif
 }
 
 COMMAND_FUNC (download)
 {
+#if 0
 	in_addr_t ip;
 	in_port_t port;
 	ASSource *source;
@@ -454,6 +547,7 @@ COMMAND_FUNC (download)
 	as_download_start (dl);
 
 	return TRUE;
+#endif
 }
 
 /*****************************************************************************/

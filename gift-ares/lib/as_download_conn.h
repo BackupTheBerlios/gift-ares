@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.6 2004/09/11 18:34:30 mkern Exp $
+ * $Id: as_download_conn.h,v 1.7 2004/09/13 01:01:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,14 +23,12 @@ typedef enum
 	DOWNCONN_UNUSED,        /* Initial state and state after canceling */
 	DOWNCONN_CONNECTING,    /* We are connecting/requesting */
 	DOWNCONN_TRANSFERRING,  /* We are receiving data. */
-	DOWNCONN_FAILED,        /* Connect or request failed. Chunk is
-	                         * disassociated */
+	DOWNCONN_FAILED,        /* Connect or request failed. */
 	DOWNCONN_COMPLETE,      /* Requested chunk completed or connection was
 	                         * closed. If possible the connection is kept
-	                         * alive but the chunk is disassociated. */
-	DOWNCONN_QUEUED,        /* We are in the source's upload queue. Connection
-	                         * is kept alive if possible but chunk is
-	                         * disassociated. */
+	                         * alive. */
+	DOWNCONN_QUEUED         /* We are in the source's upload queue. Connection
+	                         * is kept alive if possible. */
 } ASDownConnState;
 
 typedef struct as_down_conn_t ASDownConn;
@@ -46,14 +44,15 @@ typedef as_bool (*ASDownConnStateCb) (ASDownConn *conn, ASDownConnState state);
 typedef as_bool (*ASDownConnDataCb) (ASDownConn *conn, as_uint8 *data,
                                      unsigned int len);
 
-typedef struct as_down_conn_t
+struct as_down_conn_t
 {
 	/* data about source from search result */
 	ASSource *source;
 
-	/* the chunk and hash we are currently downloading */
-	ASDownChunk *chunk;
-	ASHash      *hash;
+	/* the hash and chunk we are currently downloading */
+	ASHash *hash;
+	size_t chunk_start;
+	size_t chunk_size;
 
 	/* the actually http client for downloading */
 	ASHttpClient *client;
@@ -67,6 +66,8 @@ typedef struct as_down_conn_t
 	/* some stats about this connection */
 	unsigned int total_downloaded; /* total downloaded bytes */
 	unsigned int average_speed;    /* average download speed in bytes/sec */
+	unsigned int fail_count;       /* number of times a request has failed
+	                                * for this connection */
 
 	/* conection state */
 	ASDownConnState state;
@@ -74,7 +75,8 @@ typedef struct as_down_conn_t
 	ASDownConnStateCb state_cb;
 	ASDownConnDataCb  data_cb;
 
-	void *udata; /* arbitrary user data */
+	void *udata1; /* arbitrary user data */
+	void *udata2;
 };
 
 /*****************************************************************************/
@@ -88,17 +90,14 @@ void as_downconn_free (ASDownConn *conn);
 
 /*****************************************************************************/
 
-/* Associate this connection with chunk and hash and start download of file */
-as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
-                           ASDownChunk *chunk);
+/* Start this download from this connection with specified piece and hash. */
+as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
+                           size_t size);
 
-/* Stop current download and disassociate from chunk and hash. Does not raise
- * callback. State is set to DOWNCONN_UNUSED. 
+/* Stop current download. Does not raise callback. State is set to
+ * DOWNCONN_UNUSED. 
  */
 void as_downconn_cancel (ASDownConn *conn);
-
-/* Returns TRUE if connection is associated with a chunk. */
-as_bool as_downconn_in_use (ASDownConn *conn);
 
 /*****************************************************************************/
 

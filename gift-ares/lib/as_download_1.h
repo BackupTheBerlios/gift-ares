@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.h,v 1.4 2004/09/11 18:34:30 mkern Exp $
+ * $Id: as_download_1.h,v 1.5 2004/09/13 01:01:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,7 +20,7 @@ typedef enum
 	                      * AS_DOWNLOAD_MAX_ACTIVE is reached). */
 	DOWNLOAD_PAUSED,     /* Download is paused by user (or disk full). */
 	DOWNLOAD_COMPLETE,   /* Download completed successfully. */
-	DOWNLOAD_FAILED      /* Download was fully transfered but hash check
+	DOWNLOAD_FAILED,     /* Download was fully transfered but hash check
 	                      * failed. */
 	DOWNLOAD_CANCELLED,  /* Download was cancelled. */
 	DOWNLOAD_VERIFYING   /* Download is being verified after downloading. */
@@ -33,9 +33,9 @@ typedef struct as_download_t ASDownload;
  */
 typedef as_bool (*ASDownloadStateCb) (ASDownload *dl, ASDownloadState state);
 
-typedef struct as_download_t
+struct as_download_t
 {
-	ASHash *hash:      /* file hash */
+	ASHash *hash;      /* file hash */
 	char   *filename;  /* save file name */
 	size_t  size;      /* file size */
 	size_t  received;  /* total number of bytes already received */
