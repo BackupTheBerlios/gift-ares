@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.7 2004/09/15 17:24:34 mkern Exp $
+ * $Id: as_download.c,v 1.8 2004/09/15 21:27:17 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -574,7 +574,7 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 	dl->received += write_len;
 	chunk->received += write_len;
 	assert (chunk->received <= chunk->size);
-	assert (dl->recevied <= dl->filesize);
+	assert (dl->received <= dl->size);
 
 	/* chunk complete? */
 	if (chunk->received == chunk->size)
