@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.5 2004/09/07 16:01:31 mkern Exp $
+ * $Id: as_search_result.c,v 1.6 2004/09/09 16:15:35 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -121,6 +121,26 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		{
 			r->filename = strdup (r->filename);
 			as_meta_remove_tag (r->meta, "filename");
+		}
+		else
+		{
+			/* attempt to reconstruct from other tags */
+			String *filename = string_new (NULL, 0, 0, FALSE);
+
+			const unsigned char *artist = as_meta_get_tag (r->meta, "artist");
+			const unsigned char *title  = as_meta_get_tag (r->meta, "title");
+			const unsigned char *album  = as_meta_get_tag (r->meta, "album");
+			
+			if (artist)
+				string_appendf (filename, "%s - ", artist);
+			if (album)
+				string_appendf (filename, "%s - ", album);
+			if (title)
+				string_append (filename, title);
+			if (r->fileext)
+				string_append (filename, r->fileext);
+
+			r->filename = string_free_keep (filename);
 		}
 
 		break;
