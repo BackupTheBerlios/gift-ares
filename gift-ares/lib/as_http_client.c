@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.c,v 1.7 2004/09/17 21:58:36 HEx Exp $
+ * $Id: as_http_client.c,v 1.8 2005/02/16 17:34:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -198,7 +198,7 @@ int as_http_client_request (ASHttpClient *client, ASHttpHeader *request,
 		if (! (he = gethostbyname (client->host)))
 		{
 			AS_WARN_1 ("gethostbyname failed for host %s", client->host);
-			client_reset (client, FALSE);
+			client_reset (client, TRUE);
 			return FALSE;
 		}
 
@@ -214,7 +214,7 @@ int as_http_client_request (ASHttpClient *client, ASHttpHeader *request,
 	{
 		AS_ERR_3 ("ERROR: tcp_open() failed for %s [%s]:%d",
 				   client->host, net_ip_str(client->ip), client->port);
-		client_reset (client, FALSE);
+		client_reset (client, TRUE);
 		return FALSE;
 	}
 

@@ -1,6 +1,4 @@
 
-- Is there a crash if tcp_open fails somewhere (in http client?)?
-
 - Meta data for 'Album' seems not to be parsed correctly (read is missing) in search results.
 
 - Why do so many source go into 'timed out' state and are not removed? should they be?
