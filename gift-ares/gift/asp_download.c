@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.7 2004/12/30 00:40:52 mkern Exp $
+ * $Id: asp_download.c,v 1.8 2005/01/04 21:33:43 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -36,15 +36,15 @@ static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
 		status = SOURCE_ACTIVE;
 		status_str = "Active";
 		break;
+	case DOWNCONN_COMPLETE:
+		/* This can happen only if we have received zero bytes.  See 
+		 * dl_data_callback. */
+		assert (!conn->client || !conn->client->data_len);
+
+		/* fall-through */
 	case DOWNCONN_FAILED:
 		status = SOURCE_CANCELLED;
 		status_str = "Failed";
-		break;
-	case DOWNCONN_COMPLETE:
-		/* This cannot happen. Transfer has already been freed. See
-		 * dl_data_callback.
-		 */
-		abort ();
 		break;
 	case DOWNCONN_QUEUED:
 	{
