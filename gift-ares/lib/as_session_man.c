@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.11 2004/09/01 18:05:55 HEx Exp $
+ * $Id: as_session_man.c,v 1.12 2004/09/01 18:07:25 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -360,7 +360,7 @@ int as_send_search (ASSessMan *man, unsigned char *query)
 	List *l;
 	int count = 0;
 	
-	for (l = man->connecting; l; l = l->next)
+	for (l = man->connected; l; l = l->next)
 		if (send_search (l->data, query))
 			count++;
 	
