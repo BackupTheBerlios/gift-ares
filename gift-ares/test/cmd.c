@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.30 2004/09/19 18:40:25 mkern Exp $
+ * $Id: cmd.c,v 1.31 2004/09/19 19:06:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -458,6 +458,7 @@ as_bool downman_cb (ASDownMan *man, ASDownload *dl, ASDownloadState state)
 	case DOWNLOAD_QUEUED:
 	case DOWNLOAD_PAUSED:
 	case DOWNLOAD_VERIFYING:
+		break;
 	case DOWNLOAD_CANCELLED:
 	case DOWNLOAD_COMPLETE:
 	case DOWNLOAD_FAILED:
