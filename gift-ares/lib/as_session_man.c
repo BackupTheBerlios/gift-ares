@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.4 2004/08/31 23:25:49 mkern Exp $
+ * $Id: as_session_man.c,v 1.5 2004/09/01 10:30:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -76,7 +76,7 @@ void as_sessman_connect (ASSessMan *man, unsigned int connections)
 
 static int sessman_disconnect_itr (ASSession *session, ASSessMan *man)
 {
-	as_session_disconnect (session); /* this will raise a callback */
+	as_session_disconnect (session, FALSE);
 	as_session_free (session);
 
 	return TRUE; /* remove link */
@@ -110,7 +110,7 @@ static as_bool sessman_maintain (ASSessMan *man)
 		
 		while (len > 0)
 		{
-			as_session_disconnect (man->connected->data); /* callback! */
+			as_session_disconnect (man->connected->data, FALSE);
 			as_session_free (man->connected->data);
 
 			man->connected = list_remove_link (man->connected, man->connected);
@@ -184,10 +184,10 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 	{
 	case SESSION_DISCONNECTED:
 		AS_DBG_2 ("DISCONNECTED %s:%d",
-		          net_ip_str (session->c->host), session->c->port);
+		          net_ip_str (session->host), session->port);
 
 		/* notify node manager */
-		as_nodeman_update_disconnected (AS->nodeman, session->c->host);
+		as_nodeman_update_disconnected (AS->nodeman, session->host);
 
 		/* remove from list and free session */
 		man->connected = list_remove (man->connected, session);
@@ -200,10 +200,10 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 
 	case SESSION_FAILED:
 		AS_HEAVY_DBG_2 ("FAILED %s:%d",
-		                net_ip_str (session->c->host), session->c->port);
+		                net_ip_str (session->host), session->port);
 
 		/* notify node manager */
-		as_nodeman_update_failed (AS->nodeman, session->c->host);
+		as_nodeman_update_failed (AS->nodeman, session->host);
 
 		/* remove from list and free session */
 		man->connecting = list_remove (man->connecting, session);
@@ -216,20 +216,20 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 
 	case SESSION_CONNECTING:
 		AS_HEAVY_DBG_2 ("CONNECTING %s:%d",
-		                net_ip_str (session->c->host), session->c->port);
+		                net_ip_str (session->host), session->port);
 		break;
 
 	case SESSION_HANDSHAKING:
 		AS_HEAVY_DBG_2 ("HANDSHAKING %s:%d",
-		                net_ip_str (session->c->host), session->c->port);
+		                net_ip_str (session->host), session->port);
 		break;
 
 	case SESSION_CONNECTED:
 		AS_DBG_2 ("CONNECTED %s:%d",
-		          net_ip_str (session->c->host), session->c->port);
+		          net_ip_str (session->host), session->port);
 		
 		/* notify node manager */
-		as_nodeman_update_connected (AS->nodeman, session->c->host);
+		as_nodeman_update_connected (AS->nodeman, session->host);
 
 		/* remove from connecting list... */
 		man->connecting = list_remove (man->connecting, session);

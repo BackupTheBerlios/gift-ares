@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.5 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_list.c,v 1.6 2004/09/01 10:30:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -242,7 +242,7 @@ List *list_foreach_remove (List *head, ListForeachFunc func, void *udata)
 		next = link->next;
 
 		if (func (link->data, udata)) 
-			list_remove_link (head, link);
+			head = list_remove_link (head, link);
 
 		link = next;
 	}

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.6 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_session.c,v 1.7 2004/09/01 10:30:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -36,6 +36,8 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 	if (!(session = malloc (sizeof (ASSession))))
 		return NULL;
 
+	session->host      = INADDR_NONE;
+	session->port      = 0;
 	session->c         = NULL;
 	session->input     = INVALID_INPUT;
 	session->cipher    = NULL;
@@ -85,8 +87,12 @@ as_bool as_session_connect (ASSession *session, in_addr_t host,
                             in_port_t port)
 {
 	assert (session);
+	assert (session->c == NULL);
 
-	if (!(session->c = tcp_open (host, port, FALSE)))
+	session->host = host;
+	session->port = port;
+
+	if (!(session->c = tcp_open (session->host, session->port, FALSE)))
 	{
 		AS_ERR_2 ("tcp_open failed for %s:%d", net_ip_str (host), port);
 		return FALSE;
@@ -109,14 +115,16 @@ as_bool as_session_connect (ASSession *session, in_addr_t host,
 	return TRUE;
 }
 
-/* Disconnect but does not free session. Triggers state callback. */
-void as_session_disconnect (ASSession *session)
+/* Disconnect but does not free session. Triggers state callback if
+ * specified.
+ */
+void as_session_disconnect (ASSession *session, as_bool raise_callback)
 {
 	assert (session);
 
 	session_cleanup (session);
 
-	session_set_state (session, SESSION_DISCONNECTED, TRUE);
+	session_set_state (session, SESSION_DISCONNECTED, raise_callback);
 }
 
 /*****************************************************************************/
@@ -131,13 +139,13 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	if (net_sock_error (session->c->fd))
 	{
 		AS_HEAVY_DBG_2 ("Connect to %s:%d failed",
-		                net_ip_str (session->c->host), session->c->port);
+		                net_ip_str (session->host), session->port);
 		session_error (session);
 		return;
 	}
 
-	AS_DBG_2 ("CONNECTED %s:%d", net_ip_str (session->c->host),
-	          session->c->port);
+	AS_DBG_2 ("CONNECTED %s:%d", net_ip_str (session->host),
+	          session->port);
 	
 	/* set up packet buffer */
 	if (!(session->packet = as_packet_create ()))
@@ -188,15 +196,15 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 	if (net_sock_error (session->c->fd))
 	{
 		AS_HEAVY_DBG_2 ("Connection with %s:%d closed remotely",
-		                net_ip_str (session->c->host), session->c->port);
+		                net_ip_str (session->host), session->port);
 		session_error (session);
 		return;
 	}
 
 	if (!as_packet_recv (session->packet, session->c))	
 	{
-		AS_WARN_2 ("Recv failed from %s:%d", net_ip_str (session->c->host),
-		           session->c->port);
+		AS_WARN_2 ("Recv failed from %s:%d", net_ip_str (session->host),
+		           session->port);
 		session_error (session);
 		return;
 	}
@@ -250,7 +258,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 		if (type != PACKET_ACK)
 		{
 			AS_ERR_2 ("Handshake with %s:%d failed. Got something else than ACK.",
-			          net_ip_str (session->c->host), session->c->port);
+			          net_ip_str (session->host), session->port);
 			session_error (session);
 			return FALSE;
 		}
@@ -273,8 +281,8 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 			if (!as_packet_decrypt (packet, session->cipher))
 			{
 				AS_ERR_3 ("Packet decrypt failed for type 0x%02X from %s:%d",
-				          (int)type, net_ip_str (session->c->host),
-				          session->c->port);
+				          (int)type, net_ip_str (session->host),
+				          session->port);
 				session_error (session);
 				return FALSE;
 			}
@@ -306,7 +314,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	if (as_packet_remaining (packet) < 0x15)
 	{
 		AS_ERR_2 ("Handshake with %s:%d failed. ACK packet too short.",
-		          net_ip_str (session->c->host), session->c->port);
+		          net_ip_str (session->host), session->port);
 		session_error (session);
 		return FALSE;
 	}
@@ -337,7 +345,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 		 * 0x5E == 94, a load percentage? 
 		 */
 		AS_ERR_2 ("FIXME: Handshake with %s:%d failed. kind > 0x15E.",
-		          net_ip_str (session->c->host), session->c->port);
+		          net_ip_str (session->host), session->port);
 		session_error (session);
 		return FALSE;
 	}
@@ -355,7 +363,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
 
 	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x04X and 0x02X",
-	          net_ip_str (session->c->host), session->c->port,
+	          net_ip_str (session->host), session->port,
 	          (int)seed_16, (int)seed_8);
 	
 	return TRUE;

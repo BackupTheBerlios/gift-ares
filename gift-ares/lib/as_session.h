@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.4 2004/08/31 22:05:58 mkern Exp $
+ * $Id: as_session.h,v 1.5 2004/09/01 10:30:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -47,6 +47,8 @@ typedef as_bool (*ASSessionPacketCb) (ASSession *session, ASPacketType type,
 
 struct as_session_t
 {
+	in_addr_t      host;
+	in_port_t      port;
 	TCPC          *c;
 	input_id       input;   /* input id of event associated with c */
 
@@ -79,8 +81,10 @@ ASSessionState as_session_state (ASSession *session);
 as_bool as_session_connect (ASSession *session, in_addr_t host,
                             in_port_t port);
 
-/* Disconnect but does not free session. */
-void as_session_disconnect (ASSession *session);
+/* Disconnect but does not free session. Triggers state callback if
+ * specified.
+ */
+void as_session_disconnect (ASSession *session, as_bool raise_callback);
 
 /*****************************************************************************/
 
