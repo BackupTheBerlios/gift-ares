@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.5 2005/03/07 14:58:46 mkern Exp $
+ * $Id: sniff.c,v 1.6 2005/03/07 23:40:29 mkern Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -407,7 +407,7 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				plen=data[0]+(data[1]<<8);
 				type=data[2];
 				if (len >= plen+2) {
-					if (type==0x33 && plen >= 0x15) {
+					if ((type==0x33 || type == 0x38) && plen >= 0x15) {
 						unsigned short tmp;
 						unsigned char *packet_body;
 						decrypt_handshake_packet (data+3, plen, tcp->addr.dest);
@@ -422,8 +422,17 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 						c->enc_state_8 = packet_body[0x14];
 						read=plen+3;
 						c->state++;
-						fprintf(stderr, "%s got 0x33, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
-							buf, plen, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
+
+						if(type == 0x33) {
+							fprintf(stderr, "%s got 0x33, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
+								buf, plen, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
+						} else if (type == 0x38) {
+							fprintf(stderr, "%s got NEW 0x38, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
+								buf, plen, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
+
+						} else {
+							abort();
+						}
 						print_bin_data (data+3, plen);
 					} else {
 						c->state=STATE_UNSUPPORTED;
@@ -457,6 +466,10 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 								print_bin_data(uncompressed,size);
 							}
 						} else {
+							/* FIXME: this gets executed for the initial client sent 0x5a packet
+							 * which is sent before the encryption key is known and has a different
+							 * format. No idea how to distinguish this case here. */
+							
 							key = calc_packet_key (data[3], c->enc_state_16, c->enc_state_8);
 							decrypt_packet (data+5, plen-2, key);
 							
