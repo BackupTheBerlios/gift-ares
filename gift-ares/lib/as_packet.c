@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.22 2005/01/01 03:09:29 hex Exp $
+ * $Id: as_packet.c,v 1.23 2005/02/01 19:53:09 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -469,23 +469,23 @@ void as_packet_dump (ASPacket *packet)
 	int i;
 	int i2;
 	int i2_end;
+	String *s = string_new (NULL, 0, 0, TRUE);
 
-	printf ("packet len=%d\n", len);
 	for (i2 = 0; i2 < len; i2 = i2 + 16)
 	{
 		i2_end = (i2 + 16 > len) ? len: i2 + 16;
 		for (i = i2; i < i2_end; i++)
-			if (isprint(data[i]))
-				fprintf(stdout, "%c", data[i]);
-			else
-			fprintf(stdout, ".");
+			string_appendf (s, "%c", isprint(data[i]) ? data[i] : '.');
 		for ( i = i2_end ; i < i2 + 16; i++)
-			fprintf(stdout, " ");
-		fprintf(stdout, " | ");
+			string_appendf (s, " ");
+		string_appendf (s, " | ");
 		for (i = i2; i < i2_end; i++)
-			fprintf(stdout, "%02x ", data[i]);
-		fprintf(stdout, "\n");
+			string_appendf (s, "%02x ", data[i]);
+		string_appendf (s, "\n");
 	}
+	AS_DBG_2 ("packet len=%d\n%s", len, s->str);
+
+	string_free (s);
 }
 
 ASPacket *as_packet_slurp (void)
