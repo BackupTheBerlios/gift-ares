@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.7 2004/09/18 19:28:00 HEx Exp $
+ * $Id: as_share_man.c,v 1.8 2004/10/22 12:11:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -42,45 +42,90 @@ void as_shareman_free (ASShareMan *man)
 
 /***********************************************************************/
 
+/* Add share to manager. If a share with the same hash is already added it
+ * will be replaced with the new share. Takes ownership of share.
+ */
 as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 {
-	if (!as_hashtable_insert (man->table, share->hash->data,
-			     sizeof (share->hash->data), share))
-		return FALSE;
+	List *link;
 
-	man->shares = list_prepend (man->shares, share);
-	man->nshares++;
+	if ((link = as_hashtable_lookup (man->table, share->hash->data,
+	                                 sizeof (share->hash->data))))
+	{
+		/* Free old share and create new one. */
+		ASShare *old_share = link->data;
+
+		AS_HEAVY_DBG_2 ("Duplicate hash share. Replacing '%s' with '%s'",
+		                old_share->path, share->path);
+
+		man->size -= ((double)old_share->size) / 1048576;
+		as_share_free (old_share);
+
+		link->data = share;
+	}
+	else
+	{
+		/* Create new list entry and add it to hash table. */
+		man->shares = list_prepend (man->shares, share);
+
+		if (!as_hashtable_insert (man->table, share->hash->data,
+		                          sizeof (share->hash->data),
+		                          man->shares))
+		{
+			AS_ERR_1 ("Hashtable insert failed for share '%s'",
+			          share->path);
+			assert (0);
+			return FALSE;
+		}
+
+		man->nshares++;
+	}
+
 	man->size += ((double)share->size) / 1048576;
 
 	return TRUE;
 }
 
-as_bool as_shareman_remove (ASShareMan *man, ASShare *share)
+/* Remove and free share with specified hash. */
+as_bool as_shareman_remove (ASShareMan *man, ASHash *hash)
 {
-	ASShare *s;
+	List *link;
+	ASShare *share;
 
-	/* this might fail if there are duplicates */
-	if ((s = as_hashtable_lookup (man->table, share->hash->data,
-				      sizeof (share->hash->data))) &&
-	    s == share)
-		as_hashtable_remove (man->table, share->hash->data,
-				     sizeof (share->hash->data));
-	    
-	/* the important one, but we don't get to know if it worked or
-	 * not :( */
-	man->shares = list_remove (man->shares, share);
+	/* Lookup and remove list link from hashtable. */
+	if (!(link = as_hashtable_remove (man->table, hash->data,
+	                               sizeof (hash->data))))
+	{
+		AS_ERR_1 ("Didn't find share '%s' for removal.",
+		          as_hash_str (hash));
+		return FALSE;
+	}
 
+	share = link->data;
+
+	/* Free share */
 	man->nshares--;
 	man->size -= ((double)share->size) / 1048576;
 	as_share_free (share);
 
+	/* remove link */
+	man->shares = list_remove_link (man->shares, link);
+
 	return TRUE;
 }
 
+/* Lookup share by file hash. */
 ASShare *as_shareman_lookup (ASShareMan *man, ASHash *hash)
 {
-	return as_hashtable_lookup (man->table, hash->data,
-				    sizeof (hash->data));
+	List *link;
+
+	if (!(link  = as_hashtable_lookup (man->table, hash->data,
+	                                   sizeof (hash->data))))
+	{
+		return NULL;
+	}
+
+	return link->data;
 }
 
 /***********************************************************************/
@@ -140,6 +185,7 @@ static int share_send (ASShare *share, Conglobulator *glob)
 	return conglobulator_assimilate (glob, p);
 }
 
+/* Submit all shares to specified supernode. */
 as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 {
 	Conglobulator glob = { session, NULL };

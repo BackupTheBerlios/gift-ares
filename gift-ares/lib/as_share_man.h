@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.h,v 1.2 2004/09/18 19:26:38 HEx Exp $
+ * $Id: as_share_man.h,v 1.3 2004/10/22 12:11:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,26 +14,38 @@
 
 typedef struct
 {
-	List *shares; /* shares in the order in which they were added,
-			 which will hopefully be by-directory to
-			 maximise compression when submitting */
-	ASHashTable *table; /* shares keyed by hash */
+	List *shares;       /* shares in the order in which they were added,
+	                     * which will hopefully be by-directory to
+	                     * maximise compression when submitting */
+	ASHashTable *table; /* Points to links in shares list. Keyed by hash. */
 	int      nshares;
-	double   size; /* Gb */
+	double   size;      /* Gb */
 } ASShareMan;
 
 /*****************************************************************************/
 
+/* Create share manager. */
 ASShareMan *as_shareman_create (void);
 
+/* Free share manager and all shares. */
 void as_shareman_free (ASShareMan *man);
 
 /*****************************************************************************/
 
+/* Add share to manager. If a share with the same hash is already added it
+ * will be replaced with the new share. Takes ownership of share.
+ */
 as_bool as_shareman_add (ASShareMan *man, ASShare *share);
-as_bool as_shareman_remove (ASShareMan *man, ASShare *share);
+
+/* Remove and free share with specified hash. */
+as_bool as_shareman_remove (ASShareMan *man, ASHash *hash);
+
+/* Lookup share by file hash. */
 ASShare *as_shareman_lookup (ASShareMan *man, ASHash *hash);
 
+/* Submit all shares to specified supernode. */
 as_bool as_shareman_submit (ASShareMan *man, ASSession *session);
+
+/*****************************************************************************/
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.34 2004/10/20 17:36:43 mkern Exp $
+ * $Id: cmd.c,v 1.35 2004/10/22 12:11:21 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -696,7 +696,7 @@ COMMAND_FUNC (share)
 		as_meta_add_tag (meta, name, value);
 	}
 
-	share = as_share_new (path, hash, meta, size, realm);
+	share = as_share_create (path, hash, meta, size, realm);
 	
 	if (!share)
 	{
