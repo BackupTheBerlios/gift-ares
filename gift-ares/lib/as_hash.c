@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.c,v 1.7 2004/09/11 18:13:27 mkern Exp $
+ * $Id: as_hash.c,v 1.8 2004/09/11 18:33:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -78,6 +78,17 @@ void as_hash_free (ASHash *hash)
 		return;
 
 	free (hash);
+}
+
+/*****************************************************************************/
+
+/* return TRUE if the hashes are equal */
+as_bool as_hash_equal (ASHash *a, ASHash *b)
+{
+	if (!a || !b)
+		return FALSE;
+
+	return (memcmp (a->data, b->data, AS_HASH_SIZE) == 0);
 }
 
 /*****************************************************************************/

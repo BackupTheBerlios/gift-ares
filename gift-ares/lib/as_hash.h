@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.h,v 1.4 2004/09/11 18:13:27 mkern Exp $
+ * $Id: as_hash.h,v 1.5 2004/09/11 18:33:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,6 +35,11 @@ ASHash *as_hash_file (const char *file);
 
 /* free hash */
 void as_hash_free (ASHash *hash);
+
+/*****************************************************************************/
+
+/* return TRUE if the hashes are equal */
+as_bool as_hash_equal (ASHash *a, ASHash *b);
 
 /*****************************************************************************/
 
