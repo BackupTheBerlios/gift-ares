@@ -1,0 +1,4 @@
+all: sniff
+
+sniff: sniff.c
+	gcc -g -Wall -O2 sniff.c -o sniff -lnet -lz -lpcap -lnids
