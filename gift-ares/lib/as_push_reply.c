@@ -1,5 +1,5 @@
 /*
- * $Id: as_push_reply.c,v 1.1 2004/12/18 15:19:56 hex Exp $
+ * $Id: as_push_reply.c,v 1.2 2004/12/18 19:43:55 hex Exp $
  *
  * Copyright (C) 2004 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -68,9 +68,11 @@ void as_push_reply (ASPacket *packet)
 	ASHash *hash;
 	struct push_reply *r;
 
+	as_packet_dump (packet);
+
 	if (as_packet_remaining (packet) < 35)
 	{
-		AS_HEAVY_DBG_1 ("truncated push request (%d bytes)", as_packet_remaining (packet));
+		AS_DBG_1 ("truncated push request (%d bytes)", as_packet_remaining (packet));
 		return;
 	}
 
@@ -80,20 +82,22 @@ void as_push_reply (ASPacket *packet)
 	if (port < 1024)
 		return;
 	
-	if (as_packet_get_8 (packet) != 0)
-		return;
-
 	hash = as_packet_get_hash (packet);
 
 	if (!(r = malloc (sizeof (*r))))
 		return;
 
 	AS_DBG_2 ("got push request to %s:%d", net_ip_str (ip), port);
-	as_packet_dump (packet);
 
 	r->share = as_shareman_lookup (AS->shareman, hash);
 
 	as_hash_free (hash);
+
+	if (as_packet_get_8 (packet) != 0)
+	{
+		free (r);
+		return;
+	}
 
 	if (!r->share)
 	{
