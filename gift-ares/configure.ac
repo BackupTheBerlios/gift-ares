@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-# $Id: configure.ac,v 1.6 2005/01/01 03:09:26 hex Exp $
+# $Id: configure.ac,v 1.7 2005/01/09 17:03:33 hex Exp $
 
 dnl ###########################################################################
 dnl Process this file with autoconf to produce a configure script.
@@ -8,8 +8,8 @@ dnl ###########################################################################
 
 AC_PREREQ(2.52)
 
-AC_INIT(gift-ares, 0.2)
-AC_REVISION($Revision: 1.6 $)
+AC_INIT(gift-ares, 0.2.1)
+AC_REVISION($Revision: 1.7 $)
 AC_CONFIG_SRCDIR([lib/as_ares.h])
 
 AM_INIT_AUTOMAKE
