@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.9 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_packet.c,v 1.10 2004/09/01 15:51:36 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -288,6 +288,31 @@ as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
 	/* add seeds at front */
 	packet->data[0] = seed_a;
 	packet->data[1] = seed_b;
+
+	return TRUE;
+}
+
+/* Encrypt entire packet using cipher. This will add the two bytes of seed
+ * to the beginning of the packet.
+ */
+as_bool as_packet_header(ASPacket *packet, ASPacketType type)
+{
+	int len;
+
+	/* make enough room for seeds */
+	if (!packet_resize (packet, as_packet_size (packet) + 3))
+		return FALSE;
+
+	/* move data towards end by two bytes */
+	memmove (packet->data + 3, packet->data, as_packet_size (packet));
+
+	len = packet->used;
+	packet->used += 3;
+
+	/* add seeds at front */
+	packet->data[0] = len & 255;
+	packet->data[1] = len >> 8;
+	packet->data[2] = type;
 
 	return TRUE;
 }

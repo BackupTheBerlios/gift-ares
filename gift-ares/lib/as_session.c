@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.8 2004/09/01 12:44:51 mkern Exp $
+ * $Id: as_session.c,v 1.9 2004/09/01 15:51:36 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -163,11 +163,10 @@ static void session_connected (int fd, input_id input, ASSession *session)
 		return;
 	}
 	
-	as_packet_put_le16 (packet, 3);        /* length */
-	as_packet_put_8 (packet, PACKET_SYN);  /* type */
 	as_packet_put_8 (packet, 0x04);
 	as_packet_put_8 (packet, 0x03);
 	as_packet_put_8 (packet, 0x05);
+	as_packet_header (packet, PACKET_SYN);
 
 	if (!as_packet_send (packet, session->c))
 	{
@@ -288,7 +287,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 			}
 		}
 
-#if 1
+#if 0
 		as_packet_dump (packet);
 #endif
 
@@ -374,7 +373,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	/* Finish handshake. */
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
 
-	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x04X and 0x02X",
+	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x%04X and 0x%02X",
 		      net_ip_str (session->host), session->port,
 			  (int)seed_16, (int)seed_8);
 

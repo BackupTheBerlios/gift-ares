@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.5 2004/08/27 17:56:40 mkern Exp $
+ * $Id: as_packet.h,v 1.6 2004/09/01 15:51:36 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,6 +22,21 @@ typedef struct
 	size_t used;        /* used number of bytes relative to data */
 	size_t allocated;   /* allocated number of bytes */
 }ASPacket;
+
+typedef enum
+{
+	PACKET_SYN      = 0x5A,  /* first packet sent by connecting party */
+	PACKET_ACK      = 0x33,  /* first packet sent back by supernode */
+	PACKET_NODEINFO = 0x00,  /* info about our node */
+	PACKET_STATS    = 0x07,  /* network stats */
+	PACKET_LOCALIP  = 0x25,  /* local (external) IP */
+	PACKET_NICKNAME = 0x05,  /* your nickname */
+	PACKET_SHARE    = 0x32,  /* used to send shares to supernode, compressed! */
+	PACKET_SEARCH   = 0x09,  /* token search */
+	PACKET_LOCATE   = 0x50,  /* hash search */
+	PACKET_RESULT   = 0x12,  /* search result */
+	PACKET_NODELIST = 0x36,  /* list of index nodes? */
+} ASPacketType;
 
 /*****************************************************************************/
 
@@ -112,6 +127,10 @@ as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher);
  * at the beginning of the packet.
  */
 as_bool as_packet_decrypt(ASPacket *packet, ASCipher *cipher);
+
+/* Prepend the three-byte header (type and length). 
+ */
+as_bool as_packet_header(ASPacket *packet, ASPacketType type);
 
 /*****************************************************************************/
 

@@ -1,4 +1,4 @@
-CFLAGS=-g -Wall
+CFLAGS=-g -Wall -DDEBUG
 
 OBJECTS = \
 	as_ares.o \

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.6 2004/09/01 13:06:10 mkern Exp $
+ * $Id: as_session_man.c,v 1.7 2004/09/01 15:51:36 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -240,8 +240,38 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 	              man->connections, list_length (man->connected), 
 	              list_length (man->connecting));
 
+		send_nodeinfo (session);
+
 		return FALSE;
 	}
+
+	return TRUE;
+}
+
+#define CLIENT_NAME "aREs"
+
+static as_bool send_nodeinfo (ASSession *session)
+{
+	ASPacket *packet;
+
+	if (!(packet = as_packet_create ()))
+	{
+		AS_ERR ("Insufficient memory");
+		return FALSE;
+	}
+	
+	as_packet_put_8 (packet, 0x00);
+	as_packet_put_ustr (packet, "\x7c\xa7\x86\x36\x18\x54\xb7\xaa\xcc\xfd\xf4"
+			    "\xbe\x0f\x20\x6a\x5a\x6d\xe8\xd3\x08\x20\x92", 22); /* no idea */
+	as_packet_put_ustr (packet, "\x00\x00\x00\x04\x00\x00\xd6\x83\x00", 9); /* still no idea */
+	as_packet_put_ustr (packet, "0123456789abcdef", 16); /* GUID */
+	as_packet_put_le16 (packet, 0x00);
+	as_packet_put_ustr (packet, CLIENT_NAME, sizeof (CLIENT_NAME));
+	as_packet_put_be32 (packet, 0xc0a80080); /* our local IP */
+
+	as_packet_encrypt (packet, session->cipher);
+	as_packet_header (packet, PACKET_NODEINFO);
+	as_packet_send (packet, session->c);
 
 	return TRUE;
 }
@@ -249,6 +279,32 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 static as_bool session_packet_cb (ASSession *session, ASPacketType type,
                                   ASPacket *packet)
 {
+	switch (type)
+	{
+	case PACKET_LOCALIP:
+	{
+		in_addr_t ip;
+		ip = as_packet_get_be32 (packet);
+		AS_DBG_1 ("got local IP: %s", net_ip_str (ip)); 
+		break;
+	}
+
+	case PACKET_STATS:
+	{
+		unsigned int users, files, size;
+		users = as_packet_get_le32 (packet);
+		files = as_packet_get_le32 (packet);
+		size = as_packet_get_le32 (packet);
+		
+		printf ("got network stats: %d users, %d files, %d Gb\n",
+			users, files, size);
+		break;
+	}
+	default:
+		AS_WARN_1 ("got unknown packet 0x%x:", type);
+		as_packet_dump (packet);
+	}
+
 	return TRUE;
 }
 

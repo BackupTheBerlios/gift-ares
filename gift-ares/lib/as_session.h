@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.5 2004/09/01 10:30:18 mkern Exp $
+ * $Id: as_session.h,v 1.6 2004/09/01 15:51:36 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,14 +20,6 @@ typedef enum
 	SESSION_HANDSHAKING,  /* tcp connected, working out crypto */
 	SESSION_CONNECTED     /* session established */
 } ASSessionState;
-
-typedef enum
-{
-	PACKET_SYN   = 0x5A,  /* first packet sent by connecting party */
-	PACKET_ACK   = 0x33,  /* first packet sent back by supernode */
-	PACKET_SHARE = 0x32   /* used to send shares to supernode, compressed! */
-
-} ASPacketType;
 
 /*****************************************************************************/
 
