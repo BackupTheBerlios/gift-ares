@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.h,v 1.1 2004/08/26 22:50:23 mkern Exp $
+ * $Id: as_hashtable.h,v 1.2 2004/08/26 22:55:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,8 +45,8 @@ typedef struct as_hashtable_entry_t
 	void *val;
 
 	/* private */
-    unsigned int h;
-    struct as_hashtable_entry_t *next;
+	unsigned int h;
+	struct as_hashtable_entry_t *next;
 
 } ASHashTableEntry;
 
@@ -57,11 +57,11 @@ typedef as_bool (*ASHashTableForeachFunc) (ASHashTableEntry *entry,
 
 typedef struct as_hashtable_t
 {
-    unsigned int tablelength;
-    ASHashTableEntry **table;
-    unsigned int entrycount;
-    unsigned int loadlimit;
-    unsigned int primeindex;
+	unsigned int tablelength;
+	ASHashTableEntry **table;
+	unsigned int entrycount;
+	unsigned int loadlimit;
+	unsigned int primeindex;
 	ASHashTableHashFunc hashfn;
 	ASHashTableCmpFunc eqfn;
 
@@ -78,7 +78,7 @@ typedef struct as_hashtable_t
  */
 ASHashTable *as_hashtable_create (ASHashTableCmpFunc cmp_func,
                                   ASHashTableHashFunc hash_func,
-							      as_bool copy_keys);
+                                  as_bool copy_keys);
 
 /* Create new hash table which does a memcmp(a,b,key_len) for key comparisons
  * and uses a default hash function. If copy_keys is TRUE a copy of the key
