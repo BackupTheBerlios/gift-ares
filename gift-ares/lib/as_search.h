@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.6 2004/09/19 18:27:42 mkern Exp $
+ * $Id: as_search.h,v 1.7 2004/10/13 13:28:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,9 +23,11 @@ typedef enum
 typedef struct as_search_t ASSearch;
 
 /* Called for each result received. If result is NULL the search terminated
- * (possibly timed out).
+ * (possibly timed out). If duplicate is TRUE a result with the same hash was
+ * reported for this search before.
  */
-typedef void (*ASSearchResultCb) (ASSearch *search, ASResult *result);
+typedef void (*ASSearchResultCb) (ASSearch *search, ASResult *result,
+                                  as_bool duplicate);
 
 struct as_search_t
 {

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.18 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_download.c,v 1.19 2004/10/13 13:32:37 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -511,7 +511,8 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 
 /*****************************************************************************/
 
-static void search_result_cb (ASSearch *search, ASResult *result)
+static void search_result_cb (ASSearch *search, ASResult *result,
+                              as_bool duplicate)
 {
 	ASDownload *dl = search->udata;
 

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.32 2004/09/24 22:27:20 mkern Exp $
+ * $Id: cmd.c,v 1.33 2004/10/13 13:28:42 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -298,7 +298,7 @@ static as_bool meta_tag_itr (ASMetaTag *tag, void *udata)
 	return TRUE;
 }
 
-static void search_callback (ASSearch *search, ASResult *r)
+static void search_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 {
 	assert (search == test_search);
 

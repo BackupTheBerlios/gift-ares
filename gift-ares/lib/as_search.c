@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.10 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_search.c,v 1.11 2004/10/13 13:28:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -178,6 +178,7 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 void as_search_add_result (ASSearch *search, ASResult *result)
 {
 	List *head;
+	as_bool duplicate;
 
 	if (!result)
 	{
@@ -188,6 +189,8 @@ void as_search_add_result (ASSearch *search, ASResult *result)
 	{
 		/* find list of results for this hash if there is one */
 		head = as_search_get_results (search, result->hash);
+
+		duplicate = head ? TRUE : FALSE;
 
 		/* Link in this result or create list.
 		 * FIXME: Can optimize this by inserting as second link for multiple
@@ -216,7 +219,7 @@ void as_search_add_result (ASSearch *search, ASResult *result)
 	if (search->result_cb)
 	{
 		/* the callback may free the search */
-		search->result_cb (search, result);
+		search->result_cb (search, result, duplicate);
 	}
 }
 
