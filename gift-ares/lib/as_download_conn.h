@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.5 2004/09/10 18:01:45 mkern Exp $
+ * $Id: as_download_conn.h,v 1.6 2004/09/11 18:34:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -95,7 +95,7 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 /* Stop current download and disassociate from chunk and hash. Does not raise
  * callback. State is set to DOWNCONN_UNUSED. 
  */
-as_bool as_downconn_cancel (ASDownConn *conn);
+void as_downconn_cancel (ASDownConn *conn);
 
 /* Returns TRUE if connection is associated with a chunk. */
 as_bool as_downconn_in_use (ASDownConn *conn);

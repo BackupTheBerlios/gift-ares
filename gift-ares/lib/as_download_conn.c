@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.4 2004/09/10 18:01:45 mkern Exp $
+ * $Id: as_download_conn.c,v 1.5 2004/09/11 18:34:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -16,8 +16,24 @@ static as_bool downconn_request (ASDownConn *conn);
 static int downconn_http_callback (ASHttpClient *client,
                                    ASHttpClientCbCode code);
 
+/*****************************************************************************/
+
 static as_bool downconn_set_state (ASDownConn *conn, ASDownConnState state,
-                                   as_bool raise_callback);
+                                   as_bool raise_callback)
+{
+	conn->state = state;
+
+	if (raise_callback && conn->state_cb)
+		return conn->state_cb (conn, conn->state);
+
+	return TRUE;
+}
+
+static void downconn_reset (ASDownConn *conn)
+{
+	conn->chunk = NULL;
+	conn->hash = NULL;
+}
 
 /*****************************************************************************/
 
@@ -109,9 +125,8 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 			AS_ERR_2 ("UNSUPPORTED: tried to use firewalled source %s:%d",
 			          net_ip_str (conn->source->host), conn->source->port);
 
-			conn->chunk = NULL;
-			conn->hash  = NULL;
 			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+			downconn_reset (conn);
 			
 			return FALSE;
 #endif
@@ -127,30 +142,28 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 			AS_ERR_2 ("Failed to create http client for %s:%d",
 			          net_ip_str (conn->source->host), conn->source->port);
 
-			conn->chunk = NULL;
-			conn->hash  = NULL;
 			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+			downconn_reset (conn);
 
 			return FALSE;
 		}
 	}
 
-	/* set state to connecting and raise callback */
-	if (!downconn_set_state (conn, DOWNCONN_CONNECTING, TRUE))
-		return FALSE; /* connection was freed by callback */
-	
 	/* make request */
 	if (!downconn_request (conn))
 	{
 		AS_ERR_2 ("Failed to send http request to %s:%d",
 		          net_ip_str (conn->source->host), conn->source->port);
 
-		conn->chunk = NULL;
-		conn->hash = NULL;
-		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+		downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
+		downconn_reset (conn);
 
 		return FALSE;
 	}
+
+	/* set state to connecting and raise callback */
+	if (!downconn_set_state (conn, DOWNCONN_CONNECTING, TRUE))
+		return FALSE; /* connection was freed by callback */
 
 	return TRUE;
 }
@@ -158,16 +171,13 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash,
 /* Stop current download and disassociate from chunk and hash. Does not raise
  * callback. State is set to DOWNCONN_UNUSED. 
  */
-as_bool as_downconn_cancel (ASDownConn *conn)
+void as_downconn_cancel (ASDownConn *conn)
 {
 	if (conn->client)
 		as_http_client_cancel (conn->client);
 
-	conn->chunk = NULL;
-	conn->hash = NULL;
 	downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
-
-	return TRUE;
+	downconn_reset (conn);
 }
 
 /* Returns TRUE if connection is associated with a chunk. */
@@ -378,13 +388,11 @@ static as_bool handle_reply (ASHttpClient *client)
 		conn->queue_last_try = time (NULL);
 		conn->queue_next_try = conn->queue_last_try + retry * ESECONDS;
 
-		/* disassociate from chunk since the next request might be for a
-		 * different chunk
+		/* Disassociate from chunk since the next request might be for a
+		 * different chunk. Only do it if callback hasn't freed us.
 		 */
-		conn->chunk = NULL;
-		conn->hash  = NULL;
-		/* may free us */
-		downconn_set_state (conn, DOWNCONN_QUEUED, TRUE);
+		if (downconn_set_state (conn, DOWNCONN_QUEUED, TRUE))
+			downconn_reset (conn);
 
 		return TRUE; /* this will keep the connection open, with any luck */
 	}
@@ -396,11 +404,9 @@ static as_bool handle_reply (ASHttpClient *client)
 		break;
 	}
 
-	/* do not continue with request */
-	conn->chunk = NULL;
-	conn->hash  = NULL;
-	/* may free us */
-	downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+	/* Do not continue with request */
+	if (downconn_set_state (conn, DOWNCONN_FAILED, TRUE))
+		downconn_reset (conn);
 
 	return FALSE; /* abort request and close connection */
 }
@@ -417,10 +423,9 @@ static int downconn_http_callback (ASHttpClient *client,
 
 	case HTCL_CB_CONNECT_FAILED:
 	case HTCL_CB_REQUEST_FAILED:
-		conn->chunk = NULL;
-		conn->hash = NULL;
 		/* this may free us */
-		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
+		if (downconn_set_state (conn, DOWNCONN_FAILED, TRUE))
+			downconn_reset (conn);
 
 		return FALSE;
 
@@ -449,26 +454,12 @@ static int downconn_http_callback (ASHttpClient *client,
 				return FALSE; /* connection was free by callback */
 		}
 
-		conn->chunk = NULL;
-		conn->hash = NULL;
 		/* this may free us */
-		downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE);
+		if (downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE))
+			downconn_reset (conn);
 
 		return TRUE; /* try to keep connection alive */
 	}
-
-	return TRUE;
-}
-
-/*****************************************************************************/
-
-static as_bool downconn_set_state (ASDownConn *conn, ASDownConnState state,
-                                   as_bool raise_callback)
-{
-	conn->state = state;
-
-	if (raise_callback && conn->state_cb)
-		return conn->state_cb (conn, conn->state);
 
 	return TRUE;
 }

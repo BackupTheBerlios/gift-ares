@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.h,v 1.3 2004/09/10 18:04:46 mkern Exp $
+ * $Id: as_download_1.h,v 1.4 2004/09/11 18:34:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,6 +22,8 @@ typedef enum
 	DOWNLOAD_COMPLETE,   /* Download completed successfully. */
 	DOWNLOAD_FAILED      /* Download was fully transfered but hash check
 	                      * failed. */
+	DOWNLOAD_CANCELLED,  /* Download was cancelled. */
+	DOWNLOAD_VERIFYING   /* Download is being verified after downloading. */
 } ASDownloadState;
 
 typedef struct as_download_t ASDownload;
@@ -57,7 +59,9 @@ typedef struct as_download_t
 /* Create download. */
 ASDownload *as_download_create (ASDownloadStateCb state_cb);
 
-/* Stop and free download. */
+/* Stop and free download. Incomplete file is left in place and can be
+ * resumed.
+ */
 void as_download_free (ASDownload *dl);
 
 /*****************************************************************************/
@@ -71,10 +75,16 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
  */
 as_bool as_download_restart (ASDownload *dl, const char *filename);
 
+/* Cancels download and removes incomplete file. */
+as_bool as_download_cancel (ASDownload *dl);
+
 /* Pause download */
 as_bool as_download_pause (ASDownload *dl);
 
-/* Resume paused download */
+/* Queue download locally (effectively pauses it) */
+as_bool as_download_queue (ASDownload *dl);
+
+/* Resume download from paused or queued state */
 as_bool as_download_resume (ASDownload *dl);
 
 /* Returns current download state */

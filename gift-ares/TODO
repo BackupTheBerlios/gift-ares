@@ -7,4 +7,16 @@ lib
 - notify search manager of new sessions and resend searches until
   AS_SEARCH_SEND_COUNT is reached.
 
+- Add timer to download which regularly calls download_maintain in order to
+  the status of remotely queued sources.
+
+- Add AS_DOWNLOAD_MAX_ACTIVE_SOURCES which limits the number of active sources
+  per download.
+
+- Calculate average bandwidth for sources and use faster ones during end game.
+  Generally sort connection list by b/w so faster ones are always used first.
+
+- Make file hashing non-blocking.
+
+
 
