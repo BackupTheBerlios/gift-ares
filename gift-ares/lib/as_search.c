@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.16 2004/12/24 13:40:59 mkern Exp $
+ * $Id: as_search.c,v 1.17 2004/12/24 13:52:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -199,7 +199,7 @@ as_bool as_search_send (ASSearch *search, ASSession *session)
 	{
 		search->finish_timer = timer_add (AS_CONF_INT (AS_SEARCH_TIMEOUT) * SECONDS,
 		                                  (TimerCallback)finish_timer_func,
-		                                  timer);
+		                                  search);
 	}
 	
 	return TRUE;
@@ -242,7 +242,7 @@ void as_search_add_result (ASSearch *search, ASResult *result)
 
 	/* Don't add results to finished searches. */
 	if (search->finished)
-		return TRUE;
+		return;
 
 	if (!result)
 	{
