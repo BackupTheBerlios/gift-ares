@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.c,v 1.4 2004/09/13 01:01:18 mkern Exp $
+ * $Id: as_download_1.c,v 1.5 2004/09/13 13:40:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -109,6 +109,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
                            const char *filename)
 {
 	ASDownChunk *chunk;
+	struct stat st;
 
 	if (dl->state != DOWNLOAD_NEW)
 	{
@@ -124,9 +125,19 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 		return FALSE;
 	}
 
-	/* open file */
+	/* create incomplete file name */
 	dl->filename = stringf_dup ("%s%s", INCOMPLETE_PREFIX, filename);
 
+	/* make sure the file does not already exist */
+	if (stat (dl->filename, &st) != -1)
+	{
+		AS_ERR_1 ("Download file \"%s\" already exists.", dl->filename);
+		free (dl->filename);
+		dl->filename = NULL;
+		return FALSE;
+	}
+
+	/* open file */
 	if (!(dl->fp = fopen (dl->filename, "wb")))
 	{
 		AS_ERR_1 ("Unable to open download file \"%s\" for writing",
@@ -353,32 +364,35 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 		/* Chunk used by connection may not be in chunk list at this point.
 		 * See recalc_chunks. 
 		 */
-		AS_HEAVY_DBG_4 ("Connecting to %s:%d for chunk (%u,%u).",
+		AS_HEAVY_DBG_4 ("DOWNCONN_CONNECTING: %s:%d for chunk (%u,%u).",
 		                net_ip_str (conn->source->host), conn->source->port,
 		                chunk->start, chunk->size);
 		break;
 
 	case DOWNCONN_TRANSFERRING:
-		AS_HEAVY_DBG_4 ("Transfering chunk (%u,%u) from %s:%d.", chunk->start,
+		AS_HEAVY_DBG_4 ("DOWNCONN_TRANSFERRING: chunk (%u,%u) from %s:%d.", chunk->start,
 		                chunk->size, net_ip_str (conn->source->host),
 		                conn->source->port);
 		break;
 
 	case DOWNCONN_COMPLETE:
+		/* This happens if remote closes connection or number of requested
+		 * bytes are read.
+		 */
 		assert (chunk->received <= chunk->size);
 
-		AS_HEAVY_DBG_4 ("Chunk (%u,%u) from %s:%d complete.", chunk->start,
-		                chunk->size, net_ip_str (conn->source->host),
-		                conn->source->port);
+		AS_HEAVY_DBG_4 ("DOWNCONN_COMPLETE: Chunk (%u,%u), conn %s:%d.",
+		                chunk->start, chunk->size,
+		                net_ip_str (conn->source->host), conn->source->port);
 
 		disassociate_conn (conn);
 		download_maintain (dl);
 		break;
 
 	case DOWNCONN_FAILED:
-		AS_HEAVY_DBG_4 ("Chunk (%u,%u) from %s:%d failed.", chunk->start,
-		                chunk->size, net_ip_str (conn->source->host),
-		                conn->source->port);
+		AS_HEAVY_DBG_4 ("DOWNCONN_FAILED: Chunk (%u,%u), conn %s:%dd.",
+		                chunk->start, chunk->size,
+		                net_ip_str (conn->source->host), conn->source->port);
 
 		disassociate_conn (conn);
 		download_maintain (dl);
@@ -386,7 +400,7 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 
 	case DOWNCONN_QUEUED:
 
-		AS_HEAVY_DBG_4 ("Queued by %s:%d, pos: %d, length: %d.",
+		AS_HEAVY_DBG_4 ("DOWNCONN_QUEUED: %s:%d, pos: %d, length: %d.",
 		                net_ip_str (conn->source->host), conn->source->port,
 		                conn->queue_pos, conn->queue_len);
 
@@ -406,6 +420,7 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 {
 	ASDownload *dl = conn->udata1;
 	ASDownChunk *chunk = conn->udata2;
+	size_t write_len;
 
 	assert (len > 0);
 	assert (chunk);
@@ -422,22 +437,24 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 	}
 
 	/* make sure we are not writing past the chunk end */
-	if (len > chunk->size - chunk->received)
+	write_len = len;
+
+	if (write_len > chunk->size - chunk->received)
 	{
-		len = chunk->size - chunk->received;
+		write_len = chunk->size - chunk->received;
 		AS_HEAVY_DBG_1 ("Got more data than needed for chunk, truncated to %u.",
 		                len);
 	}
 
 	/* write the data */
-	if (fwrite (data, 1, len, dl->fp) != len)
+	if (fwrite (data, 1, write_len, dl->fp) != write_len)
 	{
 		AS_ERR_1 ("Write failed for download \"%s\". Pausing.", dl->filename);
 		as_download_pause (dl);	
 		return FALSE;
 	}
 
-	chunk->received += len;
+	chunk->received += write_len;
 	assert (chunk->received <= chunk->size);
 
 	/* chunk complete? */
@@ -447,18 +464,30 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 		                chunk->size, net_ip_str (conn->source->host),
 		                conn->source->port);
 
-		/* cancel connection and disassociate chunk */
+		/* Cancel connection if we cannot keep it open because there we got
+		 * or requested more data than the chunk needs. Otherwise just leave
+		 * and let DOWNCONN_COMPLETE reuse the connection.
+		 */
+		if (len != write_len ||
+		    conn->chunk_start + conn->chunk_size > chunk->start + chunk->size)
+		{
+			AS_HEAVY_DBG_2 ("Cancelling connection to %s:%d because chunk is"
+			                "complete before transfer end.",
+			                net_ip_str (conn->source->host),
+			                conn->source->port);
 
-/* FIXME: only cancel if we don't want connection to persist */
-		as_downconn_cancel (conn);
-		conn->udata2 = NULL;
-		chunk->udata = NULL;
+			as_downconn_cancel (conn);
 
-		/* clean up / start new connections / etc */
-		download_maintain (dl);
+			/* disassociate chunk */
+			conn->udata2 = NULL;
+			chunk->udata = NULL;
 
-		/* don't return TRUE after the connection might have been reused */
-		return FALSE;
+			/* clean up / start new connections / etc */
+			download_maintain (dl);
+
+			/* don't return TRUE after the connection might have been reused */
+			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -815,6 +844,23 @@ static void download_maintain (ASDownload *dl)
 		assert (0);
 		return;
 	}
+
+#if 1
+	{
+	List *l;
+	AS_HEAVY_DBG ("Chunk state after merging:");
+	for (l = dl->chunks; l; l = l->next)
+	{
+		ASDownChunk *chunk = l->data;
+		ASDownConn *conn = chunk->udata;
+
+		AS_HEAVY_DBG_5 ("Chunk: (%7u, %7u, %7u) conn %15s %s",
+		                chunk->start, chunk->size, chunk->received,
+						conn ? net_ip_str (conn->source->host) : "-",
+		                (chunk->received == chunk->size) ? " complete" : "");
+	}
+	}
+#endif
 
 	/* Is the download complete? */
 	if (((ASDownChunk *)dl->chunks->data)->received == dl->size)

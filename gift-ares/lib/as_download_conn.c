@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.6 2004/09/13 01:01:18 mkern Exp $
+ * $Id: as_download_conn.c,v 1.7 2004/09/13 13:40:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -340,6 +340,9 @@ static as_bool handle_reply (ASHttpClient *client)
 						   conn->chunk_size, stop - start + 1);
 			}
 
+			/* Reset fail count */
+			conn->fail_count = 0;
+
 			/* we are in business */
 			downconn_set_state (conn, DOWNCONN_TRANSFERRING, TRUE);
 
@@ -380,6 +383,9 @@ static as_bool handle_reply (ASHttpClient *client)
 		conn->queue_len = len;
 		conn->queue_last_try = time (NULL);
 		conn->queue_next_try = conn->queue_last_try + retry * ESECONDS;
+
+		/* Reset fail count */
+		conn->fail_count = 0;
 
 		/* Reset connection since the next request might be for a different
 		 * chunk.
@@ -461,14 +467,14 @@ static int downconn_http_callback (ASHttpClient *client,
 		if (client->data_len > 0 && conn->data_cb)
 		{
 			if (!conn->data_cb (conn, client->data, client->data_len))
-				return FALSE; /* connection was freed by callback */
+				return FALSE; /* connection was freed / reused  by callback */
 		}
 
 		downconn_reset (conn);
-		/* this may free us */
+		/* this may free or reuse us */
 		downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE);
 
-		return TRUE; /* try to keep connection alive */
+		return TRUE; /* return value is ignored by http client */
 	}
 
 	return TRUE;

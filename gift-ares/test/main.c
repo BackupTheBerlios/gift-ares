@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.10 2004/09/10 00:35:47 HEx Exp $
+ * $Id: main.c,v 1.11 2004/09/13 13:40:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -125,6 +125,7 @@ int main (int argc, char *argv[])
 	/* setup logging */
 	logger = as_logger_create ();
 	as_logger_add_output (logger, "stderr");
+	as_logger_add_output (logger, "ares.log");
 
 	AS_DBG ("Logging subsystem started");
 

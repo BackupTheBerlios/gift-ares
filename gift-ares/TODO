@@ -18,5 +18,13 @@ lib
 
 - Make file hashing non-blocking.
 
+- Create sources from X-Alt headers and add them
 
+- Check how Ares handles same file names for downloads and do the same.
+  Reverse _ARESTRA_ file appendix.
 
+- Parse node list packet
+
+- Does persisten http actually work? It seems remote closes connection on
+  second request.
+  Update: Saw it working a few times. So is it a remote problem?

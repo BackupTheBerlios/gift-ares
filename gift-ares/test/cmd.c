@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.18 2004/09/13 01:02:09 mkern Exp $
+ * $Id: cmd.c,v 1.19 2004/09/13 13:40:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -393,6 +393,8 @@ COMMAND_FUNC (clear)
 
 	as_searchman_remove (AS->searchman, test_search);
 	test_search = NULL;
+
+	printf ("Cleared search results.\n");
 
 	return TRUE;
 }

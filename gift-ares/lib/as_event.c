@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.14 2004/09/13 00:04:15 mkern Exp $
+ * $Id: as_event.c,v 1.15 2004/09/13 13:40:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -369,8 +369,10 @@ void input_remove_all (int fd)
 
 	if (!(ev = as_hashtable_lookup_int (input_table, (as_uint32) fd)))
 	{
+#if 0
 		AS_WARN_1 ("input_remove_all: Didn't find events for fd 0x%X in hash table",
 		           fd);
+#endif
 		return;
 	}
 

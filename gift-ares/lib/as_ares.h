@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.28 2004/09/13 01:01:18 mkern Exp $
+ * $Id: as_ares.h,v 1.29 2004/09/13 13:40:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -133,10 +133,10 @@ typedef int            as_bool;
 #define AS_DOWNLOAD_MAX_ACTIVE (6)
 
 /* Minimum chunk size in bytes */
-#define AS_DOWNLOAD_MIN_CHUNK_SIZE (64*1024)
+#define AS_DOWNLOAD_MIN_CHUNK_SIZE (128*1024)
 
 /* Number of request fails after which a source is removed */
-#define AS_DOWNLOAD_SOURCE_MAX_FAIL (3)
+#define AS_DOWNLOAD_SOURCE_MAX_FAIL (2)
 
 /*****************************************************************************/
 
