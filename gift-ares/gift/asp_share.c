@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.11 2004/12/30 08:43:03 hex Exp $
+ * $Id: asp_share.c,v 1.12 2005/01/07 20:28:26 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -115,6 +115,7 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 	ASRealm realm;
 	Hash *hash;
 	ASHash *ashash;
+	char *host_path;
 
 	/* Get realm from file extension like ares does. */
 	realm = as_meta_realm_from_filename (share->path);
@@ -138,8 +139,16 @@ BOOL asp_giftcb_share_add (Protocol *p, Share *share, void *data)
 		return FALSE;
 	}
 
+	host_path = file_host_path (share->path);
+
+	assert (host_path);
+
 	/* Create ares share object. */
-	if (!(ashare = as_share_create (share->path, ashash, meta, share->size, realm)))
+	ashare = as_share_create (host_path, ashash, meta, share->size, realm);
+
+	free (host_path);
+
+	if (!ashare)
 	{
 		AS_ERR_1 ("Couldn't create ares share object for '%s'.", share->path);
 		as_meta_free (meta);
