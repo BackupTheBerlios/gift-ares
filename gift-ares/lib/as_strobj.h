@@ -1,5 +1,5 @@
 /*
- * $Id: as_strobj.h,v 1.2 2004/09/03 20:03:21 HEx Exp $
+ * $Id: as_strobj.h,v 1.3 2004/11/20 10:22:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,7 +35,7 @@ char *string_finish_keep (String *sobj);
 
 /*****************************************************************************/
 
-/* Create string object. Always call with string_new (NULL, 0, 0, FALSE) */
+/* Create string object. Always call with string_new (NULL, 0, 0, TRUE) */
 String *string_new (char *str, int alloc, int len, as_bool can_resize);
 
 /* free string object and str data */

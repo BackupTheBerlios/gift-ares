@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.6 2004/11/19 21:16:34 HEx Exp $
+ * $Id: as_http_server.c,v 1.7 2004/11/20 10:22:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -232,7 +232,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 
 	/* get us a buffer */
 	if (!servcon->buf)
-		servcon->buf = string_new (NULL, 0, 0, FALSE);
+		servcon->buf = string_new (NULL, 0, 0, TRUE);
 
 	/* read a chunk */
 	if ((len = tcp_recv (servcon->tcpcon, buf, sizeof (buf))) <= 0)
@@ -327,13 +327,14 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 				   net_ip_str (servcon->remote_ip));
 
 		tcp_close_null (&servcon->tcpcon);
+		string_free (servcon->buf);
 		free (servcon);
 		return;
 	}
 
 	/* get us a buffer */
 	if (!servcon->buf)
-		servcon->buf = string_new (NULL, 0, 0, FALSE);
+		servcon->buf = string_new (NULL, 0, 0, TRUE);
 
 	/* read a chunk */
 	if ((len = tcp_recv (servcon->tcpcon, buf, sizeof (buf))) <= 0)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.8 2004/10/23 09:23:50 mkern Exp $
+ * $Id: as_search_result.c,v 1.9 2004/11/20 10:22:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -129,7 +129,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		else
 		{
 			/* attempt to reconstruct from other tags */
-			String *filename = string_new (NULL, 0, 0, FALSE);
+			String *filename = string_new (NULL, 0, 0, TRUE);
 
 			const unsigned char *artist = as_meta_get_tag (r->meta, "artist");
 			const unsigned char *title  = as_meta_get_tag (r->meta, "title");
