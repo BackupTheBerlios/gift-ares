@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.2 2004/12/05 01:55:07 hex Exp $
+ * $Id: asp_plugin.c,v 1.3 2004/12/05 02:46:30 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -170,8 +170,6 @@ static BOOL config_refresh (Config *conf)
 		{
 			char *val = (char *)config_get_str (conf, name);
 
-			AS_WARN_3 ("name=%s val=%s type=%d", name, val,
-				   as_config_get_type (AS->config, i));
 			if (val)
 			{
 				switch (as_config_get_type (AS->config, i))
@@ -190,8 +188,10 @@ static BOOL config_refresh (Config *conf)
 		}
 	}
 
-	return TRUE;
+	return TRUE; /* reset */
 }
+
+static timer_id conf_timer = INVALID_TIMER;
 
 static void config_init (void)
 {
@@ -202,6 +202,15 @@ static void config_init (void)
 	}
 
 	config_refresh (gift_config);
+
+	conf_timer = timer_add (2 * MINUTES, (TimerCallback)config_refresh, gift_config);
+}
+
+static void config_destroy (void)
+{
+	timer_remove_zero (&conf_timer);
+
+	config_free (gift_config);
 }
 
 /*****************************************************************************/
@@ -262,6 +271,8 @@ static void asp_giftcb_destroy (Protocol *proto)
 		AS_WARN_1 ("Failed to save nodes file to '%s'", 
 		           gift_conf_path ("Ares/nodes"));
 	}
+
+	config_destroy ();
 
 	/* Stop library. */
 	if (!as_stop (AS))
