@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.17 2004/11/06 18:08:17 mkern Exp $
+ * $Id: as_ares.c,v 1.18 2004/12/19 18:54:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -91,16 +91,17 @@ as_bool as_init ()
 	}
 
 	/* Start in defined state so as_cleanup works right. */
-	AS->config    = NULL;
-	AS->nodeman   = NULL;
-	AS->sessman   = NULL;
-	AS->netinfo   = NULL;
-	AS->searchman = NULL;
-	AS->downman   = NULL;
-	AS->upman     = NULL;
-	AS->pushman   = NULL;
-	AS->shareman  = NULL;
-	AS->server    = NULL;
+	AS->config       = NULL;
+	AS->nodeman      = NULL;
+	AS->sessman      = NULL;
+	AS->netinfo      = NULL;
+	AS->searchman    = NULL;
+	AS->downman      = NULL;
+	AS->upman        = NULL;
+	AS->pushman      = NULL;
+	AS->pushreplyman = NULL;
+	AS->shareman     = NULL;
+	AS->server       = NULL;
 
 	/* Create config first so rest can use it. */
 	if (!(AS->config = as_config_create ()))
@@ -183,6 +184,13 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+	if (!(AS->pushreplyman = as_pushreplyman_create ()))
+	{
+		AS_ERR ("Failed to create push reply manager");
+		as_cleanup ();
+		return FALSE;
+	}
+
 	if (!(AS->downman = as_downman_create ()))
 	{
 		AS_ERR ("Failed to create download manager");
@@ -212,6 +220,7 @@ as_bool as_cleanup ()
 	as_upman_free (AS->upman);
 	as_downman_free (AS->downman);
 	as_pushman_free (AS->pushman); /* Don't free before downman */
+	as_pushreplyman_free (AS->pushreplyman);
 	as_searchman_free (AS->searchman);
 	as_shareman_free (AS->shareman);
 	as_sessman_free (AS->sessman);

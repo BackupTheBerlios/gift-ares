@@ -28,8 +28,6 @@ Features:
 
 Optimizations:
 
-- What are those pesky 0x08 packets? Push requests we should handle?
-
 - Optimize chunking by only allocating new chunk after the tcp connection to a
   new source has been established. Requires major rewrites, maybe we can do
   this once we use binary requests.

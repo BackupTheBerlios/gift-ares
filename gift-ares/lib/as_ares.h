@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.57 2004/12/18 15:19:56 hex Exp $
+ * $Id: as_ares.h,v 1.58 2004/12/19 18:54:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -256,8 +256,11 @@ typedef struct
 	/* upload manager */
 	ASUpMan *upman;
 
-	/* push manager */
+	/* manager for pushes we requested */
 	ASPushMan *pushman;
+
+	/* manager for pushes we make to other hosts */
+	ASPushReplyMan *pushreplyman;
 
 	/* share manager */
 	ASShareMan *shareman;
