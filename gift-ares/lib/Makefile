@@ -6,6 +6,7 @@ OBJECTS = \
 	as_hashtable.o \
 	as_parse.o \
 	as_strobj.o \
+	as_file.o \
 	as_log.o \
 	as_event.o \
 	as_tcp.o \

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.36 2004/09/16 15:45:32 HEx Exp $
+ * $Id: as_ares.h,v 1.37 2004/09/16 18:24:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -74,6 +74,7 @@ typedef int            as_bool;
 #include "as_hashtable.h"
 #include "as_parse.h"
 #include "as_strobj.h"
+#include "as_file.h"
 #include "as_log.h"
 #include "as_event.h"
 #include "as_tcp.h"

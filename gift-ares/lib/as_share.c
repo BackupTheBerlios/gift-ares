@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.5 2004/09/16 17:47:31 HEx Exp $
+ * $Id: as_share.c,v 1.6 2004/09/16 18:24:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,28 +11,8 @@
 
 /***********************************************************************/
 
-/* [insert obligatory rant here] */
-#ifdef WIN32
-#define DIRSEP "/\\"
-#else
-#define DIRSEP "/"
-#endif
-
-static char *get_filename (char *path)
-{
-	char *name = path;
-	size_t n;
-
-	/* gah, strrcspn() doesn't exist, so we have to cobble
-	 * something else together */
-	while (name[n = strcspn (name, DIRSEP)])
-		name += n + 1;
-
-	return name;
-}
-
 ASShare *as_share_new (char *path, ASHash *hash, ASMeta *meta,
-		    size_t size, ASRealm realm)
+                       size_t size, ASRealm realm)
 {
 	ASShare *share = malloc (sizeof (ASShare));
 	char    *filename;
@@ -40,7 +20,7 @@ ASShare *as_share_new (char *path, ASHash *hash, ASMeta *meta,
 	if (!share)
 		return NULL;
 	
-	filename = get_filename (path);
+	filename = as_get_filename (path);
 	share->path  = strdup (path);
 	share->ext   = strrchr (filename, '.');
 	share->size  = size;
@@ -149,7 +129,7 @@ ASPacket *as_share_packet (ASShare *share)
 #if 0
 int main (int argc, char *argv[])
 {
-	printf("%s\n", get_filename (argv[1]));
+	printf("%s\n", as_get_filename (argv[1]));
 
 	return 0;
 }

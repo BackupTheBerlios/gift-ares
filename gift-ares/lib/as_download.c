@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.12 2004/09/16 17:01:13 mkern Exp $
+ * $Id: as_download.c,v 1.13 2004/09/16 18:24:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -40,6 +40,7 @@ static as_bool consolidate_chunks (ASDownload *dl);
 static void download_maintain (ASDownload *dl);
 static as_bool maintenance_timer_func (ASDownload *dl);
 
+static char *get_available_filename (const char *filename);
 static as_bool download_failed (ASDownload *dl);
 static as_bool download_complete (ASDownload *dl);
 static as_bool download_finished (ASDownload *dl);
@@ -139,7 +140,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
                            const char *filename)
 {
 	ASDownChunk *chunk;
-	struct stat st;
+	char *incomplete;
 
 	if (dl->state != DOWNLOAD_NEW)
 	{
@@ -156,16 +157,18 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 	}
 
 	/* create incomplete file name */
-	dl->filename = stringf_dup ("%s%s", INCOMPLETE_PREFIX, filename);
+	incomplete = stringf_dup ("%s%s", INCOMPLETE_PREFIX, filename);
 
-	/* make sure the file does not already exist */
-	if (stat (dl->filename, &st) != -1)
+	/* find a name which is not used already */
+	if (!(dl->filename = get_available_filename (incomplete)))
 	{
-		AS_ERR_1 ("Download file \"%s\" already exists.", dl->filename);
-		free (dl->filename);
-		dl->filename = NULL;
+		AS_ERR_1 ("Couldn't find available file name for download \"%s\"",
+		          dl->filename);
+		free (incomplete);
 		return FALSE;
 	}
+
+	free (incomplete);
 
 	/* open file */
 	if (!(dl->fp = fopen (dl->filename, "w+b")))
@@ -219,8 +222,6 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
  */
 as_bool as_download_restart (ASDownload *dl, const char *filename)
 {
-	struct stat st;
-
 	if (dl->state != DOWNLOAD_NEW)
 	{
 		assert (dl->state == DOWNLOAD_NEW);
@@ -237,7 +238,7 @@ as_bool as_download_restart (ASDownload *dl, const char *filename)
 	dl->filename = strdup (filename);
 
 	/* make sure the file exists */
-	if (stat (dl->filename, &st) != 0 || !S_ISREG (st.st_mode))
+	if (!as_file_exists (dl->filename))
 	{
 		AS_ERR_1 ("Incomplete file \"%s\" does not exist.", dl->filename);
 		free (dl->filename);
@@ -1201,6 +1202,42 @@ static as_bool maintenance_timer_func (ASDownload *dl)
 
 /*****************************************************************************/
 
+/* Returns filename which is not yet used. Caller frees result. */
+static char *get_available_filename (const char *filename)
+{
+	char *ext, *uniq, *name;
+	int i = 0;
+
+	if (!filename)
+		return NULL;
+
+	name = strdup (filename);
+
+	if ((ext = strrchr (name, '.')))
+		*ext++ = 0;
+
+	/* start with original name */
+	uniq = stringf_dup ("%s.%s", name, ext);
+
+	/* find a free filename */
+	while (as_file_exists (uniq))
+	{
+		free (uniq);
+
+		if ((++i) == 1000)
+		{
+			free (name);
+			return NULL;
+		}
+
+		uniq = stringf_dup ("%s(%d).%s", name, i, ext);
+	}
+
+	free (name);
+
+	return uniq;
+}
+
 static as_bool download_failed (ASDownload *dl)
 {
 	AS_DBG_1 ("Failed download \"%s\"", dl->filename);
@@ -1244,39 +1281,30 @@ static as_bool download_complete (ASDownload *dl)
 	/* rename complete file to not include the prefix. */
 	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
 	{
-		char *completed_name = dl->filename + strlen (INCOMPLETE_PREFIX);
-		char *new_name = strdup (completed_name);
-		int i = 0;
-		struct stat st;
-
-		/* find a free filename and rename to that */
-		while (1)
+		char *complete_name = dl->filename + strlen (INCOMPLETE_PREFIX);
+		char *uniq_name;
+	
+		if ((uniq_name = get_available_filename (complete_name)))
 		{
-			/* rename file if name is available */
-			if (stat (new_name, &st) < 0)
+			if (rename (dl->filename, uniq_name) >= 0)
 			{
-				if (rename (dl->filename, new_name) >= 0)
-				{
-					AS_DBG_2 ("Moved complete file \"%s\" to \"%s\"",
-					          dl->filename, new_name);
+				AS_DBG_2 ("Moved complete file \"%s\" to \"%s\"",
+				          dl->filename, uniq_name);
 
-					/* update download filename */
-					free (dl->filename);
-					dl->filename = new_name;
-					break;
-				}
+				/* update download filename */
+				free (dl->filename);
+				dl->filename = uniq_name;
 			}
-
-			free (new_name);
-
-			if (++i == 100)
+			else
 			{
-				AS_ERR_2 ("Renaming of \"%s\" still failed after %d tries",
-				          dl->filename, i);
-				break;
+				AS_ERR_2 ("Renaming file from \"%s\" to \"%s\" failed.",
+				          dl->filename, uniq_name);
+				free (uniq_name);
 			}
-
-			new_name = stringf_dup ("%s.%d", completed_name, i);
+		}
+		else
+		{
+			AS_ERR_1 ("No unique name found for \"%s\"", dl->filename);
 		}
 	}
 	else

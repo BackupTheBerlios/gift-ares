@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.18 2004/09/16 16:52:45 mkern Exp $
+# $Id: Makefile.msvc,v 1.19 2004/09/16 18:24:46 mkern Exp $
 
 
 !include ../Make.msvc
@@ -13,6 +13,7 @@ OBJECTS = \
 	as_hashtable$(O) \
 	as_parse$(O) \
 	as_strobj$(O) \
+	as_file$(O) \
 	as_log$(O) \
 	as_tcp$(O) \
 	as_ares$(O) \
@@ -40,7 +41,8 @@ OBJECTS = \
 	as_download_state$(O) \
 	as_download$(O) \
 	as_incoming$(O) \
-	as_share$(O)
+	as_share$(O) \
+	as_share_man$(O)
 	
 
 all: $(OBJECTS)
