@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.5 2004/09/07 13:14:04 mkern Exp $
+ * $Id: as_ares.c,v 1.6 2004/09/07 18:30:02 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,9 +49,20 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+	if (!(AS->netinfo = as_netinfo_create ()))
+	{
+		AS_ERR ("Failed to create network info");
+		as_sessman_free (AS->sessman);
+		as_nodeman_free (AS->nodeman);
+		free (AS);
+		AS = NULL;
+		return FALSE;
+	}
+
 	if (!(AS->searchman = as_searchman_create ()))
 	{
 		AS_ERR ("Failed to create search manager");
+		as_netinfo_free (AS->netinfo);
 		as_sessman_free (AS->sessman);
 		as_nodeman_free (AS->nodeman);
 		free (AS);
@@ -72,6 +83,7 @@ as_bool as_cleanup ()
 	AS_DBG ("Cleaning up Ares library...");
 
 	as_searchman_free (AS->searchman);
+	as_netinfo_free (AS->netinfo);
 	as_sessman_free (AS->sessman);
 	as_nodeman_free (AS->nodeman);
 

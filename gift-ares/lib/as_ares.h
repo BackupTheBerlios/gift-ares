@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.22 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_ares.h,v 1.23 2004/09/07 18:30:02 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -81,6 +81,7 @@ typedef int            as_bool;
 #include "as_node_man.h"
 #include "as_session.h"
 #include "as_session_man.h"
+#include "as_netinfo.h"
 #include "as_source.h"
 #include "as_meta.h"
 #include "as_tokenize.h"
@@ -124,6 +125,9 @@ typedef struct
 
 	/* session manager */
 	ASSessMan *sessman;
+
+	/* network info */
+	ASNetInfo *netinfo;
 
 	/* search manager */
 	ASSearchMan *searchman;

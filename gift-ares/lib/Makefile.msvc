@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.11 2004/09/07 13:14:04 mkern Exp $
+# $Id: Makefile.msvc,v 1.12 2004/09/07 18:30:02 mkern Exp $
 
 
 !include ../Make.msvc
@@ -26,6 +26,7 @@ OBJECTS = \
 	as_node_man$(O) \
 	as_session$(O) \
 	as_session_man$(O) \
+	as_netinfo$(O) \
 	as_source$(O) \
 	as_tokenize$(O) \
 	as_search_result$(O) \

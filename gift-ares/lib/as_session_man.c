@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.21 2004/09/07 15:57:57 mkern Exp $
+ * $Id: as_session_man.c,v 1.22 2004/09/07 18:30:02 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -308,30 +308,18 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 	switch (type)
 	{
 	case PACKET_LOCALIP:
-	{
-		in_addr_t ip;
-		ip = as_packet_get_ip (packet);
-		AS_DBG_1 ("Got local IP: %s", net_ip_str (ip)); 
+		as_netinfo_handle_ip (AS->netinfo, session, packet);
 		break;
-	}
 
 	case PACKET_STATS:
 	case PACKET_STATS2:
-	{
-		unsigned int users, files, size;
-		users = as_packet_get_le32 (packet);
-		files = as_packet_get_le32 (packet);
-		size = as_packet_get_le32 (packet);
-		
-		AS_DBG_3 ("Got network stats: %d users, %d files, %d Gb\n",
-		          users, files, size);
+		as_netinfo_handle_stats (AS->netinfo, session, packet);
 		break;
-	}
+
 	case PACKET_RESULT:
-	{
 		as_searchman_result (AS->searchman, session, packet);
 		break;
-	}
+
 	case PACKET_NICKNAME:
 	{
 		unsigned char *nick;

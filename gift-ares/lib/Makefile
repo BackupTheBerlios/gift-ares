@@ -20,6 +20,7 @@ OBJECTS = \
 	as_node.o \
 	as_node_man.o \
 	as_meta.o \
+	as_netinfo.o \
 	as_source.o \
 	as_tokenize.o \
 	as_search_result.o \
