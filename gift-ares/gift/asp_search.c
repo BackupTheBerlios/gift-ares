@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ * $Id: asp_search.c,v 1.2 2004/12/04 19:39:42 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -72,8 +72,7 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 	Share *share;
 	char *url;
 
-	if (!r->filename)
-		return;
+	AS_DBG ("search result");
 
 	/* Create a share object for giFT. */
 	if (!(share = share_new (NULL)))
@@ -81,12 +80,18 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 
 	share->p    = PROTO;
 	share->size = r->filesize;
-	share_set_path (share, r->filename);
-	share_set_mime (share, mime_type (r->filename));
+
+	if (r->filename)
+	{
+		share_set_path (share, r->filename);
+		share_set_mime (share, mime_type (r->filename));
+	}
+
 	share_set_hash (share, "SHA1", r->hash->data, AS_HASH_SIZE, FALSE);
 
 	/* Add meta data. */
-	as_meta_foreach_tag (r->meta, (ASMetaForeachFunc)meta_to_gift, share);
+	if (r->meta)
+		as_meta_foreach_tag (r->meta, (ASMetaForeachFunc)meta_to_gift, share);
 
 	/* Create the url giFT will pass back to us on download. */
 	if (!(url = as_source_serialize (r->source)))
@@ -163,10 +168,34 @@ BOOL asp_giftcb_browse (Protocol *p, IFEvent *event, char *user, char *node)
 }
 
 /* Called by giFT to locate file. */
-BOOL asp_giftcb_locate (Protocol *p, IFEvent *event, char *htype, char *hstr)
+int asp_giftcb_locate (Protocol *p, IFEvent *event, char *htype, char *hstr)
 {
-	/* TODO */
-	return FALSE;
+        ASSearch *search;
+        ASHash *hash;
+
+	AS_DBG_2 (" locate: '%s' '%s'", htype, hstr);
+
+        if (!htype || !hstr)
+                return FALSE;
+
+	if (gift_strcasecmp (htype, "SHA1"))
+		return FALSE;
+
+	if (!(hash = as_hash_decode (hstr)))
+	{
+		AS_DBG_1 ("malformed hash '%s'", hash);
+		return FALSE;
+	}
+
+	search = as_searchman_locate (AS->searchman,
+				      (ASSearchResultCb) result_callback,
+				      hash);
+
+	search->udata = event;
+
+	as_hash_free (hash);
+
+	return TRUE;
 }
 
 /* Called by giFT to cancel search/locate/browse. */
