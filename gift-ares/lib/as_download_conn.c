@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.19 2005/01/07 20:35:49 mkern Exp $
+ * $Id: as_download_conn.c,v 1.20 2005/01/20 16:06:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -373,7 +373,7 @@ static as_bool downconn_request (ASDownConn *conn)
 	assert (conn->chunk_size > 0);
 	start = conn->chunk_start;
 	end   = conn->chunk_start + conn->chunk_size - 1;
-	assert (start < end);
+	assert (start <= end); /* start == end is valid since it gets one byte */
 
 	snprintf(buf, sizeof (buf), "bytes=%u-%u", start, end);
 	as_http_header_set_field (request, "Range", buf);
