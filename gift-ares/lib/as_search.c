@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.6 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_search.c,v 1.7 2004/09/07 16:01:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -206,7 +206,7 @@ void as_search_add_result (ASSearch *search, ASResult *result)
 
 		/* and insert/update the hash table since head has changed */
 		if (!as_hashtable_insert (search->results, result->hash->data,
-		                          AS_HASH_SIZE, result))
+		                          AS_HASH_SIZE, head))
 		{
 			AS_ERR ("Hashtable insert failed for search result");
 			/* Remove link from front leaving the list in the same state it

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_result.c,v 1.4 2004/09/07 15:57:57 mkern Exp $
+ * $Id: as_search_result.c,v 1.5 2004/09/07 16:01:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -117,7 +117,7 @@ static as_bool result_parse (ASResult *r, ASPacket *packet)
 		r->meta = as_meta_parse_result (packet, r->realm);
 
 		/* get filename from meta data as special case */
-		if ((r->filename = as_meta_get_tag (r->meta, "filename")))
+		if ((r->filename = (char *)as_meta_get_tag (r->meta, "filename")))
 		{
 			r->filename = strdup (r->filename);
 			as_meta_remove_tag (r->meta, "filename");
