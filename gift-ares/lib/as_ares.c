@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.7 2004/09/14 00:57:42 HEx Exp $
+ * $Id: as_ares.c,v 1.8 2004/09/14 01:18:25 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,27 +49,6 @@ as_bool as_init ()
 		return FALSE;
 	}
 
-	if (!(AS->netinfo = as_netinfo_create ()))
-	{
-		AS_ERR ("Failed to create network info");
-		as_sessman_free (AS->sessman);
-		as_nodeman_free (AS->nodeman);
-		free (AS);
-		AS = NULL;
-		return FALSE;
-	}
-
-	if (!(AS->searchman = as_searchman_create ()))
-	{
-		AS_ERR ("Failed to create search manager");
-		as_netinfo_free (AS->netinfo);
-		as_sessman_free (AS->sessman);
-		as_nodeman_free (AS->nodeman);
-		free (AS);
-		AS = NULL;
-		return FALSE;
-	}
-
 	if (AS_LISTEN_PORT)
 	{
 		if (!(AS->server = as_http_server_create (
@@ -87,6 +66,29 @@ as_bool as_init ()
 	{
 		AS->server = NULL;
 		AS_WARN ("HTTP server not started (no port set)");
+	}
+
+	if (!(AS->netinfo = as_netinfo_create ()))
+	{
+		AS_ERR ("Failed to create network info");
+		as_http_server_free (AS->server);
+		as_sessman_free (AS->sessman);
+		as_nodeman_free (AS->nodeman);
+		free (AS);
+		AS = NULL;
+		return FALSE;
+	}
+
+	if (!(AS->searchman = as_searchman_create ()))
+	{
+		AS_ERR ("Failed to create search manager");
+		as_http_server_free (AS->server);
+		as_netinfo_free (AS->netinfo);
+		as_sessman_free (AS->sessman);
+		as_nodeman_free (AS->nodeman);
+		free (AS);
+		AS = NULL;
+		return FALSE;
 	}
 
 	return TRUE;

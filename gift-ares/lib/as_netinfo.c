@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.1 2004/09/07 18:30:02 mkern Exp $
+ * $Id: as_netinfo.c,v 1.2 2004/09/14 01:18:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,6 +23,7 @@ ASNetInfo *as_netinfo_create ()
 	info->files      = 0;
 	info->size       = 0;
 	info->outside_ip = 0;
+	info->port       = AS->server ? AS->server->port : 0;
 
 	return info;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.7 2004/09/13 13:40:04 mkern Exp $
+ * $Id: as_download_conn.c,v 1.8 2004/09/14 01:18:26 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -217,7 +217,7 @@ static void set_header_b6mi (ASHttpHeader *request, ASSource *source)
 
 	/* our IP and port */
 	as_packet_put_ip (p, AS->netinfo->outside_ip);
-	as_packet_put_le16 (p, 0xDEAD); /* FIXME */
+	as_packet_put_le16 (p, AS->netinfo->port);
 
 	/* and our supernode's (use the one we got the result from) */
 	as_packet_put_ip (p, source->parent_host);
