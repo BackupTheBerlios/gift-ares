@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.8 2004/09/16 23:36:14 HEx Exp $
+ * $Id: as_share.c,v 1.9 2004/09/17 21:00:33 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -126,6 +126,7 @@ ASPacket *as_share_packet (ASShare *share)
 	as_packet_free (tokens);
 	
 	as_packet_put_le32 (p, 0); /* bitrate */
+	as_packet_put_le32 (p, 0); /* frequency */
 	as_packet_put_le32 (p, 0); /* duration */
 	as_packet_put_8 (p, share->realm); /* realm */
 	as_packet_put_le32 (p, share->size); /* filesize */
