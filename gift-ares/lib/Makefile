@@ -1,5 +1,5 @@
 #CFLAGS=-O2 -Wall
-CFLAGS= -g -Wall -DDEBUG -DHEAVY_DEBUG
+CFLAGS= -g3 -Wall -DDEBUG #-DHEAVY_DEBUG
 
 OBJECTS = \
 	as_list.o \
@@ -31,7 +31,8 @@ OBJECTS = \
 	as_http_server.o \
 	as_download_chunk.o \
 	as_download_conn.o \
-	as_download_1.o
+	as_download_1.o \
+	as_incoming.o
 
 #	as_download.o
 

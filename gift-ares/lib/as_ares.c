@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.6 2004/09/07 18:30:02 mkern Exp $
+ * $Id: as_ares.c,v 1.7 2004/09/14 00:57:42 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -70,6 +70,25 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+	if (AS_LISTEN_PORT)
+	{
+		if (!(AS->server = as_http_server_create (
+			      AS_LISTEN_PORT,
+			      (ASHttpServerRequestCb)NULL,
+			      (ASHttpServerPushCb)as_incoming_push,
+			      (ASHttpServerBinaryCb)NULL
+			      )))
+		{
+			AS_ERR_1 ("Failed to create server on port %d",
+				  AS_LISTEN_PORT);
+		}
+	}
+	else
+	{
+		AS->server = NULL;
+		AS_WARN ("HTTP server not started (no port set)");
+	}
+
 	return TRUE;
 }
 
@@ -86,6 +105,7 @@ as_bool as_cleanup ()
 	as_netinfo_free (AS->netinfo);
 	as_sessman_free (AS->sessman);
 	as_nodeman_free (AS->nodeman);
+	as_http_server_free (AS->server);
 
 	free (AS);
 	AS = NULL;

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.30 2004/09/13 17:09:13 mkern Exp $
+ * $Id: as_ares.h,v 1.31 2004/09/14 00:57:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -95,6 +95,7 @@ typedef int            as_bool;
 #include "as_download_chunk.h"
 #include "as_download_conn.h"
 #include "as_download_1.h"
+#include "as_incoming.h"
 
 /*
 #include "as_download.h"
@@ -107,6 +108,9 @@ typedef int            as_bool;
 
 /* User name. TODO: get from config system. */
 #define AS_USER_NAME "antares"
+
+/* Port to listen on. */
+#define AS_LISTEN_PORT 59049
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
@@ -157,6 +161,8 @@ typedef struct
 	/* search manager */
 	ASSearchMan *searchman;
 
+	/* HTTP (and other stuff) server */
+	ASHttpServer *server;
 } ASInstance;
 
 /*****************************************************************************/

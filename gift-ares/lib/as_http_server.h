@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.h,v 1.1 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_http_server.h,v 1.2 2004/09/14 00:57:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -37,7 +37,7 @@ typedef int (*ASHttpServerRequestCb)(ASHttpServer *server, TCPC *tcpcon,
 
 /* called when a push request is received */
 typedef int (*ASHttpServerPushCb)(ASHttpServer *server, TCPC *tcpcon,
-                                  unsigned int push_id);
+                                  String *buf);
 
 /* called for anything else, most likely a fasttrack session attempt */
 typedef int (*ASHttpServerBinaryCb)(ASHttpServer *server, TCPC *tcpcon);

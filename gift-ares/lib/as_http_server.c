@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.2 2004/09/04 18:21:51 mkern Exp $
+ * $Id: as_http_server.c,v 1.3 2004/09/14 00:57:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -179,8 +179,7 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 	}
 
 /* FIXME: Ares push support */
-#if 0
-	else if (!strcmp (buf, "GIVE"))
+	else if (!strcmp (buf, "PUSH"))
 	{
 		AS_HEAVY_DBG_2 ("connection from %s is a push reply [%s]",
 		                 net_ip_str (servcon->remote_ip), buf);
@@ -188,7 +187,6 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
 				   (InputCallback)server_push, HTSV_REQUEST_TIMEOUT);
 	}
-#endif
 
 	else if (!strcmp (buf, "CHAT"))
 	{
@@ -318,9 +316,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 static void server_push (int fd, input_id input, ServCon *servcon)
 {
 	unsigned char buf[1024];
-	char *p;
 	int len;
-	unsigned int push_id; 
 
 	input_remove (input);
 
@@ -364,7 +360,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 	len = servcon->buf->len;
 
 	/* check if we got entire header */
-	if (strstr (servcon->buf->str, "\r\n") == NULL)
+	if (strstr (servcon->buf->str, "\n") == NULL)
 	{
 		if (len > HTSV_MAX_REQUEST_LEN)
 		{
@@ -392,17 +388,12 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 					 net_ip_str(servcon->remote_ip), servcon->buf->str);
 #endif
 
-	/* parse push reply */
-	p = servcon->buf->str;
-	string_sep (&p, " "); /* skip "GIVE " */
-	push_id = gift_strtol (p);
-
 	/* raise callback */
 	if (!servcon->server->push_cb ||
-		!servcon->server->push_cb (servcon->server, servcon->tcpcon, push_id))
+	    !servcon->server->push_cb (servcon->server, servcon->tcpcon, servcon->buf))
 	{
 		AS_DBG_1 ("Connection from %s closed on callback's request",
-				   net_ip_str (servcon->remote_ip));
+			  net_ip_str (servcon->remote_ip));
 		tcp_close_null (&servcon->tcpcon);
 	}
 
