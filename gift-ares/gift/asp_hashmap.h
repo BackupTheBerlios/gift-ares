@@ -1,5 +1,5 @@
 /*
- * $Id: asp_hashmap.h,v 1.1 2004/12/10 02:00:09 hex Exp $
+ * $Id: asp_hashmap.h,v 1.2 2004/12/19 00:50:14 mkern Exp $
  *
  * Copyright (C) 2004 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -16,6 +16,9 @@
  */
 
 /*****************************************************************************/
+
+#ifndef __ASP_HASHMAP_H
+#define __ASP_HASHMAP_H
 
 #ifdef EVIL_HASHMAP
 
@@ -94,7 +97,20 @@ struct transfer
 
 /*****************************************************************************/
 
+/* Init hash map. */
 void asp_hashmap_init (void);
+
+/* Free hash map. */
 void asp_hashmap_destroy (void);
+
+/* Lookup file name and size by hash. Returns TRUE if an entry was found and
+ * sets name and size. Caller must not modify returned name.
+ */
 as_bool asp_hashmap_lookup (ASHash *hash, char **name, size_t *size);
+
+/* Insert file name and size for given hash. */
 void asp_hashmap_insert (ASHash *hash, char *name, size_t size);
+
+/*****************************************************************************/
+
+#endif /* __ASP_HASHMAP_H */

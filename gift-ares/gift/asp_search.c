@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.4 2004/12/12 16:19:32 hex Exp $
+ * $Id: asp_search.c,v 1.5 2004/12/19 00:50:14 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -70,7 +70,18 @@ static as_bool meta_to_gift (ASMetaTag *tag, Share *share)
 static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 {
 	Share *share;
-	char *url;
+	char *url, *filename;
+
+	if (!r)
+	{
+		AS_DBG_1 ("Search complete. Id: %d.", search->id);
+
+		/* Tell giFT we're finished. This makes giFT call
+		 * asp_cb_search_cancel() which removes our search object.
+		 */
+		PROTO->search_complete (PROTO, search->udata);
+		return;
+	}
 
 	/* Create a share object for giFT. */
 	if (!(share = share_new (NULL)))
@@ -78,34 +89,35 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 
 	share->p    = PROTO;
 	share->size = r->filesize;
+	filename    = r->filename;
 
-	if (r->filename)
-	{
-		share_set_path (share, r->filename);
-		share_set_mime (share, mime_type (r->filename));
-	}
-
-	if (search->type == SEARCH_LOCATE)
+	/* Try to find file name and size in hash table if none was returned. */
+	if (search->type == SEARCH_LOCATE && (!filename || share->size == 0))
 	{
 		size_t size;
 		char *name;
 
-		assert (!r->filesize);
-		assert (!r->filename);
-
 		/* Lookup this hash in the evil hash map to find the
-		 * size and filename for giFT. */
+		 * size and filename for giFT.
+		 */
 		if (asp_hashmap_lookup (r->hash, &name, &size))
 		{
-			share->size = size;
-			if (name && *name)
-			{
-				share_set_path (share, name);
-				share_set_mime (share, mime_type (name));
-			}
+			if (share->size == 0)
+				share->size = size;
+
+			if (!filename && name && *name)
+				filename = name;
 		}
 	}
 
+	/* If we still don't have a file name fake one to prevent things from
+	 * blowing up elsewhere.
+	 */
+	if (!filename)
+		filename = "<Unknown>";
+
+	share_set_path (share, filename);
+	share_set_mime (share, mime_type (filename));
 	share_set_hash (share, "SHA1", r->hash->data, AS_HASH_SIZE, FALSE);
 
 	/* Add meta data. */
@@ -174,8 +186,8 @@ BOOL asp_giftcb_search (Protocol *p, IFEvent *event, char *query,
 
 	search->udata = event;
 
-	AS_DBG_2 ("Started search for '%s' in realm '%s'.", query,
-	          realm ? realm : "Any");
+	AS_DBG_3 ("Started search for '%s' in realm '%s'. Id: %d.", query,
+	          realm ? realm : "Any", search->id);
 
 	return TRUE;
 }
@@ -189,28 +201,32 @@ BOOL asp_giftcb_browse (Protocol *p, IFEvent *event, char *user, char *node)
 /* Called by giFT to locate file. */
 int asp_giftcb_locate (Protocol *p, IFEvent *event, char *htype, char *hstr)
 {
-        ASSearch *search;
-        ASHash *hash;
+	ASSearch *search;
+	ASHash *hash;
 
-	AS_DBG_2 (" locate: '%s' '%s'", htype, hstr);
-
-        if (!htype || !hstr)
-                return FALSE;
+	if (!htype || !hstr)
+		return FALSE;
 
 	if (gift_strcasecmp (htype, "SHA1"))
 		return FALSE;
 
 	if (!(hash = asp_hash_decode (hstr)))
 	{
-		AS_DBG_1 ("malformed hash '%s'", hash);
+		AS_DBG_1 ("malformed hash '%s'", as_hash_str (hash));
 		return FALSE;
 	}
 
-	search = as_searchman_locate (AS->searchman,
-				      (ASSearchResultCb) result_callback,
-				      hash);
+	if (!(search = as_searchman_locate (AS->searchman,
+	    (ASSearchResultCb) result_callback, hash)))
+	{
+		AS_ERR_1 ("Failed to start search for '%s'.", as_hash_str (hash));
+		return FALSE;
+	}
 
 	search->udata = event;
+
+	AS_DBG_2 ("Started locate for '%s'. Id: %d.", as_hash_str (hash),
+	          search->id);
 
 	as_hash_free (hash);
 
