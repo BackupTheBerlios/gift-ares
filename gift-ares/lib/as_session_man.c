@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.8 2004/09/01 16:55:38 mkern Exp $
+ * $Id: as_session_man.c,v 1.9 2004/09/01 16:58:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -313,12 +313,11 @@ static as_bool send_nodeinfo (ASSession *session)
 	/* unknown, stays the same */
 	as_packet_put_ustr (packet, "\x00\x00\x00\x04\x00\x00\x00\xd6\x83\x00", 9);
 	/* client GUID */
-	as_packet_put_ustr (packet, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-	                            "\x00\x00\x00\x00\x00", 16);
+	as_packet_put_ustr (packet, "0123456789abcdef", 16);
 	/* unknown, always zero */
 	as_packet_put_le16 (packet, 0x0000);
 	/* client name, zero terminated */
-	as_packet_put_ustr (packet, AS_CLIENT_NAME, strlen (AS_CLIENT_NAME) + 1);
+	as_packet_put_ustr (packet, AS_CLIENT_NAME, sizeof (AS_CLIENT_NAME));
 	
 	/* local ip, FIXME */
 	as_packet_put_be32 (packet, (as_uint32) net_ip ("192.168.0.1"));
