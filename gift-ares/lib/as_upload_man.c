@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.7 2004/10/30 18:28:30 mkern Exp $
+ * $Id: as_upload_man.c,v 1.8 2004/10/30 23:08:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -82,7 +82,6 @@ void as_upman_free (ASUpMan *man)
 
 	as_hashtable_free (man->uploads, FALSE);
 	list_foreach_remove (man->queue, NULL, NULL); /* free entries */
-	list_free (man->queue);
 	
 	free (man);
 }
@@ -320,12 +319,14 @@ static void progress_timer_update (ASUpMan *man)
 	    man->nuploads > 0 &&
 	    man->progress_timer == INVALID_TIMER)
 	{
+		AS_HEAVY_DBG ("Adding upload progress timer");
 		man->progress_timer = timer_add (AS_UPLOAD_PROGRESS_INTERVAL,
 		                                 (TimerCallback)progress_timer_func,
 		                                 man);
 	}
 	else if (man->progress_timer != INVALID_TIMER)
 	{
+		AS_HEAVY_DBG ("Removing upload progress timer");
 		timer_remove_zero (&man->progress_timer);
 	}
 }
@@ -411,7 +412,7 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 	 */
 	if (man->nuploads + man->nqueued <= man->max_active)
 	{
-		AS_DBG_3 ("spare slots available (%d+%d < %d), allowing",
+		AS_DBG_3 ("spare slots available (%d+%d <= %d), allowing",
 		          man->nuploads, man->nqueued, man->max_active);
 		return 0;
 	}

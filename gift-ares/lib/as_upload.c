@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.9 2004/10/30 18:28:30 mkern Exp $
+ * $Id: as_upload.c,v 1.10 2004/10/30 23:08:06 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,7 +18,7 @@
 #define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares/0.1)"
 
 /* Log http reply headers. */
-#define LOG_HTTP_REPLIES
+/* #define LOG_HTTP_REPLIES */
 
 /*****************************************************************************/
 
@@ -164,9 +164,6 @@ as_bool as_upload_start (ASUpload *up)
 		return FALSE;
 	}
 
-	AS_DBG_2 ("Upload request: '%s' from %s",
-	          up->share->path, net_ip_str (up->host));
-
 	/* Get range from request header. */
 	if ((range = as_http_header_get_field (up->request, "Range")))
 	{
@@ -195,6 +192,9 @@ as_bool as_upload_start (ASUpload *up)
 		up->start = 0;
 		up->stop = up->share->size;
 	}
+
+	AS_DBG_4 ("Upload request: '%s' (%d, %d) from %s",
+	          up->share->path, up->start, up->stop, net_ip_str (up->host));
 
 	/* Ask auth callback what to do. */
 	queue_pos = 0; /* send data */
@@ -534,7 +534,8 @@ static as_bool send_error (ASUpload *up)
 
 static void send_file (int fd, input_id input, ASUpload *up)
 {
-	unsigned int in, out, left, wanted;
+	int in, out;
+	unsigned int left, wanted;
 	as_uint8 buf[BLOCKSIZE];
 
 	if (net_sock_error (fd))
@@ -557,8 +558,8 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	
 	if (in < wanted)
 	{
-		AS_WARN_1 ("Read failed from %s. Cancelling upload.",
-		           up->share->path);
+		AS_WARN_3 ("Read (%d of %d) failed from %s. Cancelling upload.",
+		           in, wanted, up->share->path);
 
 		send_error (up); /* may free us */
 		return;
@@ -568,8 +569,8 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	
 	if (out < 0)
 	{
-		AS_WARN_2 ("Failed to write %d bytes to %s. Cancelling upload.",
-		           in, net_ip_str (up->host));
+		AS_DBG_2 ("Failed to write %d bytes to %s. Cancelling upload.",
+		          in, net_ip_str (up->host));
 
 		send_error (up); /* may free us */
 		return;
