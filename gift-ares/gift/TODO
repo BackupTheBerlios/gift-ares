@@ -4,6 +4,10 @@
   Lazy way: Add #ifdef'ed throttle call directly to as_upload.c::send_file
   FIXME: Throttling should work without the above but seems not to.
 
+- Disabled sharing makes other nodes ask us for pushes
+
+- A lot of successfuly pushes hit the 'first packet needs 4 byte' limit in http server
+
 - Source searching
 
 - Search timeouts (in ares lib)
