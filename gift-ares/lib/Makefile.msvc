@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.14 2004/09/14 09:32:16 mkern Exp $
+# $Id: Makefile.msvc,v 1.15 2004/09/14 09:36:08 mkern Exp $
 
 
 !include ../Make.msvc
@@ -37,7 +37,7 @@ OBJECTS = \
 	as_http_server$(O) \
 	as_download_chunk$(O) \
 	as_download_conn$(O) \
-	as_download_1$(O)
+	as_download$(O)
 	
 
 all: $(OBJECTS)

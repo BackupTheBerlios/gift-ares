@@ -31,7 +31,7 @@ OBJECTS = \
 	as_http_server.o \
 	as_download_chunk.o \
 	as_download_conn.o \
-	as_download_1.o \
+	as_download.o \
 	as_incoming.o
 
 all: libares.a($(OBJECTS))

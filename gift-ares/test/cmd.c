@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.19 2004/09/13 13:40:04 mkern Exp $
+ * $Id: cmd.c,v 1.20 2004/09/14 09:36:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -436,7 +436,6 @@ as_bool download_cb (ASDownload *dl, ASDownloadState state)
 
 COMMAND_FUNC (dl)
 {
-#if 1
 	int rnum;
 	int i;
 	ASResult *r;
@@ -492,33 +491,6 @@ COMMAND_FUNC (dl)
 	printf ("Download of \"%s\" started\n", r->filename);
 
 	return TRUE;
-
-#else
-	int rnum;
-	int i;
-	char *str;
-	ASResult *r;
-	ASDownload *dl;
-
-	if (argc < 2)
-		return FALSE;
-
-	rnum = atoi (argv[1]);
-
-	r = list_nth_data (results, rnum);
-
-	if (!r)
-	{
-		printf ("Invalid result number\n");
-		return TRUE;
-	}
-
-	dl = as_download_new (r->source, r->hash, r->filename);
-
-	as_download_start (dl);
-
-	return TRUE;
-#endif
 }
 
 COMMAND_FUNC (download)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.h,v 1.6 2004/09/13 19:50:46 mkern Exp $
+ * $Id: as_download.h,v 1.5 2004/09/14 09:36:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
