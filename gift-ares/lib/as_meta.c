@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.2 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_meta.c,v 1.3 2004/09/07 15:57:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -94,6 +94,9 @@ as_bool as_meta_add_tag (ASMeta *meta, const char *name, const char *value)
 		if (!(tag = malloc (sizeof (ASMetaTag))))
 			return FALSE;
 
+		/* insert into list */
+		meta->tags = list_prepend (meta->tags, tag);
+
 		tag->name = gift_strdup (name);
 	}	
 
@@ -110,7 +113,7 @@ const char *as_meta_get_tag (ASMeta *meta, const char *name)
 	if (!(link = meta_find_tag (meta, name)))
 		return NULL;
 
-	return ((ASMetaTag *) link->data)->name;
+	return ((ASMetaTag *) link->data)->value;
 }
 
 /* remove gift style meta tag */

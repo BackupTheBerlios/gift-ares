@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.20 2004/09/07 13:30:09 mkern Exp $
+ * $Id: as_session_man.c,v 1.21 2004/09/07 15:57:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -119,7 +119,7 @@ static as_bool sessman_maintain (ASSessMan *man)
 		man->connected = list_foreach_remove (man->connected,
 		                     (ListForeachFunc)sessman_disconnect_itr, man);
 	}
-	else if (man->connections < connected)
+	else if (man->connections <= connected)
 	{
 		/* We have more connections than needed. First stop all discovery. */
 		man->connecting = list_foreach_remove (man->connecting,

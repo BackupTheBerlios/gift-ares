@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.1 2004/09/06 17:27:55 HEx Exp $
+ * $Id: as_download.h,v 1.2 2004/09/07 15:57:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,5 +23,10 @@ typedef struct {
 	FILE     *f;
 	timer_id  timer;
 } ASDownload;
+
+
+ASDownload *as_download_new (ASSource *source, ASHash *hash, unsigned char *filename);
+
+as_bool as_download_start (ASDownload *dl);
 
 #endif

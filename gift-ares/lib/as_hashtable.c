@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.4 2004/09/07 13:30:09 mkern Exp $
+ * $Id: as_hashtable.c,v 1.5 2004/09/07 15:57:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -121,6 +121,7 @@ static ASHashTableEntry *hashtable_entry (void *key, unsigned int key_len,
 		return NULL;
 
 	entry->next = NULL;
+	entry->h = 0;
 	entry->key_len = key_len;
 
 	if (copy)
@@ -150,6 +151,7 @@ static ASHashTableEntry *hashtable_entry_int (as_uint32 int_key, void *val)
 		return NULL;
 
 	entry->next = NULL;
+	entry->h = 0;
 	entry->int_key = int_key;
 	entry->val = val;
 
@@ -314,12 +316,21 @@ static void hashtable_insert (ASHashTable *h, ASHashTableEntry *in)
         /* Check hash value to short circuit heavier comparison */
         if ((in->h == e->h) && (h->eqfn(in, e) == 0))
         {
-			/* found key, replace value pointer */
+			/* found key, replace value and key pointer */
 			e->val = in->val;
+	
+			if (!h->int_keys)
+			{
+				if (h->copy_keys)
+					free (e->key);
+				e->key = in->key;
+			}
+
 			/* free new entry since we used the old */
-			if (h->copy_keys)
-				free (in->key);
 			free (in);
+
+			/* entry count hasn't changed */
+			h->entrycount--;
             return;
         }
         e = e->next;

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.12 2004/09/07 13:09:47 mkern Exp $
+ * $Id: cmd.c,v 1.13 2004/09/07 15:58:00 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -221,13 +221,26 @@ static const char *realm_chars="RA?S?VDI";
 static List *results = NULL;
 static ASSearch *test_search = NULL;
 
+static as_bool meta_tag_itr (ASMetaTag *tag, void *udata)
+{
+	printf ("  %s: %s\n", tag->name, tag->value);
+	return TRUE;
+}
+
 static void search_callback (ASSearch *search, ASResult *r)
 {
+	int i;
 	assert (search == test_search);
 
 	printf ("%3d) %20s %10d %c [%s]\n", list_length (results),
 		r->source->username, r->filesize,
 		realm_chars[r->realm], r->filename);
+
+#if 0
+	printf ("Meta tags:\n");
+	i = as_meta_foreach_tag (r->meta, meta_tag_itr, NULL);
+	printf ("(%d tags total)\n", i);
+#endif
 
 	results = list_append (results, r);
 }
@@ -261,12 +274,6 @@ COMMAND_FUNC (search)
 	
 	printf ("Started search for \"%s\"\n", query);
 
-	return TRUE;
-}
-
-static as_bool meta_tag_itr (ASMetaTag *tag, void *udata)
-{
-	printf ("  %s: %s\n", tag->name, tag->value);
 	return TRUE;
 }
 
