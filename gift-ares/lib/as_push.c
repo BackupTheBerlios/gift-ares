@@ -1,5 +1,5 @@
 /*
- * $Id: as_push.c,v 1.1 2004/09/22 03:40:55 HEx Exp $
+ * $Id: as_push.c,v 1.2 2004/09/22 04:04:12 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -71,6 +71,8 @@ static void push_connected (int fd, input_id input, ASPush *push)
 	as_packet_put_8 (p, 0x61);
 
 	as_encrypt_push (p->data, p->used, push->source->shost, push->source->sport);
+
+	as_packet_header (p, PACKET_PUSH2);
 
 	if (!as_packet_send (p, push->c))
 	{

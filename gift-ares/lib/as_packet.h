@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.16 2004/09/17 11:42:19 mkern Exp $
+ * $Id: as_packet.h,v 1.17 2004/09/22 04:04:12 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -32,6 +32,7 @@ typedef enum
 	/* otherwise specially handled */
 	PACKET_COMPRESSED = 50, /* 0x32, zlib compression encapsulation layer */
 	PACKET_ACK        = 51, /* 0x33, first packet sent back by supernode */
+	PACKET_PUSH2      = 7,  /* 0x07, push request */
 
 	/* encrypted */
 	PACKET_HANDSHAKE  = 0,  /* 0x00, info about our node */
