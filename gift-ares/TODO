@@ -25,8 +25,7 @@ Essential stuff:
 
 Features:
 
-- Add meta data to downloads from results (in download manager).
-  Save/load them from state.
+- Save/load meta data with incomplete dowloads.
 
 
 Optimizations:
