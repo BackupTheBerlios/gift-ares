@@ -18,6 +18,7 @@ OBJECTS = \
 	as_session_man.o \
 	as_node.o \
 	as_node_man.o \
+	as_tcp.o \
 	as_tokenize.o \
 	as_sha1.o
 
