@@ -422,6 +422,21 @@ static void wrote (ASUpload *up, int len)
 				 (void *)len, len);
 }
 
+static as_bool send_progress (ASUpload *up)
+{
+	Chunk *chunk;
+
+	if (!(chunk = up->udata))
+		return FALSE;
+
+	if (chunk->transmit == up->sent)
+		return FALSE;
+
+	wrote (up, up->sent - chunk->transmit);
+
+	return TRUE;
+}
+
 as_bool up_state_cb (ASUpMan *man, ASUpload *up,
 		     ASUploadState state)
 {
@@ -443,8 +458,10 @@ as_bool up_state_cb (ASUpMan *man, ASUpload *up,
 
 		break;
 		break;
-	case UPLOAD_FAILED:
 	case UPLOAD_COMPLETE:
+		send_progress (up);
+		break;
+	case UPLOAD_FAILED:
 	case UPLOAD_CANCELLED:
 		wrote (up, 0);
 		break;
@@ -491,20 +508,10 @@ as_bool up_auth_cb (ASUpMan *man, ASUpload *up,
 
 int upload_iter (ASUpload *up, void *udata)
 {
-	Chunk *chunk;
-
 	if (up->state != UPLOAD_ACTIVE)
 		return FALSE;
-	
-	if (!(chunk = up->udata))
-		return FALSE;
 
-	if (chunk->transmit == up->sent)
-		return FALSE;
-
-	wrote (up, up->sent - chunk->transmit);
-
-	return TRUE;
+	return send_progress (up);
 }
 
 static void up_progress_cb (ASUpMan *man)
