@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.7 2004/11/20 10:22:52 mkern Exp $
+ * $Id: as_http_server.c,v 1.8 2004/12/14 22:21:19 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,7 +23,8 @@ typedef struct
 	in_addr_t remote_ip;
 
 	String *buf;            /* http request buffer */
-
+	List   *link;
+	input_id input;
 } ServCon;
 
 /*****************************************************************************/
@@ -33,6 +34,39 @@ static void server_peek (int fd, input_id input, ServCon *servcon);
 static void server_request (int fd, input_id input, ServCon *servcon);
 static void server_push (int fd, input_id input, ServCon *servcon);
 static void server_binary (int fd, input_id input, ServCon *servcon);
+
+/*****************************************************************************/
+
+static ServCon *servcon_new (ASHttpServer *server, TCPC *c)
+{
+	ServCon *servcon;
+
+	if (!(servcon = malloc (sizeof (ServCon))))
+		return NULL;
+
+	servcon->server = server;
+	servcon->tcpcon = c;
+	servcon->remote_ip = net_peer (servcon->tcpcon->fd);
+	servcon->buf = NULL;
+	servcon->input = INVALID_INPUT;
+	servcon->link = server->list = list_prepend (server->list, servcon);
+
+	return servcon;
+}
+
+static void servcon_free (ServCon *servcon, as_bool close)
+{
+	if (close)
+		tcp_close_null (&servcon->tcpcon);
+
+	string_free (servcon->buf);
+	input_remove (servcon->input);
+
+	assert (servcon->link);
+	servcon->server->list = list_remove_link (servcon->server->list, servcon->link);
+
+	free (servcon);
+}
 
 /*****************************************************************************/
 
@@ -72,6 +106,13 @@ ASHttpServer *as_http_server_create (in_port_t port,
 	return server;
 }
 
+static void servcon_free_itr (ServCon *servcon, void *udata)
+{
+	servcon_free (servcon, TRUE);
+
+	return TRUE; /* remove */
+}
+
 /* free server, close listening port */
 void as_http_server_free (ASHttpServer *server)
 {
@@ -81,6 +122,9 @@ void as_http_server_free (ASHttpServer *server)
 	input_remove (server->input);
 	tcp_close_null (&server->tcpcon);
 
+	list_foreach_remove (server->list,
+			     (ListForeachFunc)servcon_free_itr,
+			     NULL);
 	free (server);
 }
 
@@ -89,6 +133,7 @@ void as_http_server_free (ASHttpServer *server)
 static void server_accept (int fd, input_id input, ASHttpServer *server)
 {
 	ServCon *servcon;
+	TCPC *c;
 
 	if (net_sock_error (fd))
 	{
@@ -98,20 +143,15 @@ static void server_accept (int fd, input_id input, ASHttpServer *server)
 		return;
 	}
 
-	if(! (servcon = malloc (sizeof (ServCon))))
-		return;
-
-	if (! (servcon->tcpcon = tcp_accept (server->tcpcon, FALSE)))
+	if (! (c = tcp_accept (server->tcpcon, FALSE)))
 	{
 		AS_WARN_1 ("accepting socket from port %d failed",
 					server->tcpcon->port);
-		free (servcon);
 		return;
 	}
 
-	servcon->server = server;
-	servcon->remote_ip = net_peer (servcon->tcpcon->fd);
-	servcon->buf = NULL;
+	if (!(servcon = servcon_new (server, c)))
+		return;
 
 #if 0
 	/* deny requests from banned ips */
@@ -121,8 +161,7 @@ static void server_accept (int fd, input_id input, ASHttpServer *server)
 		AS_DBG_1 ("denied incoming connection from %s based on banlist",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close (servcon->tcpcon);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 	else
@@ -133,8 +172,20 @@ static void server_accept (int fd, input_id input, ASHttpServer *server)
 	}
 
 	/* wait for data */
-	input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
-			   (InputCallback)server_peek, HTSV_REQUEST_TIMEOUT);
+	servcon->input = input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
+				    (InputCallback)server_peek, HTSV_REQUEST_TIMEOUT);
+}
+
+void as_http_server_pushed (ASHttpServer *server, TCPC *c)
+{
+	ServCon *servcon;
+
+	if (!(servcon = servcon_new (server, c)))
+		return;
+	
+	/* wait for data */
+	servcon->input = input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
+				    (InputCallback)server_peek, HTSV_REQUEST_TIMEOUT);
 }
 
 static void server_peek (int fd, input_id input, ServCon *servcon)
@@ -143,6 +194,7 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 	int len;
 
 	input_remove (input);
+	servcon->input = INVALID_INPUT;
 
 	if (net_sock_error (fd))
 	{
@@ -150,8 +202,7 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("connection from %s closed without receiving any data",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -163,8 +214,7 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("received less than 4 bytes from %s, closing connection",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -194,8 +244,7 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		AS_HEAVY_DBG_2 ("connection from %s is a chat request [%s]. Ignoring.",
 		                net_ip_str (servcon->remote_ip), buf);
 
-		tcp_close_null (&servcon->tcpcon);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 	else 
@@ -217,6 +266,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 	ASHttpHeader *request;
 
 	input_remove (input);
+	servcon->input = INVALID_INPUT;
 
 	if (net_sock_error (fd))
 	{
@@ -224,9 +274,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("net_sock_error for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -240,9 +288,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("tcp_recv() < 0 for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -250,9 +296,8 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 	if (string_appendu (servcon->buf, buf, len) != len)
 	{
 		AS_ERR ("Insufficient memory");
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
+
 		return;
 	}
 
@@ -267,17 +312,15 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 			AS_DBG_2 ("got more than %d bytes from from %s but no sentinel, closing connection",
 					   HTSV_MAX_REQUEST_LEN, net_ip_str (servcon->remote_ip));
 
-			tcp_close_null (&servcon->tcpcon);
-			string_free (servcon->buf);
-			free (servcon);
+			servcon_free (servcon, TRUE);
 			return;
 		}
 
-		/* wait for more data*/
+		/* wait for more data */
 		AS_HEAVY_DBG_2 ("got %d bytes from %s, waiting for more",
 						 len, net_ip_str (servcon->remote_ip));
-		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
-				   (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
+		servcon->input = input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
+					    (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
 		return;
 	}
 
@@ -287,9 +330,7 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("parsing header failed for connection from %s, closing connection",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -306,11 +347,12 @@ static void server_request (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("Connection from %s closed on callback's request",
 				   net_ip_str (servcon->remote_ip));
 		as_http_header_free (request);
-		tcp_close_null (&servcon->tcpcon);
+
+		servcon_free (servcon, TRUE);
+		return;
 	}
 
-	string_free (servcon->buf);
-	free (servcon);
+	servcon_free (servcon, FALSE);
 }
 
 static void server_push (int fd, input_id input, ServCon *servcon)
@@ -319,6 +361,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 	int len;
 
 	input_remove (input);
+	servcon->input = INVALID_INPUT;
 
 	if (net_sock_error (fd))
 	{
@@ -326,9 +369,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("net_sock_error for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -342,9 +383,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("tcp_recv() < 0 for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -352,9 +391,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 	if (string_appendu (servcon->buf, buf, len) != len)
 	{
 		AS_ERR ("Insufficient memory");
-		tcp_close_null (&servcon->tcpcon);
-		string_free (servcon->buf);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -369,17 +406,15 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 			AS_DBG_2 ("got more than %d bytes from from %s but no sentinel, closing connection",
 					   HTSV_MAX_REQUEST_LEN, net_ip_str (servcon->remote_ip));
 
-			tcp_close_null (&servcon->tcpcon);
-			string_free (servcon->buf);
-			free (servcon);
+			servcon_free (servcon, TRUE);
 			return;
 		}
 
-		/* wait for more data*/
+		/* wait for more data */
 		AS_HEAVY_DBG_2 ("got %d bytes from %s, waiting for more",
 						 len, net_ip_str (servcon->remote_ip));
-		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
-				   (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
+		servcon->input = input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
+					    (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
 		return;
 	}
 
@@ -395,16 +430,17 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 	{
 		AS_DBG_1 ("Connection from %s closed on callback's request",
 			  net_ip_str (servcon->remote_ip));
-		tcp_close_null (&servcon->tcpcon);
+		servcon_free (servcon, TRUE);
+		return;
 	}
 
-	string_free (servcon->buf);
-	free (servcon);
+	servcon_free (servcon, FALSE);
 }
 
 static void server_binary (int fd, input_id input, ServCon *servcon)
 {
 	input_remove (input);
+	servcon->input = INVALID_INPUT;
 
 	if (net_sock_error (fd))
 	{
@@ -412,8 +448,7 @@ static void server_binary (int fd, input_id input, ServCon *servcon)
 		AS_DBG_1 ("net_sock_error for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
-		tcp_close_null (&servcon->tcpcon);
-		free (servcon);
+		servcon_free (servcon, TRUE);
 		return;
 	}
 
@@ -423,10 +458,11 @@ static void server_binary (int fd, input_id input, ServCon *servcon)
 	{
 		AS_DBG_1 ("Connection from %s closed on callback's request",
 				   net_ip_str (servcon->remote_ip));
-		tcp_close_null (&servcon->tcpcon);
+		servcon_free (servcon, TRUE);
+		return;
 	}
 
-	free (servcon);
+	servcon_free (servcon, FALSE);
 }
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.h,v 1.2 2004/09/14 00:57:43 HEx Exp $
+ * $Id: as_http_server.h,v 1.3 2004/12/14 22:21:19 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -55,6 +55,8 @@ struct _ASHttpServer
 
 	int banlist_filter;	/* cache for config key main/banlist_filter */
 
+	List *list;             /* list of connection objects */
+
 	void *udata;		/* user data */
 };
 
@@ -68,6 +70,9 @@ ASHttpServer *as_http_server_create (in_port_t port,
 
 /* free server, close listening port */
 void as_http_server_free (ASHttpServer *server);
+
+/* fake an incoming connection (for push replies) */
+void as_http_server_pushed (ASHttpServer *server, TCPC *c);
 
 /*****************************************************************************/
 
