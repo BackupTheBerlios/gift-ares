@@ -21,7 +21,8 @@ OBJECTS = \
 	as_tcp.o \
 	as_tokenize.o \
 	as_sha1.o \
-	as_hash.o
+	as_hash.o \
+	as_download.o
 
 all: libares.a($(OBJECTS))
 

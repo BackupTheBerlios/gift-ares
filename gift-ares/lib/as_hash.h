@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.h,v 1.1 2004/09/06 09:50:28 mkern Exp $
+ * $Id: as_hash.h,v 1.2 2004/09/06 12:49:31 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,15 +35,11 @@ void as_hash_free (ASHash *hash);
 
 /*****************************************************************************/
 
-#if 0
-
 /* create hash from base64 encoded string */
 ASHash *as_hash_decode (const char *encoded);
 
 /* return base64 encoded string of hash. caller frees result. */
 char *as_hash_encode (ASHash *hash);
-
-#endif
 
 /*****************************************************************************/
 
