@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.h,v 1.6 2004/12/04 15:30:46 mkern Exp $
+ * $Id: as_share_man.h,v 1.7 2004/12/20 12:22:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -32,8 +32,8 @@ void as_shareman_free (ASShareMan *man);
 
 /*****************************************************************************/
 
-/* Add share to manager. If a share with the same hash is already added it
- * will be replaced with the new share. Takes ownership of share.
+/* Add share to manager. Fails if a share with the same hash already
+ * exists otherwise takes ownership of share.
  */
 as_bool as_shareman_add (ASShareMan *man, ASShare *share);
 
@@ -47,11 +47,9 @@ ASShare *as_shareman_lookup (ASShareMan *man, ASHash *hash);
 as_bool as_shareman_submit (ASShareMan *man, ASSession *session);
 
 /* Submit list of shares to all connected supernodes and add shares to
- * manager. Takes ownership of list values (shares).
- *
- * IMPORTANT: If the list contains multiple shares with the same hash
- *            only one of them will be added and the other will be freed
- *            without notice.
+ * manager. Takes ownership of list values (shares).  Shares in the
+ * list that failed to be added (e.g. because they had duplicate hashes) will
+ * be freed and replaced by a NULL pointer.
  */
 as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares);
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.13 2004/12/19 21:24:53 hex Exp $
+ * $Id: as_share_man.c,v 1.14 2004/12/20 12:22:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -42,7 +42,8 @@ void as_shareman_free (ASShareMan *man)
 
 /***********************************************************************/
 
-/* Add share to manager. Fails if a share with the same hash already exists.
+/* Add share to manager. Fails if a share with the same hash already
+ * exists otherwise takes ownership of share.
  */
 as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 {
@@ -51,9 +52,7 @@ as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 	if ((link = as_hashtable_lookup (man->table, share->hash->data,
 	                                 sizeof (share->hash->data))))
 	{
-		AS_HEAVY_DBG_1 ("Duplicate hash share '%s'",
-		                share->path);
-
+		AS_HEAVY_DBG_1 ("Duplicate hash share '%s'", share->path);
 		return FALSE;
 	}
 
@@ -64,8 +63,7 @@ as_bool as_shareman_add (ASShareMan *man, ASShare *share)
 				  sizeof (share->hash->data),
 				  man->shares))
 	{
-		AS_ERR_1 ("Hashtable insert failed for share '%s'",
-			  share->path);
+		AS_ERR_1 ("Hashtable insert failed for share '%s'", share->path);
 		assert (0);
 		return FALSE;
 	}
@@ -206,9 +204,8 @@ as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 
 /* Submit list of shares to all connected supernodes and add shares to
  * manager. Takes ownership of list values (shares).  Shares in the
- * list that failed to be added will be freed and replaced by a NULL
- * pointer.
- *
+ * list that failed to be added (e.g. because they had duplicate hashes) will
+ * be freed and replaced by a NULL pointer.
  */
 as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares)
 {
