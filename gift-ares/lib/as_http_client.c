@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.c,v 1.6 2004/09/13 13:40:04 mkern Exp $
+ * $Id: as_http_client.c,v 1.7 2004/09/17 21:58:36 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -79,7 +79,7 @@ static void client_reset (ASHttpClient *client, int close_tcpcon)
 	 * The problem conceptual.
 	 * The solution hidden in darkness.
 	 */
-	if (client->callback_state = CB_ACTIVE)
+	if (client->callback_state == CB_ACTIVE)
 		client->callback_state = CB_RESET;
 }
 
