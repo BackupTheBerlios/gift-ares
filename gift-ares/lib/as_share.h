@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.h,v 1.1 2004/09/16 02:37:01 HEx Exp $
+ * $Id: as_share.h,v 1.2 2004/09/16 02:45:15 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,7 +22,7 @@ typedef struct
 /***********************************************************************/
 
 ASShare *share_new (char *path, ASHash *hash, ASMeta *meta,
-		    size_t size);
+		    size_t size, ASRealm realm);
 
 void as_share_free (ASShare *share);
 
