@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.11 2004/09/05 02:52:00 HEx Exp $
+ * $Id: as_list.c,v 1.12 2004/09/15 21:47:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -415,6 +415,22 @@ List *list_sort (List *head, CompareFunc func)
 /* These functions are not in libgift. We duplicate code here so we can use
  * it easily with libgift later. 
  */
+
+/* Insert link after prev. Returns prev. */
+List *list_insert_link (List *prev, List *link)
+{
+	if (!prev || !link)
+		return prev;
+
+	link->prev = prev;
+	link->next = prev->next;
+	prev->next = link;
+	if (link->next)
+		link->next->prev = link;
+
+	return prev;
+}
+
 
 /* Remove link from list but do not free it. */
 List *list_unlink_link (List *head, List *link)
