@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.6 2004/10/30 16:48:08 mkern Exp $
+ * $Id: as_upload_man.c,v 1.7 2004/10/30 18:28:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,7 +18,7 @@ struct queue
 };
 
 /* Internal Queue system if no external auth callback was set. Returns zero
- * for OK, -1 for not, or queue position.
+ * for OK, -1 for queued without position, or queue position.
  */
 static int upman_auth (ASUpMan *man, in_addr_t host);
 
@@ -300,8 +300,8 @@ static int upload_auth_cb (ASUpload *up, int *queue_length)
 	else
 	{
 		/* Use internal queue system. */
-		length = man->nqueued;
 		pos = upman_auth (man, up->host);
+		length = man->nqueued;
 	}
 
 	AS_DBG_3 ("Auth status for '%s': pos: %d, length: %d",
@@ -401,12 +401,7 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 		{
 			AS_DBG_1 ("currently uploading to %s, denying",
 			          net_ip_str (host));
-			/* If this host is currently uploading, make it wait.
-			 *
-			 * FIXME: Returning -1 will cause a 404 to be sent. How do we tell
-			 *        the downloader than he an only have one simultaneous
-			 *        download?
-			 */
+			/* If this host is currently uploading, make it wait. */
 			return -1;
 		}
 	}
@@ -414,7 +409,7 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 	/* Spare slots are available even after dealing with everyone
 	 * in the queue.
 	 */
-	if (man->nuploads + man->nqueued < man->max_active)
+	if (man->nuploads + man->nqueued <= man->max_active)
 	{
 		AS_DBG_3 ("spare slots available (%d+%d < %d), allowing",
 		          man->nuploads, man->nqueued, man->max_active);

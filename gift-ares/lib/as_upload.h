@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.5 2004/10/30 16:48:08 mkern Exp $
+ * $Id: as_upload.h,v 1.6 2004/10/30 18:28:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,7 +27,7 @@ typedef as_bool (*ASUploadStateCb) (ASUpload *up, ASUploadState state);
 
 /* Callback triggered by as_upload_start to check queue status. Return one of
  * the following values:
- *   -1  Sends 404 reply so the requester leaves us alone.
+ *   -1  Sends 503 but without specific queue position.
  *    0  Starts sending file.
  *   >0  Sends return value as queue position.
  * The callback should also set queue_length if it is known.

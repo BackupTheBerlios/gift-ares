@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.8 2004/10/30 16:48:08 mkern Exp $
+ * $Id: as_upload.c,v 1.9 2004/10/30 18:28:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -426,22 +426,23 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 	String *str;
 	char buf[128];
 
-	assert (queue_pos > 0);
+	assert (queue_pos != 0);
 	assert (queue_length > 0);
+	assert (queue_pos <= queue_length);
 
 	reply = as_http_header_reply (HTHD_VER_11, 503);
 	set_common_headers (up, reply);
 
-	sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
-	         queue_pos, queue_length,
-	         1                    /* max active downloads (per user?) */,
-	         AS_UPLOAD_QUEUE_MIN, /* min/max recheck intervals in seconds */
-	         AS_UPLOAD_QUEUE_MAX);
-	as_http_header_set_field (reply, "X-Queued", buf);
-
-#if 0
-	AS_HEAVY_DBG_2 ("queued %s: %s", net_ip_str (up->host), buf); 
-#endif
+	/* Omit queue header if position is < 0 */
+	if (queue_pos > 0)
+	{
+		sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
+		         queue_pos, queue_length,
+		         1                    /* max active downloads (per user?) */,
+		         AS_UPLOAD_QUEUE_MIN, /* min/max recheck intervals in seconds */
+		         AS_UPLOAD_QUEUE_MAX);
+		as_http_header_set_field (reply, "X-Queued", buf);
+	}
 
 	str = as_http_header_compile (reply);
 

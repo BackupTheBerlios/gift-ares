@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.4 2004/10/30 16:48:08 mkern Exp $
+ * $Id: as_upload_man.h,v 1.5 2004/10/30 18:28:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,10 +19,11 @@ typedef as_bool (*ASUpManStateCb) (ASUpMan *man, ASUpload *up,
 
 /* Called before every upload to decide if it should be started. Return one
  * of the following values:
- *   -1  Upload is not started and 404 is sent to other host.
+ *   -1  Upload is not started and requester is sent 503 without a specific
+ *       queue position.
  *    0  Upload starts immediately.
  *   >0  Upload is not started and return value is sent as queue position to
- *       requestor.
+ *       requester.
  * The callback should also set queue_length if available.
  */
 typedef as_bool (*ASUpManAuthCb) (ASUpMan *man, ASUpload *up,
