@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.10 2004/09/02 22:35:59 HEx Exp $
+ * $Id: as_list.c,v 1.11 2004/09/05 02:52:00 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -267,7 +267,7 @@ List *list_nth (List *head, int nth)
 	for (; nth > 0 && head->next; nth--)
 		head = head->next;
 
-	return head;
+	return nth ? NULL : head;
 }
 
 /* Same as list_nth but instead of the link the user data is returne */
