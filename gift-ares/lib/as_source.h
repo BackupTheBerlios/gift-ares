@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.h,v 1.1 2004/09/06 12:58:26 mkern Exp $
+ * $Id: as_source.h,v 1.2 2004/09/09 22:25:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,6 +27,7 @@ typedef struct
 
 	/* supernode we got this source from */
 	in_addr_t parent_host;
+	in_port_t parent_port;
 
 } ASSource;
 

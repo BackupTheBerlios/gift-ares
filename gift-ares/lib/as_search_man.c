@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.2 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_search_man.c,v 1.3 2004/09/09 22:25:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -68,6 +68,10 @@ as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
 	/* parse packet */
 	if (!(result = as_result_parse (packet)))
 		return FALSE;
+
+	/* add supernode this came from to result source */
+	result->source->parent_host = session->host;
+	result->source->parent_port = session->port;
 
 	if (result->search_id == INVALID_SEARCH_ID)
 	{

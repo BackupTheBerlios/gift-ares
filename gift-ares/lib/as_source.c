@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.3 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_source.c,v 1.4 2004/09/09 22:25:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,6 +25,7 @@ ASSource *as_source_create ()
 	source->sport = 0;
 	source->username = NULL;
 	source->parent_host = INADDR_NONE;
+	source->parent_port = 0;
 
 	return source;
 }
@@ -43,6 +44,7 @@ ASSource *as_source_copy (ASSource *source)
 	cpy->sport = source->sport;
 	cpy->username = gift_strdup (source->username);
 	cpy->parent_host = source->parent_host;
+	cpy->parent_port = source->parent_port;
 
 	return cpy;
 }
@@ -70,6 +72,7 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 	        a->shost       == b->shost &&
 	        a->sport       == b->sport &&
 	        a->parent_host == b->parent_host &&
+	        a->parent_port == b->parent_port &&
 	        gift_strcmp (a->username, b->username) == 0); 
 }
 
@@ -84,6 +87,7 @@ as_bool as_source_has_push_info (ASSource *source)
 {
 	return (net_ip_routable (source->shost) && source->sport != 0 &&
 	        net_ip_routable (source->parent_host) &&
+	        source->parent_port != 0 &&
 			source->username && source->username[0] != '\0');
 }
 
