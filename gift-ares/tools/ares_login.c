@@ -1,5 +1,5 @@
 /*
- * $Id: ares_login.c,v 1.1 2005/01/06 20:08:06 mkern Exp $
+ * $Id: ares_login.c,v 1.2 2005/01/07 19:59:57 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -171,8 +171,10 @@ int main (int argc, char* argv[])
 		if (!(data = as_hex_decode (argv[4], &len)))
 			FATAL_ERROR ("hex decode failed");
 
-		sscanf (argv[2], "%u", &seed_16);
-		sscanf (argv[3], "%u", &seed_8);
+		if (sscanf (argv[2], "0x%x", &seed_16) == 0)
+			sscanf (argv[2], "%u", &seed_16);
+		if (sscanf (argv[3], "0x%x", &seed_8) == 0)
+			sscanf (argv[3], "%u", &seed_8);
 
 		fprintf (stderr, "seed_16: 0x%02x, seed_8: 0x%01x\n", seed_16, seed_8);
 		fprintf (stderr, "\ndecoded data:\n");
@@ -191,8 +193,11 @@ int main (int argc, char* argv[])
 	{
 		data = strdup (argv[4]);
 		len = strlen (data);
-		sscanf (argv[2], "%u", &seed_16);
-		sscanf (argv[3], "%u", &seed_8);
+
+		if (sscanf (argv[2], "0x%x", &seed_16) == 0)
+			sscanf (argv[2], "%u", &seed_16);
+		if (sscanf (argv[3], "0x%x", &seed_8) == 0)
+			sscanf (argv[3], "%u", &seed_8);
 
 		fprintf (stderr, "seed_16: 0x%02x, seed_8: 0x%01x\n", seed_16, seed_8);
 
