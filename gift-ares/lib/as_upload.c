@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.2 2004/10/19 23:41:48 HEx Exp $
+ * $Id: as_upload.c,v 1.3 2004/10/20 00:58:43 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,7 +11,9 @@
 
 #define BLOCKSIZE 4096
 
-#define AS_HTTP_SERVER_NAME "libares/0.1"
+/* ares displays this (up to the first slash or space) as the network name,
+   so we should be consistent with what we tell supernodes */
+#define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares/0.1)"
 
 /*****************************************************************************/
 
