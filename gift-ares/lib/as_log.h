@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.h,v 1.6 2004/11/27 22:30:37 hex Exp $
+ * $Id: as_log.h,v 1.7 2004/11/28 17:01:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -78,6 +78,7 @@ extern ASLogger *g_logger;
 #else
 #  define FILE_LINE_FUNC __FILE__,__LINE__,__PRETTY_FUNCTION__
 #  define AS_LOG_DEBUG gift_proto->trace (gift_proto, FILE_LINE_FUNC
+#  define AS_LOG_HEAVY_DEBUG gift_proto->trace (gift_proto, FILE_LINE_FUNC
 #  define AS_LOG_ERROR gift_proto->err (gift_proto
 #  define AS_LOG_WARNING gift_proto->warn (gift_proto
 #  define AS_LOG(l) l
