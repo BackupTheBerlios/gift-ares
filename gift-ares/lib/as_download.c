@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.1 2004/09/06 17:27:55 HEx Exp $
+ * $Id: as_download.c,v 1.2 2004/09/07 13:14:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -118,8 +118,8 @@ static int download_client_callback (ASHttpClient *client, ASHttpClientCbCode co
 		}
 
 		{
-			p = as_http_header_get_field (reply, "Content-Range");
 			int start, stop, size;
+			p = as_http_header_get_field (reply, "Content-Range");
 			if (sscanf (p, "bytes=%d-%d/%d", &start, &stop, &size) == 3)
 				if (size)
 					dl->size = size;

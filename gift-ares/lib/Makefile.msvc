@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.10 2004/09/07 13:05:33 mkern Exp $
+# $Id: Makefile.msvc,v 1.11 2004/09/07 13:14:04 mkern Exp $
 
 
 !include ../Make.msvc
@@ -20,10 +20,8 @@ OBJECTS = \
 	as_packet$(O) \
 	as_sha1$(O) \
 	as_hash$(O) \
+	as_encoding$(O) \
 	as_meta$(O) \
-	as_http_header$(O) \
-	as_http_client$(O) \
-	as_http_server$(O) \
 	as_node$(O) \
 	as_node_man$(O) \
 	as_session$(O) \
@@ -32,7 +30,11 @@ OBJECTS = \
 	as_tokenize$(O) \
 	as_search_result$(O) \
 	as_search$(O) \
-	as_search_man$(O)
+	as_search_man$(O) \
+	as_http_header$(O) \
+	as_http_client$(O) \
+	as_http_server$(O) \
+	as_download$(O)
 	
 
 all: $(OBJECTS)
