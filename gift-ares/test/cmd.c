@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.26 2004/09/17 11:40:34 mkern Exp $
+ * $Id: cmd.c,v 1.27 2004/09/17 11:52:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -686,6 +686,10 @@ COMMAND_FUNC (download)
 	dl = as_download_new (source, hash, filename);
 
 	as_download_start (dl);
+
+	return TRUE;
+#else
+	printf ("Unimplemented\n");
 
 	return TRUE;
 #endif
