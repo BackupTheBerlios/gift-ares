@@ -1,5 +1,5 @@
 /*
- * $Id: main.h,v 1.5 2004/08/25 22:04:30 HEx Exp $
+ * $Id: main.h,v 1.6 2004/09/17 11:40:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,6 +22,10 @@
 
 #include "cmd.h"
 #include "testing.h"
+
+/*****************************************************************************/
+
+int parse_argv(char *cmdline, int *argc, char ***argv);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.25 2004/09/16 23:36:54 HEx Exp $
+ * $Id: cmd.c,v 1.26 2004/09/17 11:40:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -549,19 +549,25 @@ COMMAND_FUNC (resume)
 
 COMMAND_FUNC (share)
 {
+	char *path;
+	int size;
+	ASRealm realm;
+	ASHash *hash;
+	ASMeta *meta;
+	ASShare *share;
+	int i;
+
 	if (argc < 5)
 		return FALSE;
 
 	if (!(argc & 1))
 		return FALSE;
 
-	char *path = argv[1];
-	int size = atoi(argv[2]);
-	ASRealm realm = atoi(argv[3]);
-	ASHash *hash = as_hash_decode (argv[4]);
-	ASMeta *meta = as_meta_create ();
-	ASShare *share;
-	int i;
+	path = argv[1];
+	size = atoi(argv[2]);
+	realm = atoi(argv[3]);
+	hash = as_hash_decode (argv[4]);
+	meta = as_meta_create ();
 
 	if (!meta)
 		return FALSE;

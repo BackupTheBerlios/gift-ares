@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.13 2004/09/16 23:36:54 HEx Exp $
+ * $Id: main.c,v 1.14 2004/09/17 11:40:34 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -13,11 +13,6 @@
 
 #include "as_ares.h"
 #include "main.h"
-
-/*****************************************************************************/
-
-/* see end of file */
-int parse_argv(char *cmdline, int *argc, char ***argv);
 
 /*****************************************************************************/
 
