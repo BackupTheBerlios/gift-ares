@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.h,v 1.5 2004/09/24 22:27:20 mkern Exp $
+ * $Id: as_source.h,v 1.6 2004/11/20 03:02:40 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -58,7 +58,7 @@ as_bool as_source_has_push_info (ASSource *source);
 
 /*****************************************************************************/
 
-#if 0
+#ifdef GIFT_PLUGIN
 
 /* create source from gift url */
 ASSource *as_source_unserialize (const char *str);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.11 2004/10/24 03:31:54 HEx Exp $
+ * $Id: as_source.c,v 1.12 2004/11/20 03:02:40 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -104,18 +104,48 @@ as_bool as_source_has_push_info (ASSource *source)
 
 /*****************************************************************************/
 
-#if 0
+#ifdef GIFT_PLUGIN
 
 /* create source from gift url */
 ASSource *as_source_unserialize (const char *str)
 {
+	ASSource *source;
+	in_addr_t host, shost;
+	int port, sport;
+	char username[32] = "", host_str[20], shost_str[20];
 
+	if (sscanf (str, "Ares:?host=%[0-9.]&port=%d&shost=%[0-9.]&sport=%d&username=%30s", host_str, &port, shost_str, &sport, username) < 4) /* username may be blank */
+		return NULL;
+
+	AS_DBG_5 ("p: %s %d %s %d %s", host_str, port, shost_str, sport, username);
+
+	if (!(host = net_ip (host_str)) || !(shost = net_ip (shost_str)))
+		return NULL;
+
+	if (!(source = as_source_create ()))
+		return NULL;
+
+	source->host     = host;
+	source->port     = port;
+	source->shost    = shost;
+	source->sport    = sport;
+	source->username = strdup (username);
+
+	return source;
 }
 
 /* create url for gift. Caller frees returned string. */
 char *as_source_serialize (ASSource *source)
 {
+	char host_str[32], shost_str[32];
+	
+	if (!net_ip_strbuf (source->host, host_str, sizeof(host_str)) ||
+	    !net_ip_strbuf (source->shost, shost_str, sizeof(shost_str)))
+		return NULL;
 
+	return stringf_dup ("Ares:?host=%s&port=%d&shost=%s&sport=%d&username=%s",
+			    host_str, (int)source->port,
+			    shost_str, (int)source->sport);
 }
 
 #endif
