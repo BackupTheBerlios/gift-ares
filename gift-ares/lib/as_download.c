@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.10 2004/09/15 23:05:52 mkern Exp $
+ * $Id: as_download.c,v 1.11 2004/09/16 16:52:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -15,8 +15,9 @@
 
 /*****************************************************************************/
 
-/* Interval of maintenance timer used to check in queued sources */
-#define MAINTENANCE_TIMER_INTERVAL (30 * SECONDS)
+/* Interval of maintenance timer used to check on queued sources and save
+ * download state. */
+#define MAINTENANCE_TIMER_INTERVAL (20 * SECONDS)
 
 /* Filename prefix for incomplete files */
 #define INCOMPLETE_PREFIX "___ARESTRA___"
@@ -35,6 +36,7 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
                              unsigned int len);
 
 static as_bool verify_chunks (ASDownload *dl);
+static as_bool consolidate_chunks (ASDownload *dl);
 static void download_maintain (ASDownload *dl);
 static as_bool maintenance_timer_func (ASDownload *dl);
 
@@ -196,6 +198,16 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 	if (!download_set_state (dl, DOWNLOAD_ACTIVE, TRUE))
 		return FALSE;
 
+	/* Immediately save state data so we have something to recover from. */
+	if (!as_downstate_save (dl))
+	{
+		AS_ERR_1 ("Failed to write state data for \"%s\". Pausing.",
+		          dl->filename);
+		as_download_pause (dl);
+		/* return TRUE because the download setup has succeeded */
+		return TRUE;
+	}
+
 	/* start things off */
 	download_maintain (dl);
 
@@ -324,6 +336,33 @@ as_bool as_download_pause (ASDownload *dl)
 	/* Stop all active chunk downloads. */
 	stop_all_connections (dl);
 
+	/* Clean up chunks so state is saved with only completely full or empty
+	 * chunks
+	 */
+	if (!consolidate_chunks (dl))
+	{
+		AS_ERR_1 ("Consolidating chunks failed on pausing for \"%s\"",
+		          dl->filename);
+		/* Fail download */
+		download_failed (dl);
+		assert (0);
+		return FALSE;
+	}
+
+	/* Set state to paused so it is saved in file. */
+	download_set_state (dl, DOWNLOAD_PAUSED, FALSE);
+	
+	/* Save state data. */
+	if (!as_downstate_save (dl))
+	{
+		AS_ERR_1 ("Failed to write state data on pausing for \"%s\"",
+		          dl->filename);
+		/* Fall through and complete pause */
+	}
+
+	/* Raise callback after saving so not matter what the callback does the
+	 * state data is on disk.
+	 */
 	if (!download_set_state (dl, DOWNLOAD_PAUSED, TRUE))
 		return FALSE;
 
@@ -343,6 +382,29 @@ as_bool as_download_queue (ASDownload *dl)
 
 	/* Stop all active chunk downloads. */
 	stop_all_connections (dl);
+
+	/* Clean up chunks so state is saved with only completely full or empty
+	 * chunks
+	 */
+	if (!consolidate_chunks (dl))
+	{
+		AS_ERR_1 ("Consolidating chunks failed on queued for \"%s\"",
+		          dl->filename);
+		/* Fail download */
+		download_failed (dl);
+		assert (0);
+		return FALSE;
+	}
+
+	/* Save state data. */
+	if (!as_downstate_save (dl))
+	{
+		AS_ERR_1 ("Failed to write state data on queued for \"%s\"",
+		          dl->filename);
+		/* Pause the download instead */
+		as_download_pause (dl);
+		return FALSE;
+	}
 
 	if (!download_set_state (dl, DOWNLOAD_QUEUED, TRUE))
 		return FALSE;
@@ -771,9 +833,8 @@ static as_bool consolidate_chunks (ASDownload *dl)
 		    chunk->received > 0 &&
 		    chunk->received < chunk->size)
 		{
-			AS_HEAVY_DBG_4 ("Splitting half complete chunk (%u, %u, %u) \"%s\"",
-			                chunk->start, chunk->size,
-			                chunk->received, dl->filename);
+			AS_HEAVY_DBG_3 ("Splitting half complete chunk (%u, %u, %u)",
+			                chunk->start, chunk->size, chunk->received);
 
 			/* create the new empty chunk */
 			new_start = chunk->start + chunk->received;
@@ -1122,6 +1183,15 @@ static void download_maintain (ASDownload *dl)
 static as_bool maintenance_timer_func (ASDownload *dl)
 {
 	AS_HEAVY_DBG ("Download maintenace timer invoked");
+
+	/* Save state data. */
+	if (!as_downstate_save (dl))
+	{
+		AS_ERR_1 ("Failed to write state data for \"%s\". Pausing.",
+		          dl->filename);
+		as_download_pause (dl);	/* will remove timer */
+		return FALSE;
+	}
 
 	/* Check on queued connections */
 	download_maintain (dl);

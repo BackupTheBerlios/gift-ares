@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_state.c,v 1.1 2004/09/15 22:46:04 mkern Exp $
+ * $Id: as_download_state.c,v 1.2 2004/09/16 16:52:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -17,11 +17,14 @@
 /*****************************************************************************/
 
 static ASPacket *read_state (FILE *fp, size_t *current_filesize);
+static as_bool write_state (FILE *fp, ASPacket *packet, size_t filesize);
 
 static as_bool read_chunks (ASDownload *dl, ASPacket *packet,
                             size_t current_filesize);
+static as_bool write_chunks (ASDownload *dl, ASPacket *packet);
 
 static as_bool read_tlvs (ASDownload *dl, ASPacket *packet);
+static as_bool write_tlvs (ASDownload *dl, ASPacket *packet);
 
 /*****************************************************************************/
 
@@ -29,6 +32,8 @@ static as_bool read_tlvs (ASDownload *dl, ASPacket *packet);
 as_bool as_downstate_load (ASDownload *dl)
 {
 	ASPacket *packet;
+	List *link;
+	ASDownChunk *chunk;
 	size_t current_filesize;
 	as_uint8 u8;
 	as_bool paused = FALSE;
@@ -57,6 +62,15 @@ as_bool as_downstate_load (ASDownload *dl)
 		          dl->filename);
 		as_packet_free (packet);
 		return FALSE;
+	}
+
+	/* Recalculate dl->received from complete chunks */
+	dl->received = 0;
+	for (link = dl->chunks; link; link = link->next)
+	{
+		chunk = link->data;
+		if (chunk->received == chunk->size)
+			dl->received += chunk->size;
 	}
 
 	if (as_packet_remaining (packet) < 16)
@@ -110,8 +124,6 @@ as_bool as_downstate_load (ASDownload *dl)
 	/* We are finished. */
 	as_packet_free (packet);
 
-	/* FIXME: Should we recalculate dl->received from chunks? */
-
 	/* Set new state */
 	if (paused)
 		dl->state = DOWNLOAD_PAUSED;
@@ -124,7 +136,77 @@ as_bool as_downstate_load (ASDownload *dl)
 /* Save state data to end of file being downloaded. */
 as_bool as_downstate_save (ASDownload *dl)
 {
-	return FALSE;
+	ASPacket *packet;
+	size_t received;
+	List *link;
+	ASDownChunk *chunk;
+
+	assert (dl->chunks);
+	assert (dl->fp);
+
+	if (!(packet = as_packet_create ()))
+		return FALSE;
+
+	/* Assemble state data. */
+	as_packet_put_le32 (packet, dl->size);
+
+	/* Sum up complete chunks. */
+	received = 0;
+	for (link = dl->chunks; link; link = link->next)
+	{
+		chunk = link->data;
+		if (chunk->received == chunk->size)
+			received += chunk->size;
+	}
+	as_packet_put_le32 (packet, received);
+
+	AS_HEAVY_DBG_3 ("Saving state. File size: %u, received: %u, complete chunks: %u",
+	                dl->size, dl->received, received);
+
+	/* Write chunks. */
+	if (!write_chunks (dl, packet))
+	{
+		AS_ERR_1 ("Unable to assemble chunk data for incomplete download \"%s\"",
+		          dl->filename);
+		as_packet_free (packet);
+		return FALSE;
+	}
+
+	/* Unknown */
+	as_packet_put_8 (packet, 0x01);
+
+	/* Paused flag */
+	if (dl->state == DOWNLOAD_PAUSED)
+		as_packet_put_8 (packet, 0x01);
+	else
+		as_packet_put_8 (packet, 0x00);
+
+	/* Unknowns */
+	as_packet_put_le32 (packet, 0x00000080);
+	as_packet_put_le32 (packet, 0x00000000);
+	as_packet_put_le32 (packet, 0x000000F8);
+
+	/* Write TLVs. */
+	if (!write_tlvs (dl, packet))
+	{
+		AS_ERR_1 ("Unable to assemble TLVs for incomplete download \"%s\"",
+		          dl->filename);
+		as_packet_free (packet);
+		return FALSE;
+	}
+
+	/* Write data to disk. */
+	if (!write_state (dl->fp, packet, dl->size))
+	{
+		AS_ERR_1 ("Couldn't write state to incomplete download \"%s\"",
+		          dl->filename);
+		as_packet_free (packet);
+		return FALSE;
+	}
+
+	as_packet_free (packet);
+
+	return TRUE;
 }
 
 /*****************************************************************************/
@@ -185,6 +267,41 @@ static ASPacket *read_state (FILE *fp, size_t *current_filesize)
 	}
 
 	return packet;		
+}
+
+static as_bool write_state (FILE *fp, ASPacket *packet, size_t filesize)
+{
+	int len;
+
+	/* Write state data after end of file. */
+	if (fseek (fp, filesize, SEEK_SET) != 0)
+	{
+		AS_ERR ("Couldn't seek to file size.");
+		return FALSE;
+	}
+
+	/* Write magic */
+	if (fwrite (ARESTRA_MAGIC, ARESTRA_MAGIC_LEN, 1, fp) != 1)
+	{
+		AS_ERR ("Couldn't write magic.");
+		return FALSE;
+	}
+
+	/* Pad packet with zeros to have a multiple of 4k length. */
+	len = 4096 - ((as_packet_size (packet) + ARESTRA_MAGIC_LEN) % 4096);
+	if (!as_packet_pad (packet, 0x00, len))
+		return FALSE;	
+
+	assert (((as_packet_size (packet) + ARESTRA_MAGIC_LEN) % 4096) == 0);
+
+	/* Write entire packet to disk. */
+	if (fwrite (packet->data, as_packet_size (packet), 1, fp) != 1)
+	{
+		AS_ERR ("Couldn't write state data.");
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 /*****************************************************************************/
@@ -326,6 +443,39 @@ static as_bool read_chunks (ASDownload *dl, ASPacket *packet,
 	return FALSE;
 }
 
+static as_bool write_chunks (ASDownload *dl, ASPacket *packet)
+{
+	ASDownChunk *chunk;
+	List *link;
+
+	assert (dl->chunks);
+
+	/* The saved ranges are empty chunks up to current_filesize. We always
+	 * use the entire file size and write the appendix after it. So just save
+	 * all chunks which are not complete.
+	 */
+	for (link = dl->chunks; link; link = link->next)
+	{
+		chunk = link->data;
+
+		/* Skip complete chunks. */
+		if (chunk->received == chunk->size)
+			continue;
+
+		/* Write incomplete chunk. If download is not active this will be
+		 * completely empty chunks.
+		 */
+		as_packet_put_le32 (packet, chunk->start);
+		as_packet_put_le32 (packet, chunk->start + chunk->size - 1);
+	}
+
+	/* Write terminator. */
+	as_packet_put_le32 (packet, 0);
+	as_packet_put_le32 (packet, 0);
+
+	return TRUE;
+}
+
 /*****************************************************************************/
 
 static as_bool read_sources (ASDownload *dl, ASPacket *packet, as_uint16 len)
@@ -432,6 +582,96 @@ static as_bool read_tlvs (ASDownload *dl, ASPacket *packet)
 
 		total_len -= len;
 	}
+
+	return TRUE;
+}
+
+static void tlv_append_str (ASPacket *packet, ASDownStateTags type,
+                            const char *str)
+{
+	as_uint16 len = strlen (str);
+
+	/* type and length */
+	as_packet_put_8 (packet, (as_uint8) type);
+	as_packet_put_le16 (packet, (as_uint16) len);
+	/* data */
+	as_packet_put_ustr (packet, (as_uint8 *)str, len);
+}
+
+static as_bool tlv_append_sources (ASPacket *packet, ASDownload *dl)
+{
+	ASSource *source;
+	List *link;
+	ASPacket *body;
+
+	if (!(body = as_packet_create ()))
+		return FALSE;
+
+	for (link = dl->conns; link; link = link->next)
+	{
+		source = ((ASDownConn *)link->data)->source;
+
+		/* Ignore firewalled sources */
+		if (as_source_firewalled (source))
+			continue;
+
+		/* Append source data */
+		as_packet_put_ip (body, source->host);
+		as_packet_put_le16 (body, source->port);
+		as_packet_put_ip (body, source->shost);
+		as_packet_put_le16 (body, source->sport);
+		
+		/* User's inside ip. */
+		as_packet_put_ip (body, 0x00); 
+
+		/* Terminator. */
+		as_packet_put_8 (body, 0x00);	
+	}
+
+	/* Append type, length and body. */
+	as_packet_put_8 (packet, DOWNSTATE_TAG_SOURCES);
+	as_packet_put_le16 (packet, (as_uint16) as_packet_size (body));
+
+	if (!as_packet_append (packet, body))
+	{
+		as_packet_free (body);
+		return FALSE;
+	}
+
+	as_packet_free (body);
+
+	return TRUE;
+}
+
+static as_bool write_tlvs (ASDownload *dl, ASPacket *packet)
+{
+	ASPacket *tlvs_packet;
+
+	assert (dl->hash);
+
+	if (!(tlvs_packet = as_packet_create ()))
+		return FALSE;
+
+	/* Add hash */
+	as_packet_put_8 (tlvs_packet, DOWNSTATE_TAG_HASH);
+	as_packet_put_le16 (tlvs_packet, AS_HASH_SIZE);
+	as_packet_put_hash (tlvs_packet, dl->hash);
+
+	/* Add sources */
+	tlv_append_sources (tlvs_packet, dl);
+
+	/* TODO: Add meta data */
+
+	/* Append TLVs to packet */
+	as_packet_put_le16 (packet, (as_uint16) as_packet_size (tlvs_packet));
+
+	if (!as_packet_append (packet, tlvs_packet))
+	{
+		as_packet_free (tlvs_packet);
+		return FALSE;
+	}
+
+	as_packet_free (tlvs_packet);
 
 	return TRUE;
 }
