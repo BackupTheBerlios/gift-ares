@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.8 2004/10/30 23:51:14 mkern Exp $
+ * $Id: as_netinfo.c,v 1.9 2004/11/05 01:07:57 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -10,6 +10,24 @@
 #include "as_ares.h"
 
 /*****************************************************************************/
+
+static as_bool make_guid (as_uint8 *guid)
+{
+	ASSHA1State sha1;
+	as_uint8 hash[20];
+	time_t t = time (NULL);
+
+	as_sha1_init (&sha1);
+
+	as_sha1_update (&sha1, &t, sizeof (t));
+	/* FIXME: add more stuff here */
+
+	as_sha1_final (&sha1, hash);
+
+	memcpy (guid, hash, 16);
+
+	return TRUE;
+}
 
 /* allocate and init network info */
 ASNetInfo *as_netinfo_create ()
@@ -30,6 +48,7 @@ ASNetInfo *as_netinfo_create ()
 	info->port       = 0;
 
 	info->nick       = NULL;
+	make_guid (info->guid);
 
 	return info;
 }

@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.h,v 1.6 2004/10/29 16:27:51 HEx Exp $
+ * $Id: as_netinfo.h,v 1.7 2004/11/05 01:07:57 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,6 +26,8 @@ struct as_net_info_t
 	unsigned int size;      /* total network size in GB */
 
 	unsigned char *nick;    /* nickname from server (unique?) */
+
+	as_uint8 guid[16];
 
 	ASNetInfoStatsCb stats_cb;
 
