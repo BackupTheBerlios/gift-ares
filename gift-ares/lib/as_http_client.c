@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.c,v 1.3 2004/09/04 18:21:51 mkern Exp $
+ * $Id: as_http_client.c,v 1.4 2004/09/09 21:50:46 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,9 +9,7 @@
 
 #include "as_ares.h"
 
-/*
 #define LOG_HTTP_HEADERS
-*/
 
 /*****************************************************************************/
 
@@ -396,7 +394,7 @@ static void client_read_header (int fd, input_id input, ASHttpClient *client)
 		return;
 	}
 
-	if (client->data_len > 0)
+	if (client->data_len > 0 || client->content_length == 0)
 	{
 		if (! client_write_data (client))
 		{
@@ -407,7 +405,7 @@ static void client_read_header (int fd, input_id input, ASHttpClient *client)
 
 	/* read body data */
 	input_add (client->tcpcon->fd, (void*)client, INPUT_READ,
-			   (InputCallback)client_read_body, HTCL_DATA_TIMEOUT);
+		   (InputCallback)client_read_body, HTCL_DATA_TIMEOUT);
 }
 
 static void client_read_body (int fd, input_id input, ASHttpClient *client)
@@ -463,14 +461,12 @@ static int client_write_data (ASHttpClient *client)
 				   net_ip_str(client->ip), client->port);
 */
 
+#if 0
 	assert (client->data_len > 0);
+#endif
 
 	if (client->content_received == client->content_length)
 	{
-		char *con_str = strdup (as_http_header_get_field (client->reply,
-		                                                  "Connection"));
-		string_lower (con_str);
-
 		/* a new request may be made from the callback and we need to make
 		 * sure it's only reusing the connection if that actually makes
 		 * sense.
@@ -482,7 +478,7 @@ static int client_write_data (ASHttpClient *client)
 		 * for now we leave the cleaning up to the next request/free for
 		 * this client.
 		 */
-		if (client->persistent && strstr (con_str, "keep-alive"))
+		if (client->persistent)
 		{
 			AS_HEAVY_DBG_3 ("received all data keeping alive %s [%s]:%d",
 							 client->host, net_ip_str(client->ip), client->port);
@@ -499,7 +495,6 @@ static int client_write_data (ASHttpClient *client)
 		/* notify parent */
 		client->callback (client, HTCL_CB_DATA_LAST);
 
-		free (con_str);
 		return FALSE; /* remove input */
 	}
 	else

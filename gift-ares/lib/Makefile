@@ -1,4 +1,5 @@
-CFLAGS=-g -Wall -DDEBUG
+#CFLAGS=-O2 -Wall
+CFLAGS= -g -Wall -DDEBUG -DHEAVY_DEBUG
 
 OBJECTS = \
 	as_list.o \
