@@ -1,5 +1,5 @@
 /*
- * $Id: as_strobj.c,v 1.1 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_strobj.c,v 1.2 2004/09/03 20:03:21 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -55,7 +55,7 @@ char *string_finish_keep (String *sobj)
 /*****************************************************************************/
 
 /* Create string object. Always call with string_new (NULL, 0, 0, FALSE) */
-String *string_new (char *str, int alloc, int len, BOOL can_resize)
+String *string_new (char *str, int alloc, int len, as_bool can_resize)
 {
 	String *sobj;
 
