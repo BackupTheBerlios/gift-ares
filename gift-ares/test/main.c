@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.8 2004/09/01 12:31:57 mkern Exp $
+ * $Id: main.c,v 1.9 2004/09/05 03:29:03 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -112,6 +112,8 @@ int main (int argc, char *argv[])
 {
 	ASLogger *logger;
 	int stdin_handle;
+	input_id stdinput;
+
 #ifdef WIN32
 	HANDLE hThread;
 	int fds[2];
@@ -154,7 +156,7 @@ int main (int argc, char *argv[])
 #endif
 
 	/* add callback for command handling */
-	input_add (stdin_handle, NULL, INPUT_READ, stdin_cb, 0);
+	stdinput = input_add (stdin_handle, NULL, INPUT_READ, stdin_cb, 0);
 
 #if 0
 	/* print prompt */
@@ -165,6 +167,8 @@ int main (int argc, char *argv[])
 	AS_DBG ("Entering event loop");
 	as_event_loop ();
 	AS_DBG ("Left event loop");
+
+	input_remove (stdinput);
 
 #if WIN32
 	/* terminate thread if it is still running and close thread handle */
