@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.3 2004/12/04 15:43:53 mkern Exp $
+ * $Id: asp_download.c,v 1.4 2004/12/04 17:23:58 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -95,8 +95,8 @@ static as_bool dl_data_callback (ASDownConn *conn, as_uint8 *data,
 {
 	Source *source = conn->udata1;
 
-	/* This will make giFT call asp_giftcb_download_stop if teh chunk is
-	 * complete.
+	/* This will make giFT call asp_giftcb_download_stop and/or 
+	 * asp_giftcb_source_remove if the chunk is complete.
 	 */
 	PROTO->chunk_write (PROTO, source->chunk->transfer, source->chunk,
 	                    source, data, len);
@@ -116,45 +116,19 @@ static as_bool dl_data_callback (ASDownConn *conn, as_uint8 *data,
 BOOL asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
                                 Source *source)
 {
-	ASSource *s;
-	ASDownConn *dc;
+	ASDownConn *dc = source->udata;
 	ASHash *hash;
+	assert (dc);
 
-	assert (source->url);
-
-	/* Create source object from URL. */
-	if (!(s = as_source_unserialize (source->url)))
-	{	
-		AS_WARN_1 ("Malformed source url '%s'.", source->url);
-		PROTO->source_abort (PROTO, source->chunk->transfer, source);
-		return FALSE;
-	}
-	
 	/* Create hash object. */
 	if (strcasecmp (hashstr_algo (source->hash), "SHA1") ||
 	    !(hash = as_hash_decode (hashstr_data (source->hash))))
 	{
 		AS_WARN_1 ("Malformed source hash '%s'.", source->hash);
 		PROTO->source_abort (PROTO, source->chunk->transfer, source);
-		as_source_free (s);
 		return FALSE;
 	}
 
-	/* Create the ares download connection object. */
-	dc = as_downconn_create (s, (ASDownConnStateCb)dl_state_callback,
-	                         (ASDownConnDataCb)dl_data_callback);
-	as_source_free (s);
-
-	if (!dc)
-	{	
-		AS_ERR_1 ("Failed to create downconn from '%s'.", source->url);
-		as_hash_free (hash);
-		return FALSE;
-	}
-
-	source->udata = dc;
-	dc->udata1 = source;
-	
 	/* Start transfer. */
 	if (!as_downconn_start (dc, hash, chunk->start + chunk->transmit,
 	                        chunk->stop - chunk->start - chunk->transmit))
@@ -179,21 +153,56 @@ BOOL asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 void asp_giftcb_download_stop (Protocol *p, Transfer *transfer, Chunk *chunk,
                                Source *source, int complete)
 {
-	ASDownConn *dc = source->udata;
+	ASDownConn *dc;
+
+	/* You will probably not believe this but giFT may call this for a given
+	 * chunk with a totally random source (see cancel_sources in download.c).
+	 * I am so sick of this crap.
+	 */
+	if (!chunk->source)
+		return;
+
+	/* This may be NULL because giFT sometimes removes the source before
+	 * stopping the download. I am not kídding you.
+	 */
+	if (!(dc = chunk->source->udata))
+		return;
 	
-	/* giFT sometimes removes the source before cancelling it... */
-	if (dc)
-	{
-		as_downconn_cancel (dc);
-		as_downconn_free (dc);
-		source->udata = NULL;
-	}
+	as_downconn_cancel (dc);
 }
 
 /* Called by gift when a source is added to a download. */
 BOOL asp_giftcb_source_add (Protocol *p,Transfer *transfer, Source *source)
 {
-	/* Accept all sources. */
+	ASSource *s;
+	ASDownConn *dc;
+
+	/* Create downconn object for this new source. */
+	assert (source->udata == NULL);
+	assert (source->url);
+
+	/* Create source object from URL. */
+	if (!(s = as_source_unserialize (source->url)))
+	{	
+		AS_WARN_1 ("Malformed source url '%s'.", source->url);
+		return FALSE; /* Makes giFT drop the source. */
+	}
+	
+	/* Create the ares download connection object. */
+	dc = as_downconn_create (s, (ASDownConnStateCb)dl_state_callback,
+	                         (ASDownConnDataCb)dl_data_callback);
+
+	as_source_free (s);
+
+	if (!dc)
+	{	
+		AS_ERR_1 ("Failed to create downconn from '%s'.", source->url);
+		return FALSE;
+	}
+
+	source->udata = dc;
+	dc->udata1 = source;
+
 	return TRUE;
 }
 
@@ -202,16 +211,12 @@ void asp_giftcb_source_remove (Protocol *p, Transfer *transfer,
                                Source *source)
 {
 	ASDownConn *dc = source->udata;
+	assert (dc);
 
-	/* If there is still a downconn object associated with this source get rid
-	 * of it now. 
-	 */
-	if (dc)
-	{
-		as_downconn_cancel (dc);
-		as_downconn_free (dc);
-		source->udata = NULL;
-	}
+	/* Free our downconn object. */
+	as_downconn_cancel (dc);
+	as_downconn_free (dc);
+	source->udata = NULL;
 }
 
 /*****************************************************************************/
