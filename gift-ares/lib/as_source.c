@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.12 2004/11/20 03:02:40 HEx Exp $
+ * $Id: as_source.c,v 1.13 2004/11/20 16:56:12 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -114,7 +114,7 @@ ASSource *as_source_unserialize (const char *str)
 	int port, sport;
 	char username[32] = "", host_str[20], shost_str[20];
 
-	if (sscanf (str, "Ares:?host=%[0-9.]&port=%d&shost=%[0-9.]&sport=%d&username=%30s", host_str, &port, shost_str, &sport, username) < 4) /* username may be blank */
+	if (sscanf (str, "Ares:?host=%16[0-9.]&port=%d&shost=%16[0-9.]&sport=%d&username=%30s", host_str, &port, shost_str, &sport, username) < 4) /* username may be blank */
 		return NULL;
 
 	AS_DBG_5 ("p: %s %d %s %d %s", host_str, port, shost_str, sport, username);
