@@ -1,9 +1,6 @@
 
 - if queue pos > len don't show it
 
-- don't show source speed updates in log
-  show queue status in log?
-
 - why do so many source go into 'timed out' state and are not removed? should they be?
 
 - Disabled sharing makes other nodes ask us for pushes
