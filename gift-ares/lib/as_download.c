@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.24 2004/10/26 19:31:12 mkern Exp $
+ * $Id: as_download.c,v 1.25 2004/10/26 19:45:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -1282,7 +1282,10 @@ static as_bool start_chunks (ASDownload *dl)
  *
  * FIXME: Not a very good solution. In endgame mode the first may be a better
  *        and unused connection. The problems is that we do not know at this
- *        point if we are in endgame mode or not.
+ *        point if we are in endgame mode or not. Another problem is that a
+ *        connection has zero b/w until it has completed at least one request.
+ *        We might remove such connections even though they are perfectly
+ *        fine.
  *
  * Warning: Leaves connection list in unsorted state since it expects a call
  *          to start_chunks afterwards. Chunks also need to be consolidated

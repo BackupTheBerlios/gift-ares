@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.14 2004/10/26 19:31:12 mkern Exp $
+ * $Id: as_download_conn.c,v 1.15 2004/10/26 19:45:10 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -87,7 +87,7 @@ static void downconn_update_stats (ASDownConn *conn)
 	conn->hist_downloaded += conn->curr_downloaded;
 	conn->hist_time += time (NULL) - conn->request_time;
 
-	AS_DBG_3 ("Updated stats for %s. last speed: %.3f kb/s, total speed: %.3f kb/s",
+	AS_DBG_3 ("Updated stats for %s. last speed: %2.2f kb/s, total speed: %2.2f kb/s",
 	          net_ip_str (conn->source->host),
 	          (float)conn->curr_downloaded / (time (NULL) - conn->request_time) / 1024,
 	          (float)conn->hist_downloaded / conn->hist_time / 1024);
