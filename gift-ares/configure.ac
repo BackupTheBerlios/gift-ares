@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-# $Id: configure.ac,v 1.3 2004/12/19 00:01:43 mkern Exp $
+# $Id: configure.ac,v 1.4 2004/12/19 00:14:58 mkern Exp $
 
 dnl ###########################################################################
 dnl Process this file with autoconf to produce a configure script.
@@ -9,11 +9,8 @@ dnl ###########################################################################
 AC_PREREQ(2.52)
 
 AC_INIT(gift-ares, 0.1.1)
-AC_REVISION($Revision: 1.3 $)
+AC_REVISION($Revision: 1.4 $)
 AC_CONFIG_SRCDIR([lib/as_ares.h])
-
-dnl Needed to build with libtoolize 1.4.3 on Debian woody
-AC_CONFIG_AUX_DIR(.)
 
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
@@ -165,6 +162,9 @@ GIFT_PLUGIN_INSTALL_PATH
 dnl ###########################################################################
 dnl Finally do the generation
 dnl ###########################################################################
+
+dnl Needed to build with libtoolize 1.4.3 on Debian woody
+AC_CONFIG_AUX_DIR(.)
 
 AC_CONFIG_FILES([
   Makefile
