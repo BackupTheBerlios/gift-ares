@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.8 2004/09/15 21:27:17 HEx Exp $
+ * $Id: as_download.c,v 1.9 2004/09/15 22:46:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -165,7 +165,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 	}
 
 	/* open file */
-	if (!(dl->fp = fopen (dl->filename, "wb")))
+	if (!(dl->fp = fopen (dl->filename, "w+b")))
 	{
 		AS_ERR_1 ("Unable to open download file \"%s\" for writing",
 		          dl->filename);
@@ -201,14 +201,80 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 	return TRUE;
 }
 
-/* Restart download from incomplete _ARESTRA_ file. This will fail if the file
- * is not found/corrupt/etc.
+/* Restart download from incomplete ___ARESTRA___ file. This will fail if the
+ * file is not found/corrupt/etc.
  */
 as_bool as_download_restart (ASDownload *dl, const char *filename)
 {
-	/* TODO */
-	assert (0);
-	return FALSE;
+	struct stat st;
+
+	if (dl->state != DOWNLOAD_NEW)
+	{
+		assert (dl->state == DOWNLOAD_NEW);
+		return FALSE;
+	}
+
+	if (!filename)
+	{
+		assert (filename);
+		return FALSE;
+	}
+
+	/* copy file name */
+	dl->filename = strdup (filename);
+
+	/* make sure the file exists */
+	if (stat (dl->filename, &st) != 0 || !S_ISREG (st.st_mode))
+	{
+		AS_ERR_1 ("Incomplete file \"%s\" does not exist.", dl->filename);
+		free (dl->filename);
+		dl->filename = NULL;
+		return FALSE;
+	}
+
+	/* open file */
+	if (!(dl->fp = fopen (dl->filename, "r+b")))
+	{
+		AS_ERR_1 ("Unable to open download file \"%s\" for writing",
+		          dl->filename);
+		free (dl->filename);
+		dl->filename = NULL;
+		return FALSE;
+	}
+
+	/* read download state from file */
+	if (!as_downstate_load (dl))
+	{
+		AS_ERR_1 ("Unable to load state for incomplete download file \"%s\"",
+		          dl->filename);
+		fclose (dl->fp);
+		dl->fp = NULL;
+		free (dl->filename);
+		dl->filename = NULL;
+		return FALSE;	
+	}
+	
+	AS_HEAVY_DBG_3 ("Loaded state for \"%s\", size: %u, received: %u",
+	                dl->filename, dl->size, dl->received);
+
+#ifdef HEAVY_DEBUG
+	assert (verify_chunks (dl));
+
+	AS_HEAVY_DBG ("Chunk state after restoring download:");
+	dump_chunks (dl);
+
+	AS_HEAVY_DBG ("Connection state after restoring download:");
+	dump_connections (dl);
+#endif
+
+	/* raise callback with state set by as_downstate_load */
+	if (!download_set_state (dl, dl->state, TRUE))
+		return FALSE;
+
+	/* start things off */
+	download_maintain (dl);
+
+	return TRUE;
 }
 
 /* Cancels download and removes incomplete file. */
@@ -726,11 +792,7 @@ static as_bool consolidate_chunks (ASDownload *dl)
 
 			/* Insert new chunk after old one. */
 			new_link = list_prepend (NULL, new_chunk);
-			new_link->next = link->next;
-			new_link->prev = link;
-			link->next = new_link;
-			if (new_link->next)
-				new_link->next->prev = new_link;
+			list_insert_link (link, new_link);
 
 			assert (chunk->received == chunk->size);
 			assert (new_chunk->received == 0);
@@ -967,12 +1029,10 @@ static as_bool start_chunks (ASDownload *dl)
 	                    chunk->start, chunk->size);
 
 		/* Insert new chunk after old one */
+
+
 		tmp_l = list_prepend (NULL, new_chunk);
-		tmp_l->next = chunk_l->next;
-		tmp_l->prev = chunk_l;
-		chunk_l->next = tmp_l;
-		if (tmp_l->next)
-			tmp_l->next->prev = tmp_l;
+		list_insert_link (chunk_l, tmp_l);
 
 		/* go on with next connection */
 		conn_l = conn_l->next;

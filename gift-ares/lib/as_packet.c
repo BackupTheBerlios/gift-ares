@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.15 2004/09/15 21:27:38 HEx Exp $
+ * $Id: as_packet.c,v 1.16 2004/09/15 22:46:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,7 +8,6 @@
  */
 
 #include "as_ares.h"
-#include <zlib.h>
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.33 2004/09/14 09:36:08 mkern Exp $
+ * $Id: as_ares.h,v 1.34 2004/09/15 22:46:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,6 +23,8 @@
 #include <fcntl.h>
 #include <time.h>
 #include <assert.h>
+
+#include <zlib.h>
 
 #ifndef WIN32
 # include <sys/socket.h>
@@ -58,6 +60,9 @@ typedef int            as_bool;
 # define in_port_t as_uint16
 #endif
 
+#ifndef S_ISREG
+# define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#endif
 
 #define TRUE 1
 #define FALSE 0
@@ -95,6 +100,7 @@ typedef int            as_bool;
 #include "as_download_chunk.h"
 #include "as_download_conn.h"
 #include "as_download.h"
+#include "as_download_state.h"
 #include "as_incoming.h"
 
 /*****************************************************************************/

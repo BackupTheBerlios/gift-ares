@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.21 2004/09/15 13:04:49 mkern Exp $
+ * $Id: cmd.c,v 1.22 2004/09/15 22:46:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,6 +31,7 @@ COMMAND_FUNC (result_stats);
 COMMAND_FUNC (clear);
 COMMAND_FUNC (download);
 COMMAND_FUNC (dl);
+COMMAND_FUNC (resume);
 
 COMMAND_FUNC (quit);
 
@@ -93,6 +94,10 @@ commands[] =
 	COMMAND (dl,
 	         "<result number>",
 	         "Download search result.")
+
+	COMMAND (resume,
+	         "<file>",
+	         "Resume incomplete download.")
 
 	COMMAND (quit,
              "",
@@ -489,6 +494,35 @@ COMMAND_FUNC (dl)
 	}
 
 	printf ("Download of \"%s\" started\n", r->filename);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (resume)
+{
+	ASDownload *dl;
+	char *filename;
+
+	if (argc < 2)
+		return FALSE;
+
+	filename = argv[1];
+
+	if (!(dl = as_download_create (download_cb)))
+	{
+		printf ("Download creation failed\n");
+		return TRUE;
+	}
+
+	/* restart download */
+	if (!as_download_restart (dl, filename))
+	{
+		printf ("Download restart failed\n");
+		as_download_free (dl);
+		return TRUE;
+	}
+
+	printf ("Download of \"%s\" restarted\n", dl->filename);
 
 	return TRUE;
 }

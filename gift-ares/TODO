@@ -21,6 +21,14 @@ Essential stuff:
 
 - Figured out how to do realm searches.
 
+- Time out inactive download connections. It hangs the download indefinitely.
+  
+
+Features:
+
+- Add meta data to downloads from results (in download manager).
+  Save/load them from state.
+
 
 Optimizations:
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.6 2004/09/15 13:02:19 mkern Exp $
+ * $Id: as_download.h,v 1.7 2004/09/15 22:46:04 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -73,8 +73,8 @@ void as_download_free (ASDownload *dl);
 as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
                            const char *filename);
 
-/* Restart download from incomplete _ARESTRA_ file. This will fail if the file
- * is not found/corrupt/etc.
+/* Restart download from incomplete ___ARESTRA___ file. This will fail if the
+ * file is not found/corrupt/etc.
  */
 as_bool as_download_restart (ASDownload *dl, const char *filename);
 
