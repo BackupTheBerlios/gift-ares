@@ -1,5 +1,5 @@
 /*
- * $Id: as_util.c,v 1.1 2004/11/19 21:16:13 HEx Exp $
+ * $Id: as_util.c,v 1.2 2004/12/04 14:11:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -145,3 +145,44 @@ List *list_insert_link_sorted (List *head, CompareFunc func, List *new_link)
 	return head;
 }
 
+/* Returns true if list is linked correctly and all data fileds are
+ * non-NULL. If halt is true we assert at the point of error.
+ */
+as_bool list_verify_integrity (List *head, as_bool halt)
+{
+	List *curr = head, *prev = NULL;
+
+	while (curr)
+	{
+		/* Must have data. */
+		if (!curr->data)
+		{
+			if (halt)
+				assert (curr->data);
+			return FALSE;
+		}
+
+		/* This link must point to previous one. */
+		if (curr->prev != prev)
+		{
+			if (halt)
+				assert (curr->prev == prev);
+			return FALSE;
+		}
+
+		/* Previous link must point to this one of present. */
+		if (prev && prev->next != curr)
+		{
+			if (halt)
+				assert (prev->next == curr);
+			return FALSE;
+		}
+
+		prev = curr;
+		curr = curr->next;
+	}
+
+	return TRUE;
+}
+
+/*****************************************************************************/

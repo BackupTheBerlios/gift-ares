@@ -1,5 +1,5 @@
 /*
- * $Id: as_util.h,v 1.2 2004/12/04 11:37:41 mkern Exp $
+ * $Id: as_util.h,v 1.3 2004/12/04 14:11:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,11 @@ List *list_unlink_link (List *head, List *link);
  * new one.
  */
 List *list_insert_link_sorted (List *head, CompareFunc func, List *link);
+
+/* Returns true if list is linked correctly and all data fileds are
+ * non-NULL. If halt is true we assert at the point of error.
+ */
+as_bool list_verify_integrity (List *head, as_bool halt);
 
 /*****************************************************************************/
 

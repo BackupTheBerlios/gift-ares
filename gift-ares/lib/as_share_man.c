@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.10 2004/10/23 12:29:51 mkern Exp $
+ * $Id: as_share_man.c,v 1.11 2004/12/04 14:11:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -148,7 +148,7 @@ static as_bool conglobulator_flush (Conglobulator *glob)
 	if (glob->data)
 	{
 		ret = as_session_send (glob->session, PACKET_COMPRESSED,
-				       glob->data, PACKET_COMPRESS);
+		                       glob->data, PACKET_COMPRESS);
 
 		as_packet_free (glob->data);
 		glob->data = NULL;

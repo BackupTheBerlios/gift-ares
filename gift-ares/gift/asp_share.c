@@ -1,5 +1,5 @@
 /*
- * $Id: asp_share.c,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ * $Id: asp_share.c,v 1.2 2004/12/04 14:11:27 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -47,6 +47,8 @@ static timer_id share_timer = INVALID_TIMER;
 
 static BOOL submit_shares (List **list)
 {
+	assert (list_verify_integrity (*list, TRUE));
+
 	if (!as_shareman_add_and_submit (AS->shareman, *list))
 	{
 		AS_ERR_1 ("Failed to submit %d shares from list cache.",
