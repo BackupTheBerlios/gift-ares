@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.h,v 1.2 2004/08/21 20:17:57 mkern Exp $
+ * $Id: as_tcp.h,v 1.3 2004/08/24 20:56:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -60,6 +60,14 @@ char *net_ip_str (in_addr_t ip);
 in_addr_t net_peer_ip (int fd, in_port_t *portret);
 
 in_addr_t net_local_ip (int fd, in_port_t *portret);
+
+/*****************************************************************************/
+
+#ifdef WIN32
+
+int socketpair(int family, int type, int protocol, int pair[2]);
+
+#endif
 
 /*****************************************************************************/
 

@@ -50,6 +50,7 @@ extern "C" {
 #define EV_WRITE	0x04
 #define EV_SIGNAL	0x08
 #define EV_PERSIST	0x10	/* Persistant event */
+#define EV_EXCEPT	0x20	/* socket exception */
 
 /* Fix so that ppl dont have to run with <sys/queue.h> */
 #ifndef TAILQ_ENTRY

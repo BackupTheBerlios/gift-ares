@@ -1,16 +1,18 @@
-# $Id: Makefile.msvc,v 1.1 2004/08/21 12:32:22 mkern Exp $
+# $Id: Makefile.msvc,v 1.2 2004/08/24 20:56:26 mkern Exp $
 
 
 !include ../../Make.msvc
 
 INCLUDES = -I. -Iwin32 -Icompat -Icompat\sys $(INCLUDES)
 
+CFLAGS = $(CFLAGS) -DWIN32_SELECT
+
 
 OBJECTS = \
 	err$(O) \
 	event$(O) \
 	win32\misc$(O) \
-	win32\win32$(O)
+	win32\win32select$(O)
 	
 
 all: $(OBJECTS)

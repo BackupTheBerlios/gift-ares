@@ -1,4 +1,4 @@
-# $Id: Make.msvc,v 1.3 2004/08/21 20:17:57 mkern Exp $
+# $Id: Make.msvc,v 1.4 2004/08/24 20:56:26 mkern Exp $
 
 
 VERSION = 0.0.1
@@ -93,11 +93,16 @@ ASLIB_LIB  = aslib$(DEXT).lib
 TEST_EXE   = astest$(DEXT).exe
 DELPHI_LIB = asdelphi$(DEXT).lib
 
+# threaded clib
+CFLAGS   = $(CFLAGS) -MT$(D)
 CFLAGS   = $(CFLAGS) -nologo
+
 DEFS     = $(DEFS) -DHAVE_CONFIG_H -DWIN32 -DNO_STRICT
 INCLUDES = -I$(ASLIB_ROOT) $(INCLUDES)
 
 
+#LDFLAGS  = $(LDFLAGS)  /NODEFAULTLIB:"msvcrtd"
+LDFLAGS  = $(LDFLAGS) /NODEFAULTLIB:"LIBC"
 LDFLAGS  = $(LDFLAGS) -nologo -version:$(VERSION) 
 LDFLAGS  = $(LDFLAGS) -libpath:"$(ASLIB_ROOT)"
 

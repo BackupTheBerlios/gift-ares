@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.3 2004/08/21 20:17:57 mkern Exp $
+ * $Id: as_tcp.c,v 1.4 2004/08/24 20:56:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -79,7 +79,7 @@ as_bool tcp_cleanup ()
 
 /*****************************************************************************/
 
-static TCPC *tcp_new (in_addr_t host, in_port_t port, int fd)
+static TCPC *tcp_new (int fd, in_addr_t host, in_port_t port)
 {
 	TCPC *c;
 
@@ -123,7 +123,7 @@ TCPC *tcp_open (in_addr_t host, in_port_t port, int block)
 
 	socket_set_blocking (fd, block);
 
-	if (connect (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr)) < 0)
+	if (connect (fd, (struct sockaddr *)&addr, sizeof (addr)) < 0)
 	{
 		/* failing for non-blocking is ok */
 #ifndef WIN32
@@ -136,8 +136,9 @@ TCPC *tcp_open (in_addr_t host, in_port_t port, int block)
 			return NULL;
 		}
 	}
-		
-	if (!(c = tcp_new (host, port, fd)))
+
+	
+	if (!(c = tcp_new (fd, host, port)))
 		net_close (fd);
 
 	return c;
@@ -158,7 +159,7 @@ TCPC *tcp_accept (TCPC *listening, int block)
 
 	socket_set_blocking (fd, block);
 
-	if (!(c = tcp_new (addr.sin_addr.s_addr, addr.sin_port, fd)))
+	if (!(c = tcp_new (fd, addr.sin_addr.s_addr, addr.sin_port)))
 	{
 		net_close (fd);
 		return NULL;
@@ -189,7 +190,7 @@ TCPC *tcp_bind (in_port_t port, int block)
 
 	socket_set_blocking (fd, block);
 
-	if (bind (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr)) < 0)
+	if (bind (fd, (struct sockaddr *)&addr, sizeof (addr)) < 0)
 	{
 		net_close (fd);
 		return NULL;
@@ -201,7 +202,7 @@ TCPC *tcp_bind (in_port_t port, int block)
 		return NULL;
 	}
 
-	if (!(c = tcp_new (0, port, fd)))
+	if (!(c = tcp_new (fd, 0, port)))
 		net_close (fd);
 
 	return c;
@@ -334,5 +335,69 @@ in_addr_t net_local_ip (int fd, in_port_t *portret)
 
 	return ip;
 }
+
+/*****************************************************************************/
+
+#ifdef WIN32
+
+int socketpair(int family, int type, int protocol, int pair[2])
+{
+    int srvsock;
+    int val = sizeof (struct sockaddr_in);
+    struct sockaddr_in srv_addr, cli_addr;
+  
+	if ((srvsock = socket (PF_INET, SOCK_STREAM, 0)) < 0)
+		return -1;
+
+    memset(&srv_addr, 0, sizeof(srv_addr));
+    srv_addr.sin_family = AF_INET;
+    srv_addr.sin_addr.s_addr = htonl (INADDR_ANY);
+    srv_addr.sin_port = 0;
+    
+    if (bind (srvsock, (struct sockaddr *) &srv_addr, val) < 0)
+	{
+		closesocket (srvsock);
+		return -1;
+    }
+
+    listen (srvsock, 1);
+
+    if (getsockname (srvsock, (struct sockaddr *) &srv_addr, &val) < 0)
+	{
+		closesocket (srvsock);
+		return -1;
+    }
+
+    if ((pair[0] = socket (PF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		closesocket (srvsock);
+		return -1;
+    }
+
+    memset(&cli_addr, 0, sizeof(cli_addr));
+    cli_addr.sin_family = AF_INET;
+    cli_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+    cli_addr.sin_port = srv_addr.sin_port;
+
+    if (connect (pair[0], (struct sockaddr *) &cli_addr, sizeof(cli_addr)) < 0)
+	{
+		closesocket (pair[0]);
+		closesocket (srvsock);
+		return -1;
+    }
+
+    if ((pair[1] = accept (srvsock, (struct sockaddr *) &srv_addr, &val)) < 0)
+	{
+		closesocket (pair[0]);
+		closesocket (srvsock);
+		return -1;
+    }
+    
+    closesocket (srvsock);
+
+    return 0;
+}
+
+#endif
 
 /*****************************************************************************/

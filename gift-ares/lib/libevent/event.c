@@ -79,7 +79,11 @@ extern const struct eventop kqops;
 #ifdef HAVE_DEVPOLL
 extern const struct eventop devpollops;
 #endif
-#ifdef WIN32
+#ifdef WIN32_SELECT
+extern const struct eventop win32selectops;
+#endif
+
+#ifdef WIN32_USELESS
 extern const struct eventop win32ops;
 #endif
 
@@ -103,7 +107,10 @@ const struct eventop *eventops[] = {
 #ifdef HAVE_SELECT
 	&selectops,
 #endif
-#ifdef WIN32
+#ifdef WIN32_SELECT
+	&win32selectops,
+#endif
+#ifdef WIN32_USELESS
 	&win32ops,
 #endif
 	NULL
@@ -352,8 +359,8 @@ event_once(int fd, short events,
 		eonce->arg = arg;
 
 		evtimer_set(&eonce->ev, event_once_cb, eonce);
-	} else if (events & (EV_READ|EV_WRITE)) {
-		events &= EV_READ|EV_WRITE;
+	} else if (events & (EV_READ|EV_WRITE|EV_EXCEPT)) {
+		events &= EV_READ|EV_WRITE|EV_EXCEPT;
 
 		event_set(&eonce->ev, fd, events, event_once_cb, eonce);
 	} else {
@@ -394,7 +401,7 @@ event_pending(struct event *ev, short event, struct timeval *tv)
 	int flags = 0;
 
 	if (ev->ev_flags & EVLIST_INSERTED)
-		flags |= (ev->ev_events & (EV_READ|EV_WRITE));
+		flags |= (ev->ev_events & (EV_READ|EV_WRITE|EV_EXCEPT));
 	if (ev->ev_flags & EVLIST_ACTIVE)
 		flags |= ev->ev_res;
 	if (ev->ev_flags & EVLIST_TIMEOUT)
@@ -402,7 +409,7 @@ event_pending(struct event *ev, short event, struct timeval *tv)
 	if (ev->ev_flags & EVLIST_SIGNAL)
 		flags |= EV_SIGNAL;
 
-	event &= (EV_TIMEOUT|EV_READ|EV_WRITE|EV_SIGNAL);
+	event &= (EV_TIMEOUT|EV_READ|EV_WRITE|EV_EXCEPT|EV_SIGNAL);
 
 	/* See if there is a timeout that we should report */
 	if (tv != NULL && (flags & event & EV_TIMEOUT))
@@ -419,6 +426,7 @@ event_add(struct event *ev, struct timeval *tv)
 		 ev,
 		 ev->ev_events & EV_READ ? "EV_READ " : " ",
 		 ev->ev_events & EV_WRITE ? "EV_WRITE " : " ",
+		 ev->ev_events & EV_EXCEPT ? "EV_EXCEPT " : " ",
 		 tv ? "EV_TIMEOUT " : " ",
 		 ev->ev_callback));
 
@@ -456,7 +464,7 @@ event_add(struct event *ev, struct timeval *tv)
 		event_queue_insert(ev, EVLIST_TIMEOUT);
 	}
 
-	if ((ev->ev_events & (EV_READ|EV_WRITE)) &&
+	if ((ev->ev_events & (EV_READ|EV_WRITE|EV_EXCEPT)) &&
 	    !(ev->ev_flags & (EVLIST_INSERTED|EVLIST_ACTIVE))) {
 		event_queue_insert(ev, EVLIST_INSERTED);
 

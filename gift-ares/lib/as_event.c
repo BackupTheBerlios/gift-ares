@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.3 2004/08/21 20:17:57 mkern Exp $
+ * $Id: as_event.c,v 1.4 2004/08/24 20:56:26 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -142,8 +142,10 @@ static void libevent_cb (int fd, short event, void *arg)
 {
 	ASEvent *ev = (ASEvent *) arg;
 
+#if 0
 	AS_HEAVY_DBG_3 ("libevent_cb: fd: %d, event: 0x%02x, arg: %p", fd,
 	                event, arg);
+#endif
 
 	if (ev->type == AS_EVTIMER)
 	{
@@ -186,12 +188,10 @@ static void libevent_cb (int fd, short event, void *arg)
 			/* raise callback with bad fd and no input_id */
 			cb (-1, 0, udata);
 		}
-		else if (event & (EV_READ | EV_WRITE))
+		else if (event & (EV_READ | EV_WRITE | EV_EXCEPT))
 		{
 			/* raise callback */
 			ev->input.cb (fd, (input_id)ev, ev->udata);
-
-			/* FIXME: the input is removed even though we used EV_PERSIST? */
 
 			/* FIXME: does libevent reset/remove the timeout? libgift seems
 			 * to _remove_ it after the first input event.
@@ -232,19 +232,10 @@ input_id input_add (int fd, void *udata, InputState state,
 	ev->input.timeout.tv_usec = (timeout % 1000) * 1000;
 	ev->input.cb = callback;
 
-	trigger = (ev->input.state & INPUT_READ)  ? EV_READ  : 0 |
-	          (ev->input.state & INPUT_WRITE) ? EV_WRITE : 0 |
+	trigger = ((ev->input.state & INPUT_READ)  ? EV_READ   : 0) |
+	          ((ev->input.state & INPUT_WRITE) ? EV_WRITE  : 0) |
+	          ((ev->input.state & INPUT_ERROR) ? EV_EXCEPT : 0) |
 	          EV_PERSIST;
-
-#if 0	
-	if (ev->input.state & INPUT_ERROR)
-	{
-		/* FIXME: Libevent does not have an error event. My winsock docs say that
-		 * connect failures are reported in the error set of select(). Can we use
-		 * read/write for this also?
-		 */
-	}
-#endif
 
 	event_set (&ev->ev, ev->input.fd, trigger, libevent_cb, (void *)ev);
 
@@ -278,7 +269,9 @@ void input_remove (input_id id)
 /* remove all inputs of this fd */
 void input_remove_all (int fd)
 {
+#if 0
 	assert (0);
+#endif
 }
 
 /* temporarily remove fd from event loop */
