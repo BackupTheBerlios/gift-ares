@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.6 2004/09/19 19:34:05 mkern Exp $
+ * $Id: as_search_man.c,v 1.7 2004/10/17 17:50:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -290,6 +290,31 @@ ASSearch *as_searchman_lookup_hash (ASSearchMan *man, ASHash *hash)
 	}
 
 	return search;
+}
+
+static as_bool valid_search_itr (ASHashTableEntry *entry, ASSearch **search)
+{
+	if (*search == entry->val)
+		*search = NULL;
+
+	return FALSE; /* don't delete item */
+}
+
+/* returns TRUE if search is currently managed by search man */
+as_bool as_searchman_valid_search (ASSearchMan *man, ASSearch *search)
+{
+	/* check if search is in one of the hash tables */
+	as_hashtable_foreach (man->searches,
+	                      (ASHashTableForeachFunc)valid_search_itr, &search);
+	if (search == NULL)
+		return TRUE;
+
+	as_hashtable_foreach (man->hash_searches,
+	                      (ASHashTableForeachFunc)valid_search_itr, &search);
+	if (search == NULL)
+		return TRUE;
+
+	return FALSE;
 }
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.h,v 1.2 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_search_man.h,v 1.3 2004/10/17 17:50:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -72,6 +72,9 @@ ASSearch *as_searchman_lookup (ASSearchMan *man, as_uint16 search_id);
 
 /* get _hash_ search by hash */
 ASSearch *as_searchman_lookup_hash (ASSearchMan *man, ASHash *hash);
+
+/* returns TRUE if search is currently managed by search man */
+as_bool as_searchman_valid_search (ASSearchMan *man, ASSearch *search);
 
 /*****************************************************************************/
 
