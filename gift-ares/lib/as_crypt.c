@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.12 2004/09/24 22:24:39 mkern Exp $
+ * $Id: as_crypt.c,v 1.13 2004/10/03 17:54:01 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -549,6 +549,17 @@ void as_decrypt_push (as_uint8 *data, int len, in_addr_t host, in_port_t port)
 */
 }
   
+/* encrypt/decrypt arlnk URLs */
+void as_encrypt_arlnk (as_uint8 *data, int len)
+{
+	munge (data, len, 0x6F13, 0x5AB3, 0x8D1E);
+}
+
+void as_decrypt_arlnk (as_uint8 *data, int len)
+{
+	unmunge (data, len, 0x6F13, 0x5AB3, 0x8D1E);
+}
+
 /*****************************************************************************/
 
 #if 0
