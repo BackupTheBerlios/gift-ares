@@ -1,4 +1,4 @@
-# $Id: Make.msvc,v 1.4 2004/08/24 20:56:26 mkern Exp $
+# $Id: Make.msvc,v 1.5 2004/09/15 23:42:46 mkern Exp $
 
 
 VERSION = 0.0.1
@@ -8,6 +8,7 @@ ASLIB_ROOT  = $(BUILD_ROOT)\lib
 TEST_ROOT   = $(BUILD_ROOT)\test
 DELPHI_ROOT = $(BUILD_ROOT)\delphi
 BIN_ROOT    = $(BUILD_ROOT)\bin
+ZLIB_ROOT   = $(BUILD_ROOT)\zlib
 
 O = .obj
 
@@ -52,37 +53,14 @@ DEFS = $(DEFS) -DHEAVY_DEBUG
 # zlib support
 ##########################
 
-!if defined(zlib) || defined(ZLIB)
-
-
-!if "$(ZLIB_ROOT)" == ""
-
-ZLIB_ROOT=$(BUILD_ROOT)\zlib
-
-!endif # "$(ZLIB_ROOT)" == ""
-
-
 !if !exists($(ZLIB_ROOT))
-
 !error Directory $(ZLIB_ROOT) not found!
-
-!endif # !exists($(ZLIB_ROOT))
-
+!endif
 
 INCLUDES = $(INCLUDES) -I$(ZLIB_ROOT)
 DEFS     = $(DEFS)     -DUSE_ZLIB
 LDFLAGS  = $(LDFLAGS)  -libpath:"$(ZLIB_ROOT)"
-LIBS     = $(LIBS)     zlib.lib
-
-
-!if defined(dynamic) || defined(DYNAMIC)
-
-DIST_DLLS = $(DIST_DLLS) $(ZLIB_ROOT)\zlib.dll
-
-!endif #  defined(dynamic) || defined(DYNAMIC)
-
-!endif # defined(zlib) || defined(ZLIB)
-
+LIBS     = $(LIBS)     zlib$(D).lib
 
 ##########################
 # general
