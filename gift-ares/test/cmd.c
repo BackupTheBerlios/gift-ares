@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.2 2004/08/25 19:46:14 mkern Exp $
+ * $Id: cmd.c,v 1.3 2004/08/25 20:52:29 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -58,7 +58,10 @@ as_bool dispatch_cmd (int argc, char *argv[])
 	/* find handler and call it */
 	for (cmd = commands; cmd->name; cmd++)
 		if (!strcmp (cmd->name, argv[0]))
-			return cmd->func (argc, argv);
+		{
+			cmd->func (argc, argv);
+			return TRUE;
+		}
 
 	printf ("Unknown command \"%s\", try \"help\"\n", argv[0]);
 
