@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.2 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_packet.c,v 1.3 2004/08/21 12:52:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -85,7 +85,7 @@ size_t as_packet_size(ASPacket* packet)
 size_t as_packet_remaining(ASPacket* packet)
 {
 	assert (packet->read_ptr >= packet->data);
-	assert (packet->used > (packet->read_ptr - packet->data));
+	assert (packet->used > (size_t) (packet->read_ptr - packet->data));
 
 	return packet->used - (packet->read_ptr - packet->data);
 }
@@ -351,7 +351,7 @@ ASPacket *as_packet_slurp (void)
 	ASPacket *p = as_packet_create();
 
 	while ((c = getchar()) != EOF)
-		as_packet_put_8 (p, c);
+		as_packet_put_8 (p, (as_uint8) c);
 
 	return p;
 }
