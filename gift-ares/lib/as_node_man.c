@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.7 2004/09/03 20:01:12 HEx Exp $
+ * $Id: as_node_man.c,v 1.8 2004/09/03 20:33:18 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -473,7 +473,7 @@ as_bool as_nodeman_save (ASNodeMan *man, const char *file)
 	saved = 0;
 	link = list;
 
-	while (link && saved <= AS_MAX_NODEFILE_SIZE)
+	while (link && saved < AS_MAX_NODEFILE_SIZE)
 	{
 		node = (ASNode *) link->data;
 
