@@ -1,5 +1,5 @@
 /*
- * $Id: asp_upload.c,v 1.6 2004/12/18 01:12:34 hex Exp $
+ * $Id: asp_upload.c,v 1.7 2004/12/18 23:18:21 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -63,6 +63,7 @@ static as_bool send_progress (ASUpload *up)
 
 /*****************************************************************************/
 
+/* Called by ares library each time it sent something to the downloader. */
 as_bool up_data_cb (ASUpload *up, as_uint32 sent)
 {
 	wrote (up, sent);
@@ -108,6 +109,7 @@ static as_bool up_state_cb (ASUpMan *man, ASUpload *up,
 		up->udata = chunk;
 		chunk->udata = up;
 
+		/* Register send progress callback. */
 		as_upload_set_data_cb (up, (ASUploadDataCb)up_data_cb);
 
 		break;
@@ -168,22 +170,6 @@ static as_bool up_auth_cb (ASUpMan *man, ASUpload *up,
 	}
 }
 
-#if 0
-/* Called periodically by ares library while there are active uploads. */
-static void up_progress_cb (ASUpMan *man)
-{
-	List *l;
-
-	for (l = man->uploads; l; l = l->next)
-	{
-		ASUpload *up = l->data;
-
-		if (up->state == UPLOAD_ACTIVE)
-			send_progress (up);
-	}
-}
-#endif
-
 /*****************************************************************************/
 
 /* Register internal upload callbacks with ares library. */
@@ -191,9 +177,6 @@ void asp_upload_register_callbacks ()
 {
 	as_upman_set_state_cb (AS->upman, (ASUpManStateCb)up_state_cb);
 	as_upman_set_auth_cb (AS->upman, (ASUpManAuthCb)up_auth_cb);
-#if 0
-	as_upman_set_progress_cb (AS->upman, (ASUpManProgressCb)up_progress_cb);
-#endif
 }
 
 /* Called by giFT to stop upload on user's request. */
