@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.c,v 1.6 2004/08/31 23:25:49 mkern Exp $
+ * $Id: as_log.c,v 1.7 2004/09/02 20:46:51 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -192,6 +192,7 @@ void as_logger_logv (ASLogger *logger,int level, const char *file,
 		if (logger->outputs[i].name)
 		{
 			fprintf (logger->outputs[i].fp, "%s\n", buf);
+			fflush (logger->outputs[i].fp);
 		}
 	}
 }
