@@ -1,3 +1,6 @@
+###############################################################################
+# MAIN
+
 [main]
 
 #
@@ -17,3 +20,4 @@ username =
 # Number of supernodes to connect to.  Be sensible, please.
 #
 sessions = 4
+
