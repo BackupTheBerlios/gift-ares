@@ -1,10 +1,15 @@
-# $Id: Makefile.am,v 1.1 2004/11/28 21:10:03 mkern Exp $
+# $Id: Makefile.am,v 1.2 2004/12/04 01:31:17 mkern Exp $
 AM_CFLAGS = -Wall
 
 plugin_LTLIBRARIES = libAres.la
 
 libAres_la_SOURCES = \
-	as_gift_plugin.c
+	asp_plugin.c   asp_plugin.h \
+	asp_download.c asp_download.h \
+	asp_hash.c     asp_hash.h \
+	asp_search.c   asp_search.h \
+	asp_share.c    asp_share.h \
+	asp_upload.c   asp_upload.h
 
 libAres_la_LIBADD = \
 	$(top_builddir)/lib/libaresgift.la

@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.13 2004/11/05 19:05:48 mkern Exp $
+ * $Id: as_upload.c,v 1.14 2004/12/04 01:31:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -282,6 +282,28 @@ as_bool as_upload_cancel (ASUpload *up)
 	if (!upload_set_state (up, UPLOAD_CANCELLED, TRUE))
 		return FALSE; /* Callback freed us */
 
+	return TRUE;
+}
+
+/*****************************************************************************/
+
+/* Suspend transfer using input_suspend_all on socket. */
+as_bool as_upload_suspend (ASUpload *up)
+{
+	if (!up->c)
+		return FALSE;
+
+	input_suspend_all (up->c->fd);
+	return TRUE;
+}
+
+/* Resume transfer using input_resume_all on socket. */
+as_bool as_upload_resume (ASUpload *up)
+{
+	if (!up->c)
+		return FALSE;
+
+	input_resume_all (up->c->fd);
 	return TRUE;
 }
 

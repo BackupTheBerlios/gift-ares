@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.6 2004/10/30 18:28:30 mkern Exp $
+ * $Id: as_upload.h,v 1.7 2004/12/04 01:31:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -91,6 +91,14 @@ as_bool as_upload_start (ASUpload *up);
 
 /* Cancel data transfer and close connection. Raises state callback. */
 as_bool as_upload_cancel (ASUpload *up);
+
+/*****************************************************************************/
+
+/* Suspend transfer using input_suspend_all on socket. */
+as_bool as_upload_suspend (ASUpload *up);
+
+/* Resume transfer using input_resume_all on socket. */
+as_bool as_upload_resume (ASUpload *up);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.12 2004/11/06 18:08:17 mkern Exp $
+ * $Id: as_upload_man.c,v 1.13 2004/12/04 01:31:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -372,7 +372,7 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 {
 	ASUpload *up;
 	List *l;
-	struct queue *q;
+	struct queue *q = NULL;
 	int i;
 
 #ifdef VERIFY_ACTIVE_COUNT
@@ -443,6 +443,8 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 		man->nqueued++;
 		assert (i == man->nqueued);
 	}
+
+	assert (q);
 
 	if (i + man->nuploads < man->max_active)
 	{

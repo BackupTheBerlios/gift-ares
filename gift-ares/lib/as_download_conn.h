@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.12 2004/10/28 14:00:39 mkern Exp $
+ * $Id: as_download_conn.h,v 1.13 2004/12/04 01:31:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -116,6 +116,14 @@ unsigned int as_downconn_hist_speed (ASDownConn *conn);
  * currently running one in bytes/sec.
  */
 unsigned int as_downconn_speed (ASDownConn *conn);
+
+/*****************************************************************************/
+
+/* Suspend transfer using input_suspend_all on http client socket. */
+as_bool as_downconn_suspend (ASDownConn *conn);
+
+/* Resume transfer using input_resume_all on http client socket. */
+as_bool as_downconn_resume (ASDownConn *conn);
 
 /*****************************************************************************/
 

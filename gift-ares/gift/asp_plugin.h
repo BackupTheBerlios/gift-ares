@@ -1,0 +1,57 @@
+/*
+ * $Id: asp_plugin.h,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ *
+ * Copyright (C) 2003 giFT-Ares project
+ * http://developer.berlios.de/projects/gift-ares
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2, or (at your option) any
+ * later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ */
+
+#ifndef __ASP_PLUGIN_H
+#define __ASP_PLUGIN_H
+
+/*****************************************************************************/
+
+#if HAVE_CONFIG_H
+#  include <config.h>
+#endif /* HAVE_CONFIG_H */
+
+#ifndef GIFT_PLUGIN
+# error "GIFT_PLUGIN not defined. Your build environment seems broken."
+#endif
+
+/* Get ares lib and libgift headers. */
+#include "as_ares.h"
+
+/* Plugin headers. */
+#include "asp_hash.h"
+#include "asp_search.h"
+#include "asp_download.h"
+#include "asp_upload.h"
+#include "asp_share.h"
+
+/*****************************************************************************/
+
+/* Pointer to our protocol struct provided by giFT. */
+extern Protocol *gift_proto;
+#define PROTO (gift_proto)
+
+/*****************************************************************************/
+
+/* Called by gift to init plugin */
+#ifdef GIFT_PLUGIN_EXPORT
+GIFT_PLUGIN_EXPORT
+#endif
+  int Ares_init (Protocol *p);
+
+/*****************************************************************************/
+
+#endif /* __ASP_PLUGIN_H */

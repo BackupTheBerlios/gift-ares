@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.14 2004/10/23 14:13:56 mkern Exp $
+ * $Id: as_search.c,v 1.15 2004/12/04 01:31:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -210,7 +210,7 @@ as_bool as_search_sent_to (ASSearch *search, ASSession *session)
 void as_search_add_result (ASSearch *search, ASResult *result)
 {
 	List *head, *l;
-	as_bool duplicate;
+	as_bool duplicate = FALSE;
 
 	if (!result)
 	{
