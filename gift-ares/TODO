@@ -1,0 +1,10 @@
+
+lib
+---
+
+- timeout searches (use periodic timer and start date for each search)
+
+- notify search manager of new sessions and resend searches until
+  AS_SEARCH_SEND_COUNT is reached.
+
+
