@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.26 2004/09/10 18:01:25 mkern Exp $
+ * $Id: as_ares.h,v 1.27 2004/09/11 18:13:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
@@ -124,6 +125,9 @@ typedef int            as_bool;
 
 /* Limit for the number of max active downloads at any given time */
 #define AS_DOWNLOAD_MAX_ACTIVE (6)
+
+/* Minimum chunk size in bytes */
+#define AS_DOWNLOAD_MIN_CHUNK_SIZE (64*1024)
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.c,v 1.6 2004/09/10 17:58:53 mkern Exp $
+ * $Id: as_hash.c,v 1.7 2004/09/11 18:13:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,15 @@
  */
 
 #include "as_ares.h"
+
+/*****************************************************************************/
+
+/* Buffer size used when hashing files. */
+#define BLOCK_SIZE (8*1024)
+
+/*****************************************************************************/
+
+static as_bool hash_file (ASHash *hash, const char *file);
 
 /*****************************************************************************/
 
@@ -43,6 +52,23 @@ ASHash *as_hash_create (const as_uint8 *src, unsigned int src_len)
 ASHash *as_hash_copy (ASHash *hash)
 {
 	return as_hash_create (hash->data, AS_HASH_SIZE);
+}
+
+/* create hash from file */
+ASHash *as_hash_file (const char *file)
+{
+	ASHash *hash;
+
+	if (!(hash = as_hash_create (NULL, 0)))
+		return NULL;
+
+	if (!hash_file (hash, file))
+	{
+		as_hash_free (hash);
+		return NULL;
+	}
+
+	return hash;
 }
 
 /* free hash */
@@ -109,3 +135,56 @@ char *as_hash_str (ASHash *hash)
 
 /*****************************************************************************/
 
+static as_bool hash_file (ASHash *hash, const char *file)
+{
+	FILE *fp;
+	ASSHA1State sha1;
+	struct stat st;
+	as_uint8 buf[BLOCK_SIZE];
+	size_t size, len;
+
+	if (stat (file, &st) < 0)
+		return FALSE;
+
+	size = st.st_size;
+
+	if (!(fp = fopen (file, "rb")))
+		return FALSE;
+
+	as_sha1_init (&sha1);
+
+	while (size > BLOCK_SIZE)
+	{
+		len = fread (buf, 1, BLOCK_SIZE, fp);
+
+		if (len != BLOCK_SIZE)
+			break;
+
+		as_sha1_update (&sha1, buf, len);
+		size -= len;
+	}
+
+	/* hash final segment */
+	if (size <= BLOCK_SIZE)
+	{
+		len = fread (buf, 1, size, fp);
+
+		if (len == size)
+		{
+			as_sha1_update (&sha1, buf, len);
+			size -= len;
+		}
+	}
+
+	fclose (fp);
+
+	if (size != 0)
+		return FALSE;
+
+	assert (sizeof (hash->data) == SHA_DIGESTSIZE);
+	as_sha1_final (&sha1, hash->data);
+
+	return TRUE;
+}
+
+/*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.h,v 1.3 2004/09/10 17:58:53 mkern Exp $
+ * $Id: as_hash.h,v 1.4 2004/09/11 18:13:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,9 @@ ASHash *as_hash_create (const as_uint8 *src, unsigned int src_len);
 
 /* create copy of hash */
 ASHash *as_hash_copy (ASHash *hash);
+
+/* create hash from file */
+ASHash *as_hash_file (const char *file);
 
 /* free hash */
 void as_hash_free (ASHash *hash);
