@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.6 2004/12/10 02:27:39 hex Exp $
+ * $Id: asp_plugin.c,v 1.7 2004/12/18 23:55:59 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -181,7 +181,7 @@ static BOOL config_refresh (Config *conf)
 					break;
 				case AS_CONF_INT:
 					as_config_set_int (AS->config, i,
-							   config_get_int (conf, name));
+					                   config_get_int (conf, name));
 					break;
 				default:
 					assert (0);
@@ -205,7 +205,8 @@ static void config_init (void)
 
 	config_refresh (gift_config);
 
-	conf_timer = timer_add (2 * MINUTES, (TimerCallback)config_refresh, gift_config);
+	conf_timer = timer_add (2 * MINUTES, (TimerCallback)config_refresh,
+	                        gift_config);
 }
 
 static void config_destroy (void)
@@ -221,6 +222,7 @@ static void config_destroy (void)
 static int asp_giftcb_start (Protocol *proto)
 {
 	char *path;
+	int sessions;
 
 	AS_DBG ("Starting up.");
 
@@ -260,7 +262,15 @@ static int asp_giftcb_start (Protocol *proto)
 	asp_hashmap_init ();
 	
 	/* And now start the connections. */
-	as_sessman_connect (AS->sessman, config_get_int (gift_config, "main/sessions=4"));
+	if ((sessions = config_get_int (gift_config, "main/sessions=4")) >
+	    ASP_MAX_SESSIONS)
+	{
+		AS_WARN_2 ("Requested number of sessions (%d) above hard limit. Reducing to %d.",
+		           sessions, ASP_MAX_SESSIONS);
+		sessions = ASP_MAX_SESSIONS;
+	}
+
+	as_sessman_connect (AS->sessman, sessions);
 
 	return TRUE;
 }

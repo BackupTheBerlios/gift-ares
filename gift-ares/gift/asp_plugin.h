@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.h,v 1.2 2004/12/10 02:00:09 hex Exp $
+ * $Id: asp_plugin.h,v 1.3 2004/12/18 23:55:59 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -43,6 +43,11 @@
 #include "asp_upload.h"
 #include "asp_share.h"
 #include "asp_hashmap.h"
+
+/*****************************************************************************/
+
+/* Upper bound on number of sessions specifiably in config file. */
+#define ASP_MAX_SESSIONS 10
 
 /*****************************************************************************/
 
