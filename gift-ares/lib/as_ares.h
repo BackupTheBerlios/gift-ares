@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.50 2004/10/30 16:48:07 mkern Exp $
+ * $Id: as_ares.h,v 1.51 2004/11/06 18:08:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -99,6 +99,7 @@ typedef int            as_bool;
 #include "as_event.h"
 #include "as_tcp.h"
 
+#include "as_config.h"
 #include "as_sha1.h"
 #include "as_encoding.h"
 #include "as_hash.h"
@@ -133,14 +134,24 @@ typedef int            as_bool;
 
 /*****************************************************************************/
 
+/* IDs of config variables. See as_ares.c for definitions. */
+
+typedef enum
+{
+	AS_LISTEN_PORT                 = 0, /* HTTP server port. */
+	AS_USER_NAME                   = 1, /* User name. */
+	AS_DOWNLOAD_MAX_ACTIVE         = 2, /* Limit for the number of max active
+	                                     * downloads at any given time. */
+	AS_DOWNLOAD_MAX_ACTIVE_SOURCES = 3, /* Maximum number of active
+	                                     * connections per download. */
+	AS_UPLOAD_MAX_ACTIVE           = 4  /* Maximum number of simultaneous
+	                                     * uploads. */
+} ASAresConfigValues;
+
+/*****************************************************************************/
+
 /* The client name we send to supernodes */
 #define AS_CLIENT_NAME "aREs"
-
-/* User name. TODO: get from config system. */
-#define AS_USER_NAME "antares"
-
-/* Port to listen on. */
-#define AS_LISTEN_PORT 59049
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
@@ -163,14 +174,8 @@ typedef int            as_bool;
 /* Nubmer of supernodes each search is sent to */
 #define AS_SEARCH_SEND_COUNT (4)
 
-/* Limit for the number of max active downloads at any given time */
-#define AS_DOWNLOAD_MAX_ACTIVE (6)
-
 /* Minimum chunk size in bytes */
 #define AS_DOWNLOAD_MIN_CHUNK_SIZE (128*1024)
-
-/* Maximum number of active connections per download */
-#define AS_DOWNLOAD_MAX_ACTIVE_SOURCES (10)
 
 /* Number of request fails after which a source is removed */
 #define AS_DOWNLOAD_SOURCE_MAX_FAIL (2)
@@ -187,9 +192,6 @@ typedef int            as_bool;
 
 /* How long before we remove an entry from the queue, in seconds */ 
 #define AS_UPLOAD_QUEUE_TIMEOUT 180
-
-/* Maximum number of simultaneous uploads. */
-#define AS_UPLOAD_MAX_ACTIVE  3
 
 /* Time between upload manager's progress callbacks */
 #define AS_UPLOAD_PROGRESS_INTERVAL (1 * SECONDS)
@@ -209,6 +211,9 @@ typedef int            as_bool;
 
 typedef struct
 {
+	/* config */
+	ASConfig *config;
+
 	/* node manager */
 	ASNodeMan *nodeman;
 
@@ -242,6 +247,11 @@ typedef struct
 extern ASInstance *as_instance;	/* global library instance */
 
 #define AS (as_instance)
+#define AS_CONF (as_instance->config)
+
+/* Easier access to config variables */
+#define AS_CONF_INT(id) (as_config_get_int (AS_CONF, id))
+#define AS_CONF_STR(id) (as_config_get_str (AS_CONF, id))
 
 /*****************************************************************************/
 

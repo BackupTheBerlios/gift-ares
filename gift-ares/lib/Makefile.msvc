@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.24 2004/10/26 19:31:12 mkern Exp $
+# $Id: Makefile.msvc,v 1.25 2004/11/06 18:08:17 mkern Exp $
 
 
 !include ../Make.msvc
@@ -17,6 +17,7 @@ OBJECTS = \
 	as_log$(O) \
 	as_tcp$(O) \
 	as_ares$(O) \
+	as_config$(O) \
 	as_crypt$(O) \
 	as_packet$(O) \
 	as_sha1$(O) \

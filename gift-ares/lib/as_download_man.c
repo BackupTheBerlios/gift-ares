@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.9 2004/10/23 12:24:54 mkern Exp $
+ * $Id: as_download_man.c,v 1.10 2004/11/06 18:08:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -112,7 +112,7 @@ as_bool as_downman_stop_all (ASDownMan *man, as_bool stop)
 {
 	List *l;
 	ASDownload *dl;
-	unsigned int active;
+	int active;
 
 	if (stop)
 	{
@@ -128,7 +128,7 @@ as_bool as_downman_stop_all (ASDownMan *man, as_bool stop)
 		l = man->downloads;
 		active = 0;
 
-		while (active < AS_DOWNLOAD_MAX_ACTIVE && l)
+		while (active < AS_CONF_INT (AS_DOWNLOAD_MAX_ACTIVE) && l)
 		{
 			dl = l->data;
 		
@@ -544,13 +544,13 @@ static as_bool download_state_cb (ASDownload *dl, ASDownloadState state)
 {
 	ASDownMan *man = dl->downman;
 	as_bool ret;
-	unsigned int active = active_downloads (dl->downman);
+	int active = active_downloads (dl->downman);
 
 	assert (man);
 
 	/* If we are at the limit don't allow any download to become active. */
 	if (state == DOWNLOAD_ACTIVE &&
-	    (active > AS_DOWNLOAD_MAX_ACTIVE || man->stopped))
+	    (active > AS_CONF_INT (AS_DOWNLOAD_MAX_ACTIVE) || man->stopped))
 	{
 		/* This triggers us again and the user is then notified of the new
 		 * queued state.
@@ -570,7 +570,7 @@ static as_bool download_state_cb (ASDownload *dl, ASDownloadState state)
 		ASDownload *queued_dl;
 		List *l = man->downloads;
 
-		while (active < AS_DOWNLOAD_MAX_ACTIVE && l)
+		while (active < AS_CONF_INT (AS_DOWNLOAD_MAX_ACTIVE) && l)
 		{
 			queued_dl = l->data;
 		

@@ -12,6 +12,7 @@ OBJECTS = \
 	as_tcp.o \
 	as_ares.o \
 	as_crypt.o \
+	as_config.o \
 	as_packet.o \
 	as_sha1.o \
 	as_encoding.o \

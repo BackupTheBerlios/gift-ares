@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.16 2004/10/24 03:45:59 HEx Exp $
+ * $Id: as_ares.c,v 1.17 2004/11/06 18:08:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,6 +12,64 @@
 /*****************************************************************************/
 
 ASInstance *as_instance = NULL;	/* global library instance */
+
+/*****************************************************************************/
+
+/* Called when configured listening port changes. */
+static as_bool port_change_cb (const ASConfVal *old_val,
+                               const ASConfVal *new_val, void *udata)
+{
+	ASHttpServer *server;
+
+	/* If new port is 0 stop listening. */
+	if (new_val->data.i == 0)
+	{
+		as_http_server_free (AS->server);
+		AS->server = NULL;
+		AS->netinfo->port = 0;
+
+		AS_WARN ("Removed http server when port was changed to 0");
+		return TRUE; /* Accept value change. */
+	}
+
+	/* Try to create http server with new port. */
+	if (!(server = as_http_server_create ((in_port_t)new_val->data.i,
+	                              (ASHttpServerRequestCb)as_incoming_http,
+		                          (ASHttpServerPushCb)as_incoming_push,
+	                              (ASHttpServerBinaryCb)NULL)))
+	{
+		AS_WARN_1 ("Failed to move http server to port %d", new_val->data.i);
+		return FALSE; /* Refuse value change. */
+	}
+
+	/* We have a new server. Free the old and replace it. */
+	as_http_server_free (AS->server);
+	AS->server = server;
+	AS->netinfo->port = AS->server->port;
+
+	AS_DBG_1 ("Moved http server to port %u", AS->server->port);
+
+	return TRUE; /* Accept value change. */
+}
+
+/*****************************************************************************/
+
+/* Config value defaults. */
+
+static const ASConfVal default_conf[] =
+{
+	/* id, name, type, data, callback, udata */
+	{ AS_LISTEN_PORT,                 "main/port",     AS_CONF_INT, 59049,
+	                                  port_change_cb,  NULL },
+	{ AS_USER_NAME,                   "main/username", AS_CONF_STR, "antares",
+	                                  NULL,            NULL },
+	{ AS_DOWNLOAD_MAX_ACTIVE,         NULL,            AS_CONF_INT, 6,
+	                                  NULL,            NULL },
+	{ AS_DOWNLOAD_MAX_ACTIVE_SOURCES, NULL,            AS_CONF_INT, 10,
+	                                  NULL,            NULL },
+	{ AS_UPLOAD_MAX_ACTIVE,           NULL,            AS_CONF_INT, 3,
+	                                  NULL,            NULL }
+};
 
 /*****************************************************************************/
 
@@ -33,6 +91,7 @@ as_bool as_init ()
 	}
 
 	/* Start in defined state so as_cleanup works right. */
+	AS->config    = NULL;
 	AS->nodeman   = NULL;
 	AS->sessman   = NULL;
 	AS->netinfo   = NULL;
@@ -42,6 +101,23 @@ as_bool as_init ()
 	AS->pushman   = NULL;
 	AS->shareman  = NULL;
 	AS->server    = NULL;
+
+	/* Create config first so rest can use it. */
+	if (!(AS->config = as_config_create ()))
+	{
+		AS_ERR ("Failed to create config object");
+		as_cleanup ();
+		return FALSE;
+	}
+
+	/* Add default values */
+	if (!as_config_add_values (AS->config, default_conf,
+	                   sizeof (default_conf) / sizeof (default_conf[0])))
+	{
+		AS_ERR ("Failed to add default values to config");
+		as_cleanup ();
+		return FALSE;
+	}
 
 	if (!(AS->netinfo = as_netinfo_create ()))
 	{
@@ -64,17 +140,17 @@ as_bool as_init ()
 		return FALSE;
 	}
 
-	if (AS_LISTEN_PORT)
+	if (AS_CONF_INT (AS_LISTEN_PORT) != 0)
 	{
 		if (!(AS->server = as_http_server_create (
-			      AS_LISTEN_PORT,
+			      (in_port_t) AS_CONF_INT (AS_LISTEN_PORT),
 			      (ASHttpServerRequestCb)as_incoming_http,
 			      (ASHttpServerPushCb)as_incoming_push,
 			      (ASHttpServerBinaryCb)NULL
 			      )))
 		{
 			AS_ERR_1 ("Failed to create server on port %d",
-				  AS_LISTEN_PORT);
+			          AS_CONF_INT (AS_LISTEN_PORT));
 		}
 		else
 			/* Set port so we can use it for pushes, sharing, etc */
@@ -142,6 +218,7 @@ as_bool as_cleanup ()
 	as_nodeman_free (AS->nodeman);
 	as_netinfo_free (AS->netinfo);
 	as_http_server_free (AS->server);
+	as_config_free (AS->config); /* Free last. */
 
 	free (AS);
 	AS = NULL;

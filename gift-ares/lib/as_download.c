@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.27 2004/10/30 00:45:46 mkern Exp $
+ * $Id: as_download.c,v 1.28 2004/11/06 18:08:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -763,7 +763,8 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 		                conn->source->port);
 
 		/* Abort transfer if we already have enough sources for download */
-		if (active_conns_from_list (dl, NULL) >= AS_DOWNLOAD_MAX_ACTIVE_SOURCES)
+		if (active_conns_from_list (dl, NULL) >=
+		    AS_CONF_INT (AS_DOWNLOAD_MAX_ACTIVE_SOURCES))
 		{
 			AS_HEAVY_DBG_2 ("Closing connection to %s:%d because we already have enough sources.",
 			                net_ip_str (conn->source->host),
@@ -1088,10 +1089,11 @@ static as_bool start_chunks (ASDownload *dl)
 	 */
 	active_conns = active_conns_from_list (dl, &pending_conns);
 
-	if (active_conns >= AS_DOWNLOAD_MAX_ACTIVE_SOURCES)
+	if (active_conns >= AS_CONF_INT (AS_DOWNLOAD_MAX_ACTIVE_SOURCES))
 		return TRUE;
 
-	max_new_conns = (AS_DOWNLOAD_MAX_ACTIVE_SOURCES - active_conns) * 2; 
+	max_new_conns = (AS_CONF_INT (AS_DOWNLOAD_MAX_ACTIVE_SOURCES) -
+	                 active_conns) * 2;
 
 	if (pending_conns >= max_new_conns)
 		return TRUE;

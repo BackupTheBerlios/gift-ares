@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.11 2004/11/05 19:05:48 mkern Exp $
+ * $Id: as_upload_man.c,v 1.12 2004/11/06 18:08:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -54,7 +54,7 @@ ASUpMan *as_upman_create ()
 	man->uploads = NULL;
 	man->queue   = NULL;
 
-	man->max_active = AS_UPLOAD_MAX_ACTIVE;
+	man->max_active = AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE);
 	man->nuploads = man->nqueued = 0;
 	man->bandwidth = 0;
 
