@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ * $Id: asp_plugin.c,v 1.2 2004/12/05 01:55:07 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -21,6 +21,7 @@
 
 /* Set to actual proto struct in Ares_init */
 Protocol *gift_proto = NULL;
+Config  *gift_config = NULL;
 
 /*****************************************************************************/
 
@@ -158,6 +159,53 @@ static int copy_default_file (const char *srcfile, const char *dstfile)
 
 /*****************************************************************************/
 
+static BOOL config_refresh (Config *conf)
+{
+	int i;
+
+	for (i = 0; i < AS_CONF_VAL_ID_MAX - 1; i++)
+	{
+		char *name;
+		if ((name = (char *)as_config_get_name (AS->config, i)))
+		{
+			char *val = (char *)config_get_str (conf, name);
+
+			AS_WARN_3 ("name=%s val=%s type=%d", name, val,
+				   as_config_get_type (AS->config, i));
+			if (val)
+			{
+				switch (as_config_get_type (AS->config, i))
+				{
+				case AS_CONF_STR:
+					as_config_set_str (AS->config, i, val);
+					break;
+				case AS_CONF_INT:
+					as_config_set_int (AS->config, i,
+							   config_get_int (conf, name));
+					break;
+				default:
+					assert (0);
+				}
+			}
+		}
+	}
+
+	return TRUE;
+}
+
+static void config_init (void)
+{
+	if (!(gift_config = gift_config_new ("Ares")))
+	{
+		AS_WARN ("Couldn't open config file. Using hard coded defaults.");
+		return;
+	}
+
+	config_refresh (gift_config);
+}
+
+/*****************************************************************************/
+
 /* Initialize everyything and start network connections. */
 static int asp_giftcb_start (Protocol *proto)
 {
@@ -173,15 +221,7 @@ static int asp_giftcb_start (Protocol *proto)
 
 	/* Copy default config file if it is missing and load config. */
 	copy_default_file ("Ares.conf.template", "Ares.conf");
-	path = gift_conf_path ("Ares/Ares.conf");
-
-#if 0
-	if (!as_config_load (AS->config, path))
-	{
-		AS_WARN_1 ("Couldn't open config file '%s'. Using hard coded defaults.",
-		           path);
-	}
-#endif
+	config_init ();
 
 	/* Load nodes file and copy default if necessary. */
 	copy_default_file ("nodes", "nodes");
@@ -206,7 +246,7 @@ static int asp_giftcb_start (Protocol *proto)
 	asp_upload_register_callbacks ();
 
 	/* And now start the connections. */
-	as_sessman_connect (AS->sessman, 4);
+	as_sessman_connect (AS->sessman, config_get_int (gift_config, "main/sessions=4"));
 
 	return TRUE;
 }

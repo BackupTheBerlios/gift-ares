@@ -1,5 +1,5 @@
 /*
- * $Id: as_config.c,v 1.4 2004/11/20 03:02:15 HEx Exp $
+ * $Id: as_config.c,v 1.5 2004/12/05 01:55:07 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -77,6 +77,7 @@ static ASConfVal *value_get (ASConfig *config, ASConfValId id)
 		return NULL;
 	}
 
+#if 0
 	/* Make sure value id is set. */
 	if (config->values[id] == NULL)
 	{
@@ -84,6 +85,7 @@ static ASConfVal *value_get (ASConfig *config, ASConfValId id)
 		assert (0);
 		return NULL;
 	}
+#endif
 
 	return config->values[id];
 }
