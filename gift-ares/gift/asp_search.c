@@ -1,5 +1,5 @@
 /*
- * $Id: asp_search.c,v 1.2 2004/12/04 19:39:42 hex Exp $
+ * $Id: asp_search.c,v 1.3 2004/12/10 02:00:10 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -85,6 +85,27 @@ static void result_callback (ASSearch *search, ASResult *r, as_bool duplicate)
 	{
 		share_set_path (share, r->filename);
 		share_set_mime (share, mime_type (r->filename));
+	}
+
+	if (search->type == SEARCH_LOCATE)
+	{
+		size_t size;
+		char *name;
+
+		assert (!r->filesize);
+		assert (!r->filename);
+
+		/* Lookup this hash in the evil hash map to find the
+		 * size and filename for giFT. */
+		if (asp_hashmap_lookup (r->hash, &name, &size))
+		{
+			share->size = size;
+			if (name && *name)
+			{
+				share_set_path (share, name);
+				share_set_mime (share, mime_type (name));
+			}
+		}
 	}
 
 	share_set_hash (share, "SHA1", r->hash->data, AS_HASH_SIZE, FALSE);

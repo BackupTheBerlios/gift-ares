@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.4 2004/12/04 17:23:58 mkern Exp $
+ * $Id: asp_download.c,v 1.5 2004/12/10 02:00:09 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -128,6 +128,14 @@ BOOL asp_giftcb_download_start (Protocol *p, Transfer *transfer, Chunk *chunk,
 		PROTO->source_abort (PROTO, source->chunk->transfer, source);
 		return FALSE;
 	}
+
+#ifdef EVIL_HASHMAP
+	/* Insert into the evil hash map by reading stuff we shouldn't
+	   from giFT's internal structures.  (It's not called evil for
+	   nothing, y'know...)
+	*/
+	asp_hashmap_insert (hash, transfer->filename, transfer->total);
+#endif
 
 	/* Start transfer. */
 	if (!as_downconn_start (dc, hash, chunk->start + chunk->transmit,

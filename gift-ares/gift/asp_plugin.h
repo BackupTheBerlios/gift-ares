@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.h,v 1.1 2004/12/04 01:31:17 mkern Exp $
+ * $Id: asp_plugin.h,v 1.2 2004/12/10 02:00:09 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -28,6 +28,11 @@
 # error "GIFT_PLUGIN not defined. Your build environment seems broken."
 #endif
 
+/* Make assumptions that we really shouldn't in order to work around
+ * assumptions that giFT really shouldn't make either.
+ */
+#define EVIL_HASHMAP
+
 /* Get ares lib and libgift headers. */
 #include "as_ares.h"
 
@@ -37,6 +42,7 @@
 #include "asp_download.h"
 #include "asp_upload.h"
 #include "asp_share.h"
+#include "asp_hashmap.h"
 
 /*****************************************************************************/
 

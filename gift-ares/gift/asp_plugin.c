@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.3 2004/12/05 02:46:30 hex Exp $
+ * $Id: asp_plugin.c,v 1.4 2004/12/10 02:00:09 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -254,6 +254,9 @@ static int asp_giftcb_start (Protocol *proto)
 	/* Setup some library callbacks we need. */
 	asp_upload_register_callbacks ();
 
+	/* Initialize the evil hash map. */
+	asp_hashmap_init ();
+	
 	/* And now start the connections. */
 	as_sessman_connect (AS->sessman, config_get_int (gift_config, "main/sessions=4"));
 
@@ -273,6 +276,9 @@ static void asp_giftcb_destroy (Protocol *proto)
 	}
 
 	config_destroy ();
+
+	/* Destroy the evil hash map. */
+	asp_hashmap_destroy ();
 
 	/* Stop library. */
 	if (!as_stop (AS))
