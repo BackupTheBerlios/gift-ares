@@ -1,15 +1,5 @@
-#define __AS_STRING_H
-#define __AS_TCP_H
-#define __AS_LIST_H
-#define __AS_EVENT_H
 #define GIFT_PLUGIN
 
-#include <libgift/libgift.h>
-#include <libgift/proto/protocol.h>
-#include <libgift/proto/share.h>
-#include <libgift/file.h>
-#include <libgift/mime.h>
-#include <libgift/proto/if_event_api.h>
 #include "as_ares.h"
 
 static Protocol *proto;
