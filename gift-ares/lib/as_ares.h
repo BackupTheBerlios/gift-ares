@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.49 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_ares.h,v 1.50 2004/10/30 16:48:07 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -190,6 +190,9 @@ typedef int            as_bool;
 
 /* Maximum number of simultaneous uploads. */
 #define AS_UPLOAD_MAX_ACTIVE  3
+
+/* Time between upload manager's progress callbacks */
+#define AS_UPLOAD_PROGRESS_INTERVAL (1 * SECONDS)
 
 /* Timeout for tcp connect to firewalled source's supernode. */
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)

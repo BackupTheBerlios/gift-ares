@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.4 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_upload.h,v 1.5 2004/10/30 16:48:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -46,6 +46,7 @@ struct as_upload_t
 	in_addr_t     host;      /* copy of c->host since the connection may be
 	                          * used but we still need the ip in the upload
 	                          * manager for lookups. */
+	char         *username;  /* User name of downloader. */
 	ASHttpHeader *request;
 	ASShare      *share;     /* copy of share object */
 	FILE         *file;

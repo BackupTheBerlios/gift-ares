@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.16 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_share.c,v 1.17 2004/10/30 16:48:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,6 +45,8 @@ ASShare *as_share_create (char *path, ASHash *hash, ASMeta *meta,
 			free (share);
 			return NULL;
 		}
+
+		AS_HEAVY_DBG_1 ("hash: %s", as_hash_str (share->hash));
 	}
 
 	if (!meta)

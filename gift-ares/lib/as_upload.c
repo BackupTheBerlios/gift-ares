@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.7 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_upload.c,v 1.8 2004/10/30 16:48:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -16,6 +16,9 @@
 /* ares displays this (up to the first slash or space) as the network name,
    so we should be consistent with what we tell supernodes */
 #define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares/0.1)"
+
+/* Log http reply headers. */
+#define LOG_HTTP_REPLIES
 
 /*****************************************************************************/
 
@@ -59,6 +62,7 @@ ASUpload *as_upload_create (TCPC *c, ASHttpHeader *request,
 
 	up->c = c;
 	up->host = up->c->host;
+	up->username = NULL;
 	up->request = request;
 	up->share = NULL;
 	up->file = NULL;
@@ -90,7 +94,8 @@ void as_upload_free (ASUpload *up)
 
 	if (up->file)
 		fclose (up->file);
-	
+
+	free (up->username);
 	free (up);
 }
 
@@ -117,6 +122,15 @@ as_bool as_upload_start (ASUpload *up)
 	{
 		assert (up->state == UPLOAD_NEW);
 		return FALSE;
+	}
+
+	/* Get username from request. */
+	if ((up->username = as_http_header_get_field (up->request, "X-My-Nick")))
+	{
+		if (*up->username == '\0')
+			up->username = NULL;
+		else
+			up->username = strdup (up->username);
 	}
 
 	/* Get hash from request header. */
@@ -382,8 +396,8 @@ static as_bool send_reply_success (ASUpload *up)
 
 	str = as_http_header_compile (reply);
 
-#if 0
-	AS_DBG_1("%s", str->str);
+#ifdef LOG_HTTP_REPLIES
+	AS_DBG_1 ("Reply Success:\n%s", str->str);
 #endif
 
 	/* Immediately send reply since there might be a race condition between
@@ -417,18 +431,22 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 
 	reply = as_http_header_reply (HTHD_VER_11, 503);
 	set_common_headers (up, reply);
-	str = as_http_header_compile (reply);
 
 	sprintf (buf, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
 	         queue_pos, queue_length,
 	         1                    /* max active downloads (per user?) */,
 	         AS_UPLOAD_QUEUE_MIN, /* min/max recheck intervals in seconds */
 	         AS_UPLOAD_QUEUE_MAX);
-
 	as_http_header_set_field (reply, "X-Queued", buf);
 
 #if 0
 	AS_HEAVY_DBG_2 ("queued %s: %s", net_ip_str (up->host), buf); 
+#endif
+
+	str = as_http_header_compile (reply);
+
+#ifdef LOG_HTTP_REPLIES
+	AS_DBG_1 ("Reply Queued:\n%s", str->str);
 #endif
 
 	/* Immediately send reply and close connection. */
@@ -453,6 +471,10 @@ static as_bool send_reply_error (ASUpload *up)
 	set_common_headers (up, reply);
 	str = as_http_header_compile (reply);
 
+#ifdef LOG_HTTP_REPLIES
+	AS_DBG_1 ("Reply Error:\n%s", str->str);
+#endif
+
 	/* Immediately send reply and close connection. */
 	tcp_send (up->c, str->str, str->len);
 	tcp_close_null (&up->c);
@@ -474,6 +496,10 @@ static as_bool send_reply_not_found (ASUpload *up)
 	reply = as_http_header_reply (HTHD_VER_11, 404);
 	set_common_headers (up, reply);
 	str = as_http_header_compile (reply);
+
+#ifdef LOG_HTTP_REPLIES
+	AS_DBG_1 ("Reply Not Found:\n%s", str->str);
+#endif
 
 	/* Immediately send reply and close connection. */
 	tcp_send (up->c, str->str, str->len);

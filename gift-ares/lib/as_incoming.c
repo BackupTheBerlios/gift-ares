@@ -1,5 +1,5 @@
 /*
- * $Id: as_incoming.c,v 1.8 2004/10/26 21:25:52 HEx Exp $
+ * $Id: as_incoming.c,v 1.9 2004/10/30 16:48:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -15,7 +15,9 @@ int as_incoming_http (ASHttpServer *server, TCPC *tcpcon,
                       ASHttpHeader *request)
 {
 	assert (AS->upman);
-	return !!as_upman_start (AS->upman, tcpcon, request);
+	as_upman_start (AS->upman, tcpcon, request);
+
+	return TRUE; /* as_upman_start always handles connection and request */
 }
 
 /*****************************************************************************/

@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.5 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_upload_man.c,v 1.6 2004/10/30 16:48:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,6 +26,11 @@ static int upman_auth (ASUpMan *man, in_addr_t host);
 
 static as_bool upload_state_cb (ASUpload *up, ASUploadState state);
 static int upload_auth_cb (ASUpload *up, int *queue_length);
+
+/* Add or Remove progress timer as necessary. */
+static void progress_timer_update (ASUpMan *man);
+/* Periodic timer function which in turn calls progress callback. */
+static as_bool progress_timer_func (ASUpMan *man);
 
 /*****************************************************************************/
 
@@ -98,12 +103,18 @@ void as_upman_set_auth_cb (ASUpMan *man, ASUpManAuthCb auth_cb)
 void as_upman_set_progress_cb (ASUpMan *man,
                                ASUpManProgressCb progress_cb)
 {
-	abort ();
+	if (progress_cb == man->progress_cb)
+		return;
+
+	man->progress_cb = progress_cb;
+	progress_timer_update (man);
 }
 
 /*****************************************************************************/
 
-/* Create and register a new upload from http request. */
+/* Create and register a new upload from http request. Takes ownership of
+ * connection and request in all cases (even if no download is created).
+ */
 ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 {
 	ASUpload *up;
@@ -113,12 +124,14 @@ ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 	{
 		AS_ERR_1 ("Couldn't create upload for request from %s",
 		          net_ip_str (c->host));
+		tcp_close (c);
+		as_http_header_free (req);
 		return NULL;
 	}
 
 	up->upman = man;
 
-	/* Insert into hash table first so it is available in callback triggeren
+	/* Insert into hash table first so it is available in callback triggered
 	 * by as_upload_start.
 	 */
 	if (!as_hashtable_insert_int (man->uploads, (as_uint32)up->host, up))
@@ -129,8 +142,6 @@ ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 		return NULL;
 	}
 
-	man->nuploads++;
-
 	/* Try to start upload. Auth callback will decide if this succeeds */
 	if (!as_upload_start (up))
 	{
@@ -140,10 +151,6 @@ ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 			AS_WARN_1 ("Failed to remove unstarted upload from hash table",
 			           net_ip_str (up->host));
 			assert (0);
-		}
-		else
-		{
-			man->nuploads--;
 		}
 
 		as_upload_free (up);
@@ -181,6 +188,7 @@ as_bool as_upman_cancel (ASUpMan *man, ASUpload *up)
 	if (!upman_valid_upload (man, up))
 		return FALSE;
 
+	/* Callback will decrement man->nuploads. */
 	return as_upload_cancel (up); /* triggers callback */
 }
 
@@ -196,10 +204,12 @@ as_bool as_upman_remove (ASUpMan *man, ASUpload *up)
 		          net_ip_str (up->host));
 		assert (0);
 	}
-	else
+
+	if (as_upload_state (up) == UPLOAD_ACTIVE)
 	{
 		man->nuploads--;
 		assert (man->uploads >= 0);
+		progress_timer_update (man);
 	}
 
 	as_upload_free (up);
@@ -237,6 +247,10 @@ static as_bool upload_state_cb (ASUpload *up, ASUploadState state)
 		break;
 
 	case UPLOAD_ACTIVE:
+		/* New active upload */
+		man->nuploads++;
+		progress_timer_update (man);
+
 		/* Raise callback */
 		if (man->state_cb)
 			ret = man->state_cb (man, up, state);
@@ -244,10 +258,16 @@ static as_bool upload_state_cb (ASUpload *up, ASUploadState state)
 
 	case UPLOAD_COMPLETE:
 	case UPLOAD_CANCELLED:
+		/* One active upload less */
+		man->nuploads--;
+		assert (man->nuploads >= 0);
+		progress_timer_update (man);
+
 		/* Raise callback */
 		if (man->state_cb)
 			ret = man->state_cb (man, up, state);
 
+#if 0
 		/* And free download if it still exists.
 		 * FIXME: Is it a good idea to automatically do this for the user
 		 *        here?
@@ -257,6 +277,7 @@ static as_bool upload_state_cb (ASUpload *up, ASUploadState state)
 			as_upman_remove (man, up);
 			ret = FALSE;
 		}
+#endif
 		break;
 
 	default:
@@ -288,6 +309,37 @@ static int upload_auth_cb (ASUpload *up, int *queue_length)
 
 	*queue_length = length;
 	return pos;
+}
+
+/*****************************************************************************/
+
+/* Add or Remove progress timer as necessary. */
+static void progress_timer_update (ASUpMan *man)
+{
+	if (man->progress_cb && 
+	    man->nuploads > 0 &&
+	    man->progress_timer == INVALID_TIMER)
+	{
+		man->progress_timer = timer_add (AS_UPLOAD_PROGRESS_INTERVAL,
+		                                 (TimerCallback)progress_timer_func,
+		                                 man);
+	}
+	else if (man->progress_timer != INVALID_TIMER)
+	{
+		timer_remove_zero (&man->progress_timer);
+	}
+}
+
+/* Periodic timer function which in turn calls progress callback. */
+static as_bool progress_timer_func (ASUpMan *man)
+{
+	assert (man->progress_cb);
+	assert (man->nuploads > 0);
+
+	/* raise callback */
+	man->progress_cb (man);
+
+	return TRUE; /* reset timer */
 }
 
 /*****************************************************************************/
@@ -335,16 +387,28 @@ static void tidy_queue (ASUpMan *man, struct queue *last)
 /* Returns zero for OK, -1 for not, or queue position. */
 static int upman_auth (ASUpMan *man, in_addr_t host)
 {
+	ASUpload *up;
 	List *l;
 	struct queue *q;
 	int i;
 
-	if (as_hashtable_lookup_int (man->uploads, (int)host))
+	if ((up = as_hashtable_lookup_int (man->uploads, (as_uint32)host)))
 	{
-		AS_DBG_1 ("currently uploading to %s, denying", net_ip_str (host));
-
-		/* if this host is currently uploading, make it wait */
-		return -1;
+		/* There may be non active downloads in the hash table. Specifically
+		 * the download this auth request is for is already in the list.
+		 */
+		if (as_upload_state (up) == UPLOAD_ACTIVE)
+		{
+			AS_DBG_1 ("currently uploading to %s, denying",
+			          net_ip_str (host));
+			/* If this host is currently uploading, make it wait.
+			 *
+			 * FIXME: Returning -1 will cause a 404 to be sent. How do we tell
+			 *        the downloader than he an only have one simultaneous
+			 *        download?
+			 */
+			return -1;
+		}
 	}
 
 	/* Spare slots are available even after dealing with everyone

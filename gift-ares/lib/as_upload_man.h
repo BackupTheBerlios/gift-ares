@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.3 2004/10/30 01:00:53 mkern Exp $
+ * $Id: as_upload_man.h,v 1.4 2004/10/30 16:48:08 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -39,7 +39,9 @@ struct as_upman_t
 	List *queue;          /* list of struct queues */
 	
 	int max_active;       /* max concurrent uploads */
-	int nuploads;         /* Number of active downloads */
+	int nuploads;         /* Number of _active_ downloads. Not the
+	                       * necessarily same as number of uploads in hash
+	                       * table! */
 	int nqueued;          /* Number of queued hosts */
 	int bandwidth;
 
@@ -71,7 +73,9 @@ void as_upman_set_progress_cb (ASUpMan *man,
 
 /*****************************************************************************/
 
-/* Create and register a new upload from http request. */
+/* Create and register a new upload from http request. Takes ownership of
+ * connection and request in all cases (even if no download is created).
+ */
 ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req);
 
 /*****************************************************************************/
