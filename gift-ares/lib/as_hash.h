@@ -1,5 +1,5 @@
 /*
- * $Id: as_hash.h,v 1.5 2004/09/11 18:33:24 mkern Exp $
+ * $Id: as_hash.h,v 1.6 2005/01/13 19:51:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -13,7 +13,7 @@
 /*****************************************************************************/
 
 #define AS_HASH_SIZE        (20)  /* SHA_DIGESTSIZE */
-#define AS_HASH_BASE64_SIZE (28)  /* base64 len including '\0' */
+#define AS_HASH_BASE64_SIZE (29)  /* base64 len including '\0' */
 
 /* hmm, overkill? */
 typedef struct
