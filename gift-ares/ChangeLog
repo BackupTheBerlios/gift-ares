@@ -1,4 +1,6 @@
- $Id: ChangeLog,v 1.6 2005/02/28 14:19:14 mkern Exp $
+ $Id: ChangeLog,v 1.7 2005/03/07 01:10:15 hex Exp $
+
+gift-ares 0.2.2:
 
 	* Fixed missing album meta data in search results
 
