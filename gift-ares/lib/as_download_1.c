@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_1.c,v 1.5 2004/09/13 13:40:04 mkern Exp $
+ * $Id: as_download_1.c,v 1.6 2004/09/13 17:09:13 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,12 +23,13 @@
 
 /*****************************************************************************/
 
+static int active_conns_from_list (ASDownload *dl, int *connecting);
+static void stop_all_connections (ASDownload *dl);
+
 static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state);
 
 static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
                              unsigned int len);
-
-static void stop_all_connections (ASDownload *dl);
 
 static void download_maintain (ASDownload *dl);
 
@@ -319,6 +320,59 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 
 /*****************************************************************************/
 
+/* Returns number of active and connecting downloads by traversing connection
+ * list.
+ */
+static int active_conns_from_list (ASDownload *dl, int *connecting)
+{
+	List *conn_l;
+	ASDownConn *conn;
+	int active = 0, conning = 0;
+
+
+	for (conn_l = dl->conns; conn_l; conn_l = conn_l->next)
+	{
+		conn = conn_l->data;
+		if (conn->state == DOWNCONN_TRANSFERRING)
+			active++;
+		if (conn->state == DOWNCONN_CONNECTING)
+			conning++;
+	}
+
+	if (connecting)
+		*connecting = conning;
+
+	return active;
+}
+
+/* Cancels connections and disassociates them from chunks */
+static void stop_all_connections (ASDownload *dl)
+{
+	List *conn_l;
+	ASDownChunk *chunk;
+	ASDownConn *conn;
+
+	/* loop through connections so we can also close those which are
+	 * persistent but not currently associated with a chunk.
+	 */
+	for (conn_l = dl->conns; conn_l; conn_l = conn_l->next)
+	{
+		conn = conn_l->data;
+
+		/* cancel connection */
+		as_downconn_cancel (conn);
+
+		/* if there is a chunk disassociate it */
+		if ((chunk = conn->udata2))
+		{
+			conn->udata2 = NULL;
+			chunk->udata = NULL;
+		}
+	}
+}
+
+/*****************************************************************************/
+
 static as_bool disassociate_conn (ASDownConn *conn)
 {
 	ASDownload *dl = conn->udata1;
@@ -373,6 +427,24 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 		AS_HEAVY_DBG_4 ("DOWNCONN_TRANSFERRING: chunk (%u,%u) from %s:%d.", chunk->start,
 		                chunk->size, net_ip_str (conn->source->host),
 		                conn->source->port);
+
+		/* Abort transfer if we already have enough sources for download */
+		if (active_conns_from_list (dl, NULL) >= AS_DOWNLOAD_MAX_ACTIVE_SOURCES)
+		{
+			AS_HEAVY_DBG_2 ("Closing connection to %s:%d because we already have enough sources.",
+			                net_ip_str (conn->source->host),
+			                conn->source->port);
+
+			as_downconn_cancel (conn);
+
+			/* disassociate chunk */
+			conn->udata2 = NULL;
+			chunk->udata = NULL;
+
+			/* no need to call download_maintain here */
+			return FALSE;
+		}
+
 		break;
 
 	case DOWNCONN_COMPLETE:
@@ -495,32 +567,6 @@ static as_bool conn_data_cb (ASDownConn *conn, as_uint8 *data,
 
 /*****************************************************************************/
 
-/* Cancels connections and disassociates them from chunks */
-static void stop_all_connections (ASDownload *dl)
-{
-	List *conn_l;
-	ASDownChunk *chunk;
-	ASDownConn *conn;
-
-	/* loop through connections so we can also close those which are
-	 * persistent but not currently associated with a chunk.
-	 */
-	for (conn_l = dl->conns; conn_l; conn_l = conn_l->next)
-	{
-		conn = conn_l->data;
-
-		/* cancel connection */
-		as_downconn_cancel (conn);
-
-		/* if there is a chunk disassociate it */
-		if ((chunk = conn->udata2))
-		{
-			conn->udata2 = NULL;
-			chunk->udata = NULL;
-		}
-	}
-}
-
 /* Verify chunk list is consistent */
 static as_bool verify_chunks (ASDownload *dl)
 {
@@ -640,9 +686,30 @@ static as_bool recalc_chunks (ASDownload *dl)
 	ASDownConn *conn;
 	time_t now = time (NULL);
 	size_t remaining, new_start, new_size;
+	int active_conns, pending_conns, max_new_conns;
 
 	if (!(conn_l = dl->conns))
 		return TRUE; /* nothing to do */
+
+	/* We do nothing if there are already enough connections. If not we limit
+	 * the number of our attempts to (maximum - active) * 2, assuming half of
+	 * the connection attempts will fail.
+	 * TODO: Is 2 a good factor? Does it reflect the real failure rate?
+	 */
+	active_conns = active_conns_from_list (dl, &pending_conns);
+
+	if (active_conns >= AS_DOWNLOAD_MAX_ACTIVE_SOURCES)
+		return TRUE;
+
+	max_new_conns = (AS_DOWNLOAD_MAX_ACTIVE_SOURCES - active_conns) * 2; 
+
+	if (pending_conns >= max_new_conns)
+		return TRUE;
+
+	max_new_conns -= pending_conns;
+
+	AS_HEAVY_DBG_1 ("Attempting a maximum of %d new connections",
+	                max_new_conns);
 
 	/* First assign connections to unused chunks */
 
@@ -687,6 +754,8 @@ static as_bool recalc_chunks (ASDownload *dl)
 					continue;
 				}
 
+				max_new_conns--;
+
 				AS_HEAVY_DBG_5 ("Started unused chunk (%u,%u) of \"%s\" with %s:%d",
 			                    chunk->start, chunk->size, dl->filename,
 				                net_ip_str (conn->source->host),
@@ -699,14 +768,14 @@ static as_bool recalc_chunks (ASDownload *dl)
 			conn_l = conn_l->next;
 		}
 
-		if (!conn_l)
+		if (!conn_l || max_new_conns <= 0)
 			break; /* no more suitable connections */
 	}
 
 	/* Now loop through remaining connections and create new chunks for them
 	 * by splitting large ones.
 	 */
-	while (conn_l)
+	while (conn_l && max_new_conns > 0)
 	{
 		conn = conn_l->data;
 
@@ -777,6 +846,8 @@ static as_bool recalc_chunks (ASDownload *dl)
 			/* try next connection */
 			continue;
 		}
+
+		max_new_conns--;
 
 		AS_HEAVY_DBG_5 ("Started new chunk (%u,%u) of \"%s\" with %s:%d",
 	                    new_chunk->start, new_chunk->size, dl->filename,
