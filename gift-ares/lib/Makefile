@@ -34,8 +34,6 @@ OBJECTS = \
 	as_download_1.o \
 	as_incoming.o
 
-#	as_download.o
-
 all: libares.a($(OBJECTS))
 
 clean:
