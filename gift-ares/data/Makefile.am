@@ -1,9 +1,10 @@
-# $Id: Makefile.am,v 1.2 2004/12/05 03:53:57 hex Exp $
-
-EXTRA_DIST = \
-	nodes
+# $Id: Makefile.am,v 1.3 2004/12/18 22:25:54 hex Exp $
 
 ASPdatadir = $(datadir)/Ares
 ASPdata_DATA = \
 	nodes  \
 	Ares.conf.template
+
+EXTRA_DIST = \
+	$(ASPdata_DATA)
+
