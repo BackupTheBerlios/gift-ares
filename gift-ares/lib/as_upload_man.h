@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.6 2004/10/30 23:52:06 mkern Exp $
+ * $Id: as_upload_man.h,v 1.7 2004/10/31 13:01:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -36,7 +36,7 @@ typedef void (*ASUpManProgressCb) (ASUpMan *man);
 
 struct as_upman_t
 {
-	ASHashTable *uploads; /* uploads keyed by host as an integer */
+	List *uploads;        /* list of uploads */
 	List *queue;          /* list of struct queues */
 	
 	int max_active;       /* max concurrent uploads */

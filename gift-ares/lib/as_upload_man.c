@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.9 2004/10/30 23:52:06 mkern Exp $
+ * $Id: as_upload_man.c,v 1.10 2004/10/31 13:01:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,7 +11,7 @@
 
 /*****************************************************************************/
 
-/* Verify count of active uploads by going through hash table each time */
+/* Verify count of active uploads by going through upload list each time */
 #define VERIFY_ACTIVE_COUNT
 
 /*****************************************************************************/
@@ -38,7 +38,7 @@ static void progress_timer_update (ASUpMan *man);
 static as_bool progress_timer_func (ASUpMan *man);
 
 #ifdef VERIFY_ACTIVE_COUNT
-static int active_uploads_from_table (ASUpMan *man);
+static int active_uploads_from_list (ASUpMan *man);
 #endif
 
 /*****************************************************************************/
@@ -51,12 +51,7 @@ ASUpMan *as_upman_create ()
 	if (!(man = malloc (sizeof (ASUpMan))))
 		return NULL;
 
-	if (!(man->uploads = as_hashtable_create_int ()))
-	{
-		free (man);
-		return NULL;
-	}
-
+	man->uploads = NULL;
 	man->queue   = NULL;
 
 	man->max_active = AS_UPLOAD_MAX_ACTIVE;
@@ -71,9 +66,9 @@ ASUpMan *as_upman_create ()
 	return man;
 }
 
-static as_bool free_upload (ASHashTableEntry *entry, void *udata)
+static int free_upload (ASUpload *up, void *udata)
 {
-	as_upload_free (entry->val);
+	as_upload_free (up);
 	return TRUE; /* remove */
 }
 
@@ -86,10 +81,7 @@ void as_upman_free (ASUpMan *man)
 	if (man->progress_timer != INVALID_TIMER)
 		timer_remove (man->progress_timer);
 
-	as_hashtable_foreach (man->uploads, (ASHashTableForeachFunc)free_upload,
-	                      NULL);
-
-	as_hashtable_free (man->uploads, FALSE);
+	list_foreach_remove (man->uploads, (ListForeachFunc)free_upload, NULL);
 	list_foreach_remove (man->queue, NULL, NULL); /* free entries */
 	
 	free (man);
@@ -139,28 +131,16 @@ ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 
 	up->upman = man;
 
-	/* Insert into hash table first so it is available in callback triggered
+	/* Insert into list first so it is available in callback triggered
 	 * by as_upload_start.
 	 */
-	if (!as_hashtable_insert_int (man->uploads, (as_uint32)up->host, up))
-	{
-		AS_ERR_1 ("Failed to insert upload to %s in hash table",
-		          net_ip_str (up->host));
-		as_upload_free (up);
-		return NULL;
-	}
+	man->uploads = list_prepend (man->uploads, up);
 
 	/* Try to start upload. Auth callback will decide if this succeeds */
 	if (!as_upload_start (up))
 	{
-		/* Upload was not started. Failed/queued/404/etc */
-		if (!as_hashtable_remove_int (man->uploads, (as_uint32)(up->host)))
-		{
-			AS_WARN_1 ("Failed to remove unstarted upload from hash table",
-			           net_ip_str (up->host));
-			assert (0);
-		}
-
+		/* Upload was not started. Failed/queued/404/etc. */
+		man->uploads = list_remove (man->uploads, up);
 		as_upload_free (up);
 		return NULL;
 	}
@@ -170,30 +150,10 @@ ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 
 /*****************************************************************************/
 
-static as_bool valid_upload_itr (ASHashTableEntry *entry, ASUpload **up)
-{
-	if (*up == entry->val)
-		*up = NULL;
-
-	return FALSE; /* don't delete item */
-}
-
-/* Returns TRUE if upload is currently managed by upman */
-static as_bool upman_valid_upload (ASUpMan *man, ASUpload *up)
-{
-	/* check if upload is in the hash table */
-	as_hashtable_foreach (man->uploads,
-	                      (ASHashTableForeachFunc)valid_upload_itr, &up);
-	if (up == NULL)
-		return TRUE;
-
-	return FALSE;
-}
-
 /* Cancel upload but do not remove it. */
 as_bool as_upman_cancel (ASUpMan *man, ASUpload *up)
 {
-	if (!upman_valid_upload (man, up))
+	if (!list_find (man->uploads, up))
 		return FALSE;
 
 	/* Callback will decrement man->nuploads. */
@@ -203,20 +163,20 @@ as_bool as_upman_cancel (ASUpMan *man, ASUpload *up)
 /* Remove and free finished, failed or cancelled upload. */
 as_bool as_upman_remove (ASUpMan *man, ASUpload *up)
 {
-	if (!upman_valid_upload (man, up))
+	List *link;
+
+	if (!(link = list_find (man->uploads, up)))
 		return FALSE;
 
-	if (!as_hashtable_remove_int (man->uploads, (as_uint32)up->host))
-	{
-		AS_ERR_1 ("Couldn't remove upload to %s from hashtable",
-		          net_ip_str (up->host));
-		assert (0);
-	}
+	man->uploads = list_remove_link (man->uploads, link);
 
 	if (as_upload_state (up) == UPLOAD_ACTIVE)
 	{
 		man->nuploads--;
 		assert (man->uploads >= 0);
+#ifdef VERIFY_ACTIVE_COUNT
+		assert (man->nuploads == active_uploads_from_list (man));
+#endif
 		progress_timer_update (man);
 	}
 
@@ -232,7 +192,7 @@ as_bool as_upman_remove (ASUpMan *man, ASUpload *up)
  */
 ASUploadState as_upman_state (ASUpMan *man, ASUpload *up)
 {
-	if (!upman_valid_upload (man, up))
+	if (!list_find (man->uploads, up))
 		return UPLOAD_INVALID;
 
 	return as_upload_state (up);
@@ -257,6 +217,9 @@ static as_bool upload_state_cb (ASUpload *up, ASUploadState state)
 	case UPLOAD_ACTIVE:
 		/* New active upload */
 		man->nuploads++;
+#ifdef VERIFY_ACTIVE_COUNT
+		assert (man->nuploads == active_uploads_from_list (man));
+#endif
 		progress_timer_update (man);
 
 		/* Raise callback */
@@ -269,6 +232,9 @@ static as_bool upload_state_cb (ASUpload *up, ASUploadState state)
 		/* One active upload less */
 		man->nuploads--;
 		assert (man->nuploads >= 0);
+#ifdef VERIFY_ACTIVE_COUNT
+		assert (man->nuploads == active_uploads_from_list (man));
+#endif
 		progress_timer_update (man);
 
 		/* Raise callback */
@@ -325,22 +291,25 @@ static int upload_auth_cb (ASUpload *up, int *queue_length)
 static void progress_timer_update (ASUpMan *man)
 {
 #ifdef VERIFY_ACTIVE_COUNT
-	assert (active_uploads_from_table (man) == man->nuploads);
+	assert (active_uploads_from_list (man) == man->nuploads);
 #endif
 
-	if (man->progress_cb && 
-	    man->nuploads > 0 &&
-	    man->progress_timer == INVALID_TIMER)
+	if (man->progress_cb && man->nuploads > 0)
 	{
-		AS_HEAVY_DBG ("Adding upload progress timer");
-		man->progress_timer = timer_add (AS_UPLOAD_PROGRESS_INTERVAL,
-		                                 (TimerCallback)progress_timer_func,
-		                                 man);
+		if (man->progress_timer == INVALID_TIMER)
+		{
+			AS_HEAVY_DBG ("Adding upload progress timer");
+			man->progress_timer = timer_add (AS_UPLOAD_PROGRESS_INTERVAL,
+			                       (TimerCallback)progress_timer_func, man);
+		}
 	}
-	else if (man->progress_timer != INVALID_TIMER)
+	else
 	{
-		AS_HEAVY_DBG ("Removing upload progress timer");
-		timer_remove_zero (&man->progress_timer);
+		if (man->progress_timer != INVALID_TIMER)
+		{
+			AS_HEAVY_DBG ("Removing upload progress timer");
+			timer_remove_zero (&man->progress_timer);
+		}
 	}
 }
 
@@ -407,17 +376,28 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 	int i;
 
 #ifdef VERIFY_ACTIVE_COUNT
-	assert (active_uploads_from_table (man) == man->nuploads);
+	{
+		int active = active_uploads_from_list (man);
+		if (man->nuploads != active)
+		{
+			AS_HEAVY_DBG_2 ("Upload auth: nuploads: %d, actual active: %d",
+			                man->nuploads, active);
+			assert (man->nuploads == active);
+		}
+	}
 #endif
 
-	if ((up = as_hashtable_lookup_int (man->uploads, (as_uint32)host)))
+	/* Only allow one active upload per host. */
+	for (l = man->uploads; l; l = l->next)
 	{
-		/* There may be non active downloads in the hash table. Specifically
-		 * the download this auth request is for is already in the list.
+		up = l->data;
+
+		/* There may be non active uploads in the list. Specifically
+		 * the upad this auth request is for is already in the list.
 		 */
-		if (as_upload_state (up) == UPLOAD_ACTIVE)
+		if (up->host == host && as_upload_state (up) == UPLOAD_ACTIVE)
 		{
-			AS_DBG_1 ("currently uploading to %s, denying",
+			AS_DBG_1 ("Currently uploading to %s, denying",
 			          net_ip_str (host));
 			/* If this host is currently uploading, make it wait. */
 			return -1;
@@ -427,9 +407,9 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 	/* Spare slots are available even after dealing with everyone
 	 * in the queue.
 	 */
-	if (man->nuploads + man->nqueued <= man->max_active)
+	if (man->nuploads + man->nqueued < man->max_active)
 	{
-		AS_DBG_3 ("spare slots available (%d+%d <= %d), allowing",
+		AS_DBG_3 ("spare slots available (%d+%d < %d), allowing",
 		          man->nuploads, man->nqueued, man->max_active);
 		return 0;
 	}
@@ -464,10 +444,10 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 		assert (i == man->nqueued);
 	}
 
-	if (i + man->nuploads <= man->max_active)
+	if (i + man->nuploads < man->max_active)
 	{
 		/* sufficiently near the front of the queue: pop it */
-		AS_DBG_3 ("Reserved slot available (%d+%d <= %d), allowing",
+		AS_DBG_3 ("Reserved slot available (%d+%d < %d), allowing",
 		          i, man->nuploads, man->max_active);
 
 		queue_remove (man, l);
@@ -483,21 +463,16 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 
 #ifdef VERIFY_ACTIVE_COUNT
 
-static as_bool active_upload_itr (ASHashTableEntry *entry, int *count)
+static int active_uploads_from_list (ASUpMan *man)
 {
-	if (((ASUpload *)entry->val)->state == UPLOAD_ACTIVE)
-		(*count)++;
-
-	return FALSE; /* don't delete item */
-}
-
-static int active_uploads_from_table (ASUpMan *man)
-{
+	List *l;
 	int i = 0;
 
-	/* check if upload is in the hash table */
-	as_hashtable_foreach (man->uploads,
-	                      (ASHashTableForeachFunc)active_upload_itr, &i);
+	for (l = man->uploads; l; l = l->next)
+	{
+		if (((ASUpload *)l->data)->state == UPLOAD_ACTIVE)
+			i++;
+	}
 
 	return i;
 }
