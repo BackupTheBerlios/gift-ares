@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.22 2004/09/15 22:46:04 mkern Exp $
+ * $Id: cmd.c,v 1.23 2004/09/16 18:28:13 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -32,6 +32,9 @@ COMMAND_FUNC (clear);
 COMMAND_FUNC (download);
 COMMAND_FUNC (dl);
 COMMAND_FUNC (resume);
+COMMAND_FUNC (share);
+COMMAND_FUNC (share_stats);
+COMMAND_FUNC (network_stats);
 
 COMMAND_FUNC (quit);
 
@@ -98,6 +101,18 @@ commands[] =
 	COMMAND (resume,
 	         "<file>",
 	         "Resume incomplete download.")
+
+	COMMAND (share,
+	         "<path> <size> <realm> <hash> [<metadata pairs>...]",
+	         "Share file.")
+
+	COMMAND (share_stats,
+	         "",
+	         "Show stats about shares.")
+
+	COMMAND (network_stats,
+	         "",
+	         "Show stats about the network.")
 
 	COMMAND (quit,
              "",
@@ -523,6 +538,67 @@ COMMAND_FUNC (resume)
 	}
 
 	printf ("Download of \"%s\" restarted\n", dl->filename);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (share)
+{
+	if (argc < 5)
+		return FALSE;
+
+	if (!(argc & 1))
+		return FALSE;
+
+	char *path = argv[1];
+	int size = atoi(argv[2]);
+	ASRealm realm = atoi(argv[3]);
+	ASHash *hash = as_hash_decode (argv[4]);
+	ASMeta *meta = as_meta_create ();
+	ASShare *share;
+	int i;
+
+	if (!meta)
+		return FALSE;
+
+	for (i = 5; i < argc - 1; i += 2)
+	{
+		char *name = argv[i], *value = argv[i+1];
+
+		as_meta_add_tag (meta, name, value);
+	}
+
+	share = as_share_new (path, hash, meta, size, realm);
+	
+	if (!share)
+	{
+		as_meta_free (meta);
+		return FALSE;
+	}
+	
+	if (!as_shareman_add (AS->shareman, share))
+	{
+		as_share_free (share);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+COMMAND_FUNC (share_stats)
+{
+	printf ("%d files shared, %.2f Gb\n",
+		AS->shareman->nshares, AS->shareman->size);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (network_stats)
+{
+	printf ("Connected to %u supernodes. %u users online\n",
+		list_length (AS->sessman->connected), AS->netinfo->users);
+	printf ("%u total files, %u Gb\n",
+		AS->netinfo->files, AS->netinfo->size);
 
 	return TRUE;
 }
