@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.5 2004/09/01 10:30:18 mkern Exp $
+ * $Id: as_session_man.c,v 1.6 2004/09/01 13:06:10 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -235,6 +235,10 @@ static as_bool session_state_cb (ASSession *session, ASSessionState state)
 		man->connecting = list_remove (man->connecting, session);
 		/* and add to connected list... */
 		man->connected = list_prepend (man->connected, session);
+
+		AS_DBG_3 ("Session status: requested %d, connected: %d, connecting: %d",
+	              man->connections, list_length (man->connected), 
+	              list_length (man->connecting));
 
 		return FALSE;
 	}

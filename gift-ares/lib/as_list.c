@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.6 2004/09/01 10:30:18 mkern Exp $
+ * $Id: as_list.c,v 1.7 2004/09/01 13:06:10 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -132,7 +132,11 @@ List *list_copy (List *head)
 	new_head = new_link = insert_new_link (NULL, NULL, head->data);
 
 	for (head = head->next; head; head = head->next)
+	{
+		assert (head->prev->next == head);
 		new_link = insert_new_link (new_link, NULL, head->data);
+		assert (new_link->prev->next == new_link);
+	}
 
 	return new_head;
 }
