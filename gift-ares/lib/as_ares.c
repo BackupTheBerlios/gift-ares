@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.23 2005/02/09 19:46:07 hex Exp $
+ * $Id: as_ares.c,v 1.24 2005/04/02 15:48:40 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -56,12 +56,13 @@ static as_bool port_change_cb (const ASConfVal *old_val,
 
 /* Config value defaults. */
 
-static const ASConfVal default_conf[] =
+static ASConfVal default_conf[] =
 {
 	/* id, name, type, data, callback, udata */
 	{ AS_LISTEN_PORT,                 "main/port",      AS_CONF_INT, {59049},
 	                                  port_change_cb,   NULL },
-	{ AS_USER_NAME,                   "main/username",  AS_CONF_STR, {"antares"},
+	/* warning: this is changed below to avoid problems with union initialization */
+	{ AS_USER_NAME,                   "main/username",  AS_CONF_STR, {0},
 	                                  NULL,             NULL },
 	{ AS_DOWNLOAD_MAX_ACTIVE,         NULL,             AS_CONF_INT, {6},
 	                                  NULL,             NULL },
@@ -112,6 +113,9 @@ as_bool as_init ()
 		as_cleanup ();
 		return FALSE;
 	}
+	
+	/* HACK: avoid union initialization problems */
+	default_conf[1].data.s = "antares";
 
 	/* Add default values */
 	if (!as_config_add_values (AS->config, default_conf,
