@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.24 2004/09/10 11:20:33 mkern Exp $
+ * $Id: as_ares.h,v 1.25 2004/09/10 17:24:51 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -107,7 +107,13 @@ typedef int            as_bool;
 /* Timeout for supernode handshake after connecting */
 #define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
 
-/* Number of simultaneous connection attemps when connecting to supernodes */
+/* Maximum period of inactivity for established supernode connections */
+#define AS_SESSION_IDLE_TIMEOUT (8 * MINUTES)
+
+/* Timeout for ping replies */
+#define AS_SESSION_PING_TIMEOUT (1 * MINUTES)
+
+/* Number of simultaneous connection attempts when connecting to supernodes */
 #define AS_SESSION_PARALLEL_ATTEMPTS (10)
 
 /* Maximum number of nodes saved in node file */
