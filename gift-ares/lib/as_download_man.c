@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.7 2004/10/19 19:21:36 mkern Exp $
+ * $Id: as_download_man.c,v 1.8 2004/10/19 23:48:14 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -361,7 +361,7 @@ int as_downman_restart_dir (ASDownMan *man, const char *dir)
 
 	while ((de = readdir (dh)))
 	{
-		if (restart_file_itr (man, dir, de.d_name))
+		if (restart_file_itr (man, dir, de->d_name))
 			files++;
 	}
 

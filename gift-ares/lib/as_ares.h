@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.45 2004/10/19 19:21:36 mkern Exp $
+ * $Id: as_ares.h,v 1.46 2004/10/19 23:48:14 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -36,7 +36,15 @@
 # include <winsock.h>
 #endif /* WIN32 */
 
-#ifndef HAVE_DIRENT_H
+/* assume we have this on non-win32 systems (it's POSIX after all), in
+ * the absence of any autoconf-ish setup that could detect it for us */
+#ifndef WIN32
+#define HAVE_DIRENT_H
+#endif
+
+#ifdef HAVE_DIRENT_H
+# include <dirent.h> /* opendir, readdir... */
+#else
 # include <io.h> /* _findfirst and friends */
 #endif
 
