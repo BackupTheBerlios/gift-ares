@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.h,v 1.6 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_tcp.h,v 1.7 2004/09/17 11:42:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,12 +12,20 @@
 
 /*****************************************************************************/
 
+/* This is really ugly to have here. */
+typedef struct as_packet_t ASPacket; 
+
 typedef struct
 {
 	in_addr_t         host;     /* host we are connected to */
 	in_port_t         port;     /* port we are connected to */
 
 	int               fd;       /* socket */
+
+	/* write queue */
+	ASPacket         *wbuf;
+	input_id          winput;
+
 	void             *udata;    /* user data */
 } TCPC;
 
@@ -46,6 +54,10 @@ int tcp_send (TCPC *c, unsigned char *data, size_t len);
 int tcp_recv (TCPC *c, unsigned char *buf, size_t len);
 
 int tcp_peek (TCPC *c, unsigned char *buf, size_t len);
+
+/*****************************************************************************/
+
+int tcp_write (TCPC *c, unsigned char *data, size_t len);
 
 /*****************************************************************************/
 

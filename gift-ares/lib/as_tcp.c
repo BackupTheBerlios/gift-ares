@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.7 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_tcp.c,v 1.8 2004/09/17 11:42:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -91,6 +91,9 @@ static TCPC *tcp_new (int fd, in_addr_t host, in_port_t port)
 	c->host = host;
 	c->port = port;
 	c->fd = fd;
+	c->wbuf = NULL;
+	c->winput = INVALID_INPUT;
+
 	c->udata = NULL;
 	
 	return c;
@@ -100,6 +103,8 @@ static void tcp_free (TCPC *c)
 {
 	if (!c)
 		return;
+
+	as_packet_free (c->wbuf);
 
 	free (c);
 }
@@ -215,6 +220,9 @@ void tcp_close (TCPC *c)
 	if (!c)
 		return;
 
+/*
+	input_remove (c->winput);
+*/
 	input_remove_all (c->fd);
 
 	net_close (c->fd);
@@ -263,6 +271,116 @@ int tcp_peek (TCPC *c, unsigned char *buf, size_t len)
 		return 0;
 
 	return recv (c->fd, buf, len, MSG_PEEK);
+}
+
+/*****************************************************************************/
+
+static void write_queue_cb (int fd, input_id id, TCPC *c)
+{
+	int sent;
+
+	assert (c->fd == fd);
+	assert (c->winput == id);
+
+	/* Send all we can */
+	sent = tcp_send (c, c->wbuf->read_ptr, as_packet_remaining (c->wbuf));
+
+	if (sent < 0)
+	{
+#ifndef WIN32
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+#else
+		if (WSAGetLastError () == WSAEWOULDBLOCK)
+#endif
+		{
+			/* Wait until we can write more */
+			return ;
+		}
+
+		/* Something very bad happened, emtpy write queue and remove input */
+		AS_ERR_2 ("Send error in queue for %s:%d",
+		          net_ip_str (c->host), c->port);
+
+		input_remove (c->winput);
+		c->winput = INVALID_INPUT;
+		as_packet_free (c->wbuf);
+		c->wbuf = NULL;
+		return;
+	}
+
+	/* Skip written data */
+	c->wbuf->read_ptr += sent;
+
+	/* Remove sent data if it exceeds a certain limit */
+	if (c->wbuf->read_ptr - c->wbuf->data >= 64*1024)
+		as_packet_truncate (c->wbuf);
+
+	if (as_packet_remaining (c->wbuf) == 0)
+	{
+		/* Sent everything, remove input. */
+		input_remove (c->winput);
+		c->winput = INVALID_INPUT;
+		as_packet_free (c->wbuf);
+		c->wbuf = NULL;
+		return;
+	}
+	
+	/* Wait until we can write more */
+}
+
+int tcp_write (TCPC *c, unsigned char *data, size_t len)
+{
+	int sent;
+
+	if (!c || c->fd < 0)
+		return -1;
+
+	if (len == 0)
+		return 0;
+
+	/* If there already is a non-empty buffer just append new data */
+	if (c->wbuf && as_packet_size (c->wbuf) > 0)
+	{
+		assert (c->winput != INVALID_INPUT);
+
+		if (!as_packet_put_ustr (c->wbuf, data, len))
+			return -1;
+
+		return len;
+	}
+
+	/* Otherwise try to send as much as possible immediately */
+	if ((sent = tcp_send (c, data, len)) == (int)len)
+		return len; /* sent everything */
+
+	if (sent < 0)
+	{
+#ifndef WIN32
+		if (errno != EAGAIN && errno != EWOULDBLOCK)
+#else
+		if (WSAGetLastError () != WSAEWOULDBLOCK)
+#endif
+		{
+			return sent;
+		}
+
+		sent = 0;
+	}
+
+	/* Queue rest of data */
+	if (!as_packet_put_ustr (c->wbuf, data + sent, len - sent))
+		return -1;
+
+	/* Wait until we can write more */
+	assert (c->winput == INVALID_TIMER);
+
+	c->winput = input_add (c->fd, c, INPUT_WRITE,
+	                       (InputCallback)write_queue_cb, FALSE);
+
+	if (c->winput == INVALID_INPUT)
+		return -1;
+
+	return len;
 }
 
 /*****************************************************************************/

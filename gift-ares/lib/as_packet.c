@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.19 2004/09/16 23:36:14 HEx Exp $
+ * $Id: as_packet.c,v 1.20 2004/09/17 11:42:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -425,12 +425,14 @@ as_bool as_packet_send (ASPacket *packet, TCPC *tcpcon)
 {
 	int sent;
 
-	if ((sent = tcp_send (tcpcon, packet->data, packet->used)) < 0)
+	/* Use tcp send queue */
+	if ((sent = tcp_write (tcpcon, packet->data, packet->used)) < 0)
 		return FALSE;
 
 	if (sent < (int) packet->used)
 	{
-		/* FIXME: short send */
+		/* Short sends shouldn't happen with tcp_write */
+		assert (0);
 		return FALSE;
 	}
 
