@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.c,v 1.3 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_list.c,v 1.4 2004/08/31 17:44:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,7 +7,6 @@
  * All rights reserved.
  */
 
-#include "as_list.h"
 #include "as_ares.h"
 
 /*****************************************************************************/
@@ -405,3 +404,102 @@ List *list_sort (List *head, CompareFunc func)
 }
 
 /*****************************************************************************/
+
+/* These functions are not in libgift. We duplicate code here so we can use
+ * it easily with libgift later. 
+ */
+
+/* Remove link from list but do not free it. */
+List *list_unlink_link (List *head, List *link)
+{
+	if (!head)
+		return NULL;
+
+	if (!link)
+		return head;
+
+	if (link == head)
+		head = link->next;
+
+	if (link->prev)
+		link->prev->next = link->next;
+
+	if (link->next)
+		link->next->prev = link->prev;
+
+	link->prev = NULL;
+	link->next = NULL;
+
+	return head;	
+}
+
+/* insert new_link between prev and next, returns link */
+static List *insert_link (List *prev, List *next, List *new_link)
+{
+	if (prev == NULL && next == NULL)
+	{
+		new_link->prev = NULL;
+		new_link->next = NULL;
+	}
+	else if (prev == NULL)
+	{
+		assert (next->prev == NULL);
+
+		new_link->prev = NULL;
+		new_link->next = next;
+		next->prev = new_link;
+	}
+	else if (next == NULL)
+	{
+		assert (prev->next == NULL);
+
+		new_link->prev = prev;
+		new_link->next = NULL;
+		prev->next = new_link;
+	}
+	else
+	{
+		assert (prev->next == next->prev);
+
+		new_link->prev = prev;
+		new_link->next = next;
+		prev->next = new_link;
+		next->prev = new_link;
+	}
+
+	return new_link;
+}
+
+/* Same as list_insert_sorted but uses supplied link instead of creating a
+ * new one.
+ */
+List *list_insert_link_sorted (List *head, CompareFunc func, List *new_link)
+{
+	List *link;
+
+	assert (func);
+	assert (new_link);
+
+	if (!head)
+		return insert_link (NULL, head, new_link);
+
+	if (func (head->data, new_link->data) >= 0)
+		return insert_link (NULL, head, new_link);
+
+	for (link = head; link->next; link = link->next)
+	{
+		if (func (link->next->data, new_link->data) >= 0)
+		{
+			insert_link (link, link->next, new_link);
+			return head;
+		}
+	}
+
+	/* insert as last element */
+	insert_link (link, NULL, new_link);
+
+	return head;
+}
+
+/*****************************************************************************/
+

@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.c,v 1.4 2004/08/24 20:56:26 mkern Exp $
+ * $Id: as_log.c,v 1.5 2004/08/31 17:44:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -7,7 +7,7 @@
  * All rights reserved.
  */
 
-#include "as_log.h"
+#include "as_ares.h"
 
 /*****************************************************************************/
 

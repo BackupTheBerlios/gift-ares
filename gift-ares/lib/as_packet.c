@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.8 2004/08/27 17:56:40 mkern Exp $
+ * $Id: as_packet.c,v 1.9 2004/08/31 17:44:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -275,7 +275,7 @@ as_bool as_packet_encrypt(ASPacket *packet, ASCipher *cipher)
 	as_uint8 seed_b = 0x00;
 
 	/* encrypt packet with choosen seeds */
-	as_cipher_encrypt (cipher, packer->data, as_packet_size (packet));
+	as_cipher_encrypt (cipher, seed_a, packet->data, as_packet_size (packet));
 
 	/* make enough room for seeds */
 	if (!packet_resize (packet, as_packet_size (packet) + 2))
@@ -323,7 +323,7 @@ as_bool as_packet_send (ASPacket *packet, TCPC *tcpcon)
 	if ((sent = tcp_send (tcpcon, packet->data, packet->used)) < 0)
 		return FALSE;
 
-	if (sent < packet->used)
+	if (sent < (int) packet->used)
 	{
 		/* FIXME: short send */
 		return FALSE;

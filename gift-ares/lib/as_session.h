@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.2 2004/08/27 17:56:40 mkern Exp $
+ * $Id: as_session.h,v 1.3 2004/08/31 17:44:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,8 +14,9 @@
 
 typedef enum
 {
-	SESSION_DISCONNECTED, /* tcp disconnected */
+	SESSION_DISCONNECTED, /* tcp disconnected*/
 	SESSION_CONNECTING,   /* tcp connecting */
+	SESSION_FAILED,       /* tcp connect failed */
 	SESSION_HANDSHAKING,  /* tcp connected, working out crypto */
 	SESSION_CONNECTED     /* session established */
 } ASSessionState;
@@ -56,6 +57,8 @@ struct as_session_t
 
 	ASSessionStateCb  state_cb;
 	ASSessionPacketCb packet_cb;
+
+	void *udata; /* user data */
 };
 
 /*****************************************************************************/

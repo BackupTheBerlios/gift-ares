@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.5 2004/08/26 22:50:24 mkern Exp $
+ * $Id: cmd.c,v 1.6 2004/08/31 17:44:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,6 +21,7 @@ COMMAND_FUNC (help);
 COMMAND_FUNC (event_test);
 
 COMMAND_FUNC (connect);
+COMMAND_FUNC (connect_to);
 
 COMMAND_FUNC (quit);
 
@@ -42,8 +43,12 @@ commands[] =
 	         "Test event system.")
 
 	COMMAND (connect,
+	         "<no_sessions>",
+	         "Maintain no_sessions connections to network.")
+
+	COMMAND (connect_to,
 	         "<host> <port>",
-	         "Connect to a given host.")
+	         "Create session to a given host.")
 
 	COMMAND (quit,
              "",
@@ -113,6 +118,24 @@ COMMAND_FUNC (event_test)
 
 COMMAND_FUNC (connect)
 {
+	int i;
+
+	if (argc != 2)
+		return FALSE;
+
+	i = atoi (argv[1]);
+	assert (i >= 0);
+
+	printf ("Telling seesion manager to connect to %d nodes.", i);
+
+	as_sessman_connect (AS->sessman, i);
+
+	return TRUE;
+}
+
+COMMAND_FUNC (connect_to)
+{
+	ASSession *sess;
 	in_addr_t ip;
 	in_port_t port;
 
@@ -123,7 +146,9 @@ COMMAND_FUNC (connect)
 	port = atoi (argv[2]);
 
 	printf ("connecting to %s (%08x), port %d\n", argv[1], ip, port);
-	as_session_new (ip, port);
+	sess = as_session_create (NULL, NULL);
+	assert (sess);
+	as_session_connect (sess, ip, port);
 
 	return TRUE;
 }

@@ -10,6 +10,9 @@ OBJECTS = \
 	as_packet.o \
 	as_search.o \
 	as_session.o \
+	as_session_man.o \
+	as_node.o \
+	as_node_man.o \
 	as_tcp.o \
 	as_tokenize.o
 

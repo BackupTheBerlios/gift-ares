@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.9 2004/08/27 17:56:40 mkern Exp $
+ * $Id: as_ares.h,v 1.10 2004/08/31 17:44:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -70,19 +70,36 @@ typedef int            as_bool;
 #include "as_tcp.h"
 #include "as_packet.h"
 #include "as_tokenize.h"
+#include "as_node.h"
+#include "as_node_man.h"
 #include "as_session.h"
 #include "as_session_man.h"
 
 /*****************************************************************************/
 
+/* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
+
+/* Timeout for supernode handshake after connecting */
 #define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
+
+/* Number of simultaneous connection attemps when connecting to supernodes */
+#define AS_SESSION_PARALLEL_ATTEMPTS (20)
+
+/* Maximum number of nodes saved in node file */
+#define AS_MAX_NODEFILE_SIZE (400)
 
 /*****************************************************************************/
 
 typedef struct
 {
-	int foo;
+	/* node manager */
+	ASNodeMan *nodeman;
+
+	/* session manager */
+	ASSessMan *sessman;
+
+
 } ASInstance;
 
 /*****************************************************************************/
@@ -93,4 +110,24 @@ extern ASInstance *as_instance;	/* global library instance */
 
 /*****************************************************************************/
 
-#endif /* __A_ARES_H */
+/* NOTE: The library expects networking, logging, and the event system to be
+ * set up and ready to use.
+ */
+
+/* Create library instance and initialize it. There can only be one at a time
+ * though.
+ */
+as_bool as_init ();
+
+/* Clean up library instance */
+as_bool as_cleanup ();
+
+/* Start connecting, resume downloads, etc. */
+as_bool as_start ();
+
+/* Drop all connections, stop downloads, etc. */
+as_bool as_stop ();
+
+/*****************************************************************************/
+
+#endif /* __AS_ARES_H */

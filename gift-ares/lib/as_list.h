@@ -1,5 +1,5 @@
 /*
- * $Id: as_list.h,v 1.3 2004/08/21 12:32:22 mkern Exp $
+ * $Id: as_list.h,v 1.4 2004/08/31 17:44:18 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -50,7 +50,7 @@ List *list_insert (List *head, int index, void *data);
 /* Insert a new link immediately before the node found by func. */
 List *list_insert_sorted (List *head, CompareFunc func, void *data);
 
-/* Make a copy of the entire list. Both lists will point to the same usre
+/* Make a copy of the entire list. Both lists will point to the same user
  * data.
  */
 List *list_copy (List *head);
@@ -104,6 +104,18 @@ int list_length (List *head);
 
 /* Sort list using func for comparison */
 List *list_sort (List *head, CompareFunc func);
+
+/*****************************************************************************/
+
+/* These functions are not in libgift */
+
+/* Remove link from list but do not free it. */
+List *list_unlink_link (List *head, List *link);
+
+/* Same as list_insert_sorted but uses supplied link instead of creating a
+ * new one.
+ */
+List *list_insert_link_sorted (List *head, CompareFunc func, List *link);
 
 /*****************************************************************************/
 

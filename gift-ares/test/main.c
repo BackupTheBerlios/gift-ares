@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.6 2004/08/26 16:03:41 HEx Exp $
+ * $Id: main.c,v 1.7 2004/08/31 17:44:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -127,6 +127,9 @@ int main (int argc, char *argv[])
 	/* setup event system */
 	as_event_init ();
 
+	/* init lib */
+	as_init ();
+
 #ifdef WIN32
 	/* create console reading thread on windows */
 	if (socketpair (0, 0, 0, fds) < 0)
@@ -164,6 +167,9 @@ int main (int argc, char *argv[])
 	TerminateThread (hThread, 0);
 	CloseHandle (hThread);
 #endif
+
+	/* cleanup  lib */
+	as_cleanup ();
 
 	/* shutdown */
 	as_event_shutdown ();
