@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.18 2005/01/07 19:28:47 hex Exp $
+ * $Id: as_upload.c,v 1.19 2005/01/07 20:23:44 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -228,19 +228,7 @@ as_bool as_upload_start (ASUpload *up)
 	/* Send data. */
 	assert (queue_pos == 0);
 
-#ifdef GIFT_PLUGIN
-	{
-		char *host_path = file_host_path (up->share->path);
-
-		if (host_path)
-		{
-			up->file = fopen (host_path, "rb");
-			free (host_path);
-		}
-	}
-#else
 	up->file = fopen (up->share->path, "rb");
-#endif
 
 	if (!up->file || (fseek (up->file, up->start, SEEK_SET) < 0))
 	{
