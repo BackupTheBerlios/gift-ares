@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.7 2004/08/26 22:50:23 mkern Exp $
+ * $Id: as_event.c,v 1.8 2004/08/27 10:23:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -10,10 +10,6 @@
 #include "as_ares.h"
 #include "event.h"    /* libevent */
 
-#ifndef WIN32
-#define EV_EXCEPT 0
-#endif
-
 /*****************************************************************************/
 
 typedef enum
@@ -22,7 +18,7 @@ typedef enum
 	AS_EVTIMER
 } ASEventType;
 
-typedef struct
+typedef struct as_event_t
 {
 	ASEventType type;
 
@@ -42,6 +38,7 @@ typedef struct
 			InputState state;
 			as_bool suspended;
 			struct timeval timeout;
+			as_bool validate;
 			InputCallback cb;
 		} input;
 	};
@@ -138,6 +135,7 @@ static ASEvent *event_create (ASEventType type, void *udata)
 	ev->input.suspended = 0;
 	ev->input.timeout.tv_sec = 0;
 	ev->input.timeout.tv_usec = 0;
+	ev->input.validate = FALSE;
 	ev->input.cb = NULL;
 
 	/* zero libevent struct */
@@ -213,14 +211,34 @@ static void libevent_cb (int fd, short event, void *arg)
 			/* raise callback with bad fd and no input_id */
 			cb (-1, 0, udata);
 		}
-		else if (event & (EV_READ | EV_WRITE | EV_EXCEPT))
+		else if (event & (EV_READ | EV_WRITE))
 		{
+			/* libgift removes the timer after the first succesfull input
+			 * event. libevent resets the timeout so we remove the input and
+			 * add it again without a timer.
+			 */
+			if (ev->input.validate)
+			{
+				ev->input.validate = FALSE;
+	
+				if (event_del (&ev->ev) != 0)
+					AS_ERR ("libevent_cb: event_del() failed!");
+				
+				if (event_add (&ev->ev, NULL) != 0)
+				{
+					AS_ERR ("libevent_cb: event_add() failed!");
+					/* remove from hash table */
+					as_hashtable_remove_int (input_table,
+					                         (as_uint32) ev->input.fd);
+					event_free (ev);
+
+					assert (0);
+					return; /* hmm, callback is not raised */
+				}
+			}
+
 			/* raise callback */
 			ev->input.cb (fd, (input_id)ev, ev->udata);
-
-			/* FIXME: does libevent reset/remove the timeout? libgift seems
-			 * to _remove_ it after the first input event.
-			 */
 		}
 		else
 		{
@@ -255,16 +273,24 @@ input_id input_add (int fd, void *udata, InputState state,
 	ev->input.suspended = FALSE;
 	ev->input.timeout.tv_sec = timeout / 1000;
 	ev->input.timeout.tv_usec = (timeout % 1000) * 1000;
+	ev->input.validate = (ev->input.timeout.tv_sec > 0) || 
+	                     (ev->input.timeout.tv_usec > 0);
 	ev->input.cb = callback;
 
 	trigger = ((ev->input.state & INPUT_READ)  ? EV_READ   : 0) |
 	          ((ev->input.state & INPUT_WRITE) ? EV_WRITE  : 0) |
-	          ((ev->input.state & INPUT_ERROR) ? EV_EXCEPT : 0) |
 	          EV_PERSIST;
+
+	/* Not supported by libevent except for my hacked windows build.
+	 * On windows all fds with EV_WRITE will also be added to the exception
+	 * set by libevent to work around non-standard behaviour in window's
+	 * select().
+	 */
+	assert (state & INPUT_ERROR == 0);
 
 	event_set (&ev->ev, ev->input.fd, trigger, libevent_cb, (void *)ev);
 
-	if (ev->input.timeout.tv_sec > 0 || ev->input.timeout.tv_usec > 0)
+	if (ev->input.validate)
 		ret = event_add (&ev->ev, &ev->input.timeout);
 	else
 		ret = event_add (&ev->ev, NULL);
@@ -281,7 +307,7 @@ input_id input_add (int fd, void *udata, InputState state,
 	 */
 	as_hashtable_insert_int (input_table, (as_uint32) ev->input.fd, ev);
 
-	return (input_id *) ev;
+	return (input_id) ev;
 }
 
 void input_remove (input_id id)
@@ -306,7 +332,7 @@ void input_remove_all (int fd)
 	ASEvent *ev;
 
 	if (!(ev = as_hashtable_lookup_int (input_table, (as_uint32) fd)))
-		return NULL;
+		return;
 
 	/* FIXME: only one entry per fd is removed since the hash table can not
 	 * hold multiple entries with the same key (on purpose). So this is

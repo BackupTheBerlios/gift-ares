@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.h,v 1.5 2004/08/26 15:57:44 HEx Exp $
+ * $Id: as_event.h,v 1.6 2004/08/27 10:23:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,8 +26,8 @@
 #define TIMEOUT_DEF  (60*SECONDS)
 
 /* our ids are pointers */
-typedef void * input_id;
-typedef void * timer_id;
+typedef struct as_event_t * input_id;
+typedef struct as_event_t * timer_id;
 
 /*****************************************************************************/
 

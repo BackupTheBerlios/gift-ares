@@ -1,5 +1,5 @@
 /*
- * $Id: testing.c,v 1.1 2004/08/25 19:46:14 mkern Exp $
+ * $Id: testing.c,v 1.3 2004/08/27 10:25:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
