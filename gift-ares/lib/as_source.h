@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.h,v 1.3 2004/09/10 17:58:53 mkern Exp $
+ * $Id: as_source.h,v 1.4 2004/09/16 13:06:11 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -20,7 +20,7 @@ typedef struct
 	
 	/* source's supernode host and port */
 	in_addr_t shost;
-	in_addr_t sport;
+	in_port_t sport;
 
 	/* source's username */
 	unsigned char *username;
