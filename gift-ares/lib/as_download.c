@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.23 2004/10/23 16:06:18 mkern Exp $
+ * $Id: as_download.c,v 1.24 2004/10/26 19:31:12 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,7 +23,10 @@
 #define KEEP_FAILED
 
 /* Define to get very verbose chunk logging */
-/* #define CHUNK_DEBUG */
+#define CHUNK_DEBUG
+
+/* Define to verify that connection list is sorted correctly  */
+#define VERIFY_CONN_LIST
 
 /*****************************************************************************/
 
@@ -48,6 +51,10 @@ static as_bool download_finished (ASDownload *dl);
 #ifdef HEAVY_DEBUG
 static void dump_chunks (ASDownload *dl);
 static void dump_connections (ASDownload *dl);
+#endif
+
+#ifdef VERIFY_CONN_LIST
+static void verify_connections (ASDownload *dl);
 #endif
 
 /*****************************************************************************/
@@ -477,6 +484,47 @@ ASDownloadState as_download_state (ASDownload *dl)
 
 /*****************************************************************************/
 
+/* Used to sort connection list by b/w */
+static int conn_cmp_func (ASDownConn *a, ASDownConn *b)
+{
+	/* First put sources with chunk at the back of the list */
+	if (a->udata2 && !b->udata2)
+		return 1;
+	else if (!a->udata2 && b->udata2)
+		return -1;
+
+	/* Then sort by bandwidth */
+	if (as_downconn_speed (a) < as_downconn_speed (b))
+		return 1;
+	else if (as_downconn_speed (a) > as_downconn_speed (b))
+		return -1;
+
+	return 0;
+}
+
+/* Remove connection from current position in connection list and move it to
+ * new correct position according to conn_cmp_func. O(2n).
+ */
+static void conn_reinsert (ASDownload *dl, ASDownConn *conn)
+{
+	List *link;
+
+	/* Find link. */
+	link = list_find (dl->conns, conn);
+	assert (link);
+
+	/* Remove entry. */
+	dl->conns = list_remove_link (dl->conns, link);
+
+	/* Reinsert at correct pos. */
+	dl->conns = list_insert_sorted (dl->conns, (CompareFunc) conn_cmp_func,
+	                                conn);
+
+#ifdef VERIFY_CONN_LIST
+	verify_connections (dl);
+#endif
+}
+
 /* Add source to download (copies source). */
 as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 {	
@@ -503,7 +551,9 @@ as_bool as_download_add_source (ASDownload *dl, ASSource *source)
 	/* point udata1 to download, we will use udata2 for the chunk */
 	conn->udata1 = dl;
 
-	dl->conns = list_prepend (dl->conns, conn);
+	/* Insert sorted. */
+	dl->conns = list_insert_sorted (dl->conns, (CompareFunc) conn_cmp_func,
+	                                conn);
 
 	/* check if the source should be used now */
 	if (dl->state == DOWNLOAD_ACTIVE)
@@ -644,6 +694,9 @@ static void stop_all_connections (ASDownload *dl)
 			chunk->udata = NULL;
 		}
 	}
+
+	/* Resort entire list. */
+	dl->conns = list_sort (dl->conns, (CompareFunc) conn_cmp_func);
 }
 
 /*****************************************************************************/
@@ -670,19 +723,8 @@ static as_bool disassociate_conn (ASDownConn *conn)
 		return FALSE;
 	}
 
-#if 0
-	/* remove connection if it was pushed and failed */
-	if (conn->pushed && conn->fail_count > 0)
-	{
-		AS_DBG_2 ("Removing failed pushed source %s:%d",
-		          net_ip_str (conn->source->host), conn->source->port);
-
-		/* remove connection */
-		as_downconn_free (conn);
-		dl->conns = list_remove (dl->conns, conn);
-		return FALSE;
-	}
-#endif
+	/* Reinsert at correct pos. */
+	conn_reinsert (dl, conn);
 
 	return TRUE;
 }
@@ -704,8 +746,11 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 		break;
 
 	case DOWNCONN_CONNECTING:
-		/* Chunk used by connection may not be in chunk list at this point.
-		 * See start_chunks. 
+		/* This is triggered by as_downconn_start called in start_chunks. The
+		 * following limitations apply:
+		 *   - Chunk used by connection may not yet be in chunk list.
+		 *   - Connection list may not be sorted to reflect the new use of
+		 *     the connection yet.
 		 */
 		AS_HEAVY_DBG_4 ("DOWNCONN_CONNECTING: %s:%d for chunk (%u,%u).",
 		                net_ip_str (conn->source->host), conn->source->port,
@@ -729,6 +774,9 @@ static as_bool conn_state_cb (ASDownConn *conn, ASDownConnState state)
 			/* disassociate chunk */
 			conn->udata2 = NULL;
 			chunk->udata = NULL;
+
+			/* Reinsert at correct pos. */
+			conn_reinsert (dl, conn);
 
 			/* no need to call download_maintain here */
 			return FALSE;
@@ -1015,8 +1063,9 @@ static as_bool consolidate_chunks (ASDownload *dl)
 	return TRUE;
 }
 
-/* Assing new connections to unused chunks. Split large chunks if there are
- * unused connections.
+/* Assign new connections to unused chunks. Split large chunks if there are
+ * unused connections. Since our connection list is sorted by bandwidth this
+ * will pick fast connections first.
  */
 static as_bool start_chunks (ASDownload *dl)
 {
@@ -1123,9 +1172,14 @@ static as_bool start_chunks (ASDownload *dl)
 	{
 		conn = conn_l->data;
 
-		/* skip active and queued connections */
-		if (conn->udata2 ||
-		    (conn->state == DOWNCONN_QUEUED && conn->queue_next_try > now))
+		/* if we see a used connection we can stop since there are no more
+		 * unused ones
+		 */
+		if (conn->udata2)
+			break;
+
+		/* skip queued connections */
+		if (conn->state == DOWNCONN_QUEUED && conn->queue_next_try > now)
 		{
 			conn_l = conn_l->next;
 			continue;
@@ -1212,6 +1266,92 @@ static as_bool start_chunks (ASDownload *dl)
 		conn_l = conn_l->next;
 	}
 
+	/* Get entire connection list in order. A bit inefficient. Would be better
+	 * to have two connection lists, one unsorted for used and one sorted for
+	 * unused connections.
+	 */
+	dl->conns = list_sort (dl->conns, (CompareFunc) conn_cmp_func);
+
+	return TRUE;
+}
+
+/* Cancel and remove slow sources if there are faster unused ones. In order
+ * to not get in the way of normal connection reassignements it starts with
+ * the second unused connection to determine availability of better
+ * connections.
+ *
+ * FIXME: Not a very good solution. In endgame mode the first may be a better
+ *        and unused connection. The problems is that we do not know at this
+ *        point if we are in endgame mode or not.
+ *
+ * Warning: Leaves connection list in unsorted state since it expects a call
+ *          to start_chunks afterwards. Chunks also need to be consolidated
+ *          aferwards.
+ */
+static as_bool remove_slow_conns (ASDownload *dl)
+{
+	List *conn_l, *f_conn_l;
+	ASDownConn *conn, *f_conn;
+	ASDownChunk *chunk;
+	unsigned int speed;
+	time_t now = time (NULL);
+
+	/* Skip first connection. */
+	if ((f_conn_l = dl->conns))
+		f_conn_l = f_conn_l->next;
+
+	for (; f_conn_l; f_conn_l = f_conn_l->next)
+	{
+		f_conn = f_conn_l->data;
+
+		/* if we see a used connection we can stop since there are no more
+		 * unused ones
+		 */
+		if (f_conn->udata2)
+			break;
+
+		/* Skip queued sources. */
+		if (f_conn->state == DOWNCONN_QUEUED && f_conn->queue_next_try > now)
+			continue;
+		
+		/* find a slower connection to replace */
+		speed = as_downconn_speed (f_conn);
+
+		for (conn_l = f_conn_l; conn_l; conn_l = conn_l->next)
+		{
+			conn = conn_l->data;
+
+			/* Changing the connection must be worth it so only do it if we
+			 * can become at least 1 kb/s faster.
+			 */
+			if (conn->udata2 && as_downconn_speed (conn) + 1024 < speed)
+				break;
+		}
+
+		/* break if there are no more slower connections */
+		if (!conn_l)
+			break;
+
+		AS_HEAVY_DBG_3 ("Removing slow source %s (%2.2f kb/s) for potentially faster %2.2f kb/s",
+		                net_ip_str (conn->source->host),
+		                (float)as_downconn_speed (conn) / 1024,
+		                (float)speed / 1024);
+
+		/* cancel slow connection */
+		as_downconn_cancel (conn);
+
+		/* disassociate chunk */
+		chunk = conn->udata2;
+		conn->udata2 = NULL;
+		chunk->udata = NULL;
+
+		/* Remove old connection, don't need it anymore. This is safe because
+		 * the old connection comes after f_conn_l.
+		 */
+		dl->conns = list_remove_link (dl->conns, conn_l);
+		as_downconn_free (conn);	
+	}
+
 	return TRUE;
 }
 
@@ -1230,6 +1370,11 @@ static void download_maintain (ASDownload *dl)
 		return;
 	}
 
+#ifdef VERIFY_CONN_LIST
+	/* Verify integrity of connection list */
+	verify_connections (dl);
+#endif
+
 	/* Verify integrity of chunk list. */
 	if (!verify_chunks (dl))
 	{
@@ -1240,6 +1385,13 @@ static void download_maintain (ASDownload *dl)
 
 		assert (0);
 		return;
+	}
+
+	/* Kill off low connections in endgame mode. */
+	if (!remove_slow_conns (dl))
+	{
+		/* Not too serious. */
+		AS_ERR_1 ("Removing slow connections for \"%s\"", dl->filename);
 	}
 
 	/* Clean up chunks. */
@@ -1539,15 +1691,46 @@ static void dump_connections (ASDownload *dl)
 	{
 		ASDownConn *conn = l->data;
 
-		AS_HEAVY_DBG_5 ("Connection: %15s, %4u KB, (%7u, %7u), %s",
+		AS_HEAVY_DBG_6 ("Connection: %15s, %4u KB, %2.2f KB/s, (%7u, %7u), %s",
 		                net_ip_str (conn->source->host),
 		                (conn->hist_downloaded + conn->curr_downloaded) / 1024,
+						(float)as_downconn_speed (conn) / 1024,
 		                conn->chunk_start, conn->chunk_size,
 		                as_downconn_state_str (conn));
 	}
 }
 
-#endif 
+#endif
+
+#ifdef VERIFY_CONN_LIST
+static void verify_connections (ASDownload *dl)
+{
+	List *link;
+	unsigned int bw = 0xFFFFFFFF;
+	as_bool in_use = FALSE;
+
+	/* Verify we are still sorted correctly */
+	for (link = dl->conns; link; link = link->next)
+	{
+		ASDownConn *conn = link->data;
+
+		/* If we saw one used node all following must be in use as well */
+		if (in_use)
+			assert (conn->udata2 != NULL);
+
+		/* If this is the first used node reset b/w. */
+		if (conn->udata2 && !in_use)
+		{
+			in_use = TRUE;
+			bw = 0xFFFFFFFF;
+		}
+
+		/* b/w must be descending. */
+		assert (as_downconn_speed (conn) <= bw);
+		bw = as_downconn_speed (conn);
+	}
+}
+#endif
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.h,v 1.4 2004/08/27 17:56:40 mkern Exp $
+ * $Id: as_log.h,v 1.5 2004/10/26 19:31:12 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -89,12 +89,13 @@ extern ASLogger *g_logger;
 #endif /* DEBUG */
 
 #ifdef HEAVY_DEBUG
-# define AS_HEAVY_DBG(fmt)             AS_LOG (AS_LOG_HEAVY_DEBUG), fmt)
-# define AS_HEAVY_DBG_1(fmt,a)         AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a)
-# define AS_HEAVY_DBG_2(fmt,a,b)       AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b)
-# define AS_HEAVY_DBG_3(fmt,a,b,c)     AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c)
-# define AS_HEAVY_DBG_4(fmt,a,b,c,d)   AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c,d)
-# define AS_HEAVY_DBG_5(fmt,a,b,c,d,e) AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c,d,e)
+# define AS_HEAVY_DBG(fmt)               AS_LOG (AS_LOG_HEAVY_DEBUG), fmt)
+# define AS_HEAVY_DBG_1(fmt,a)           AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a)
+# define AS_HEAVY_DBG_2(fmt,a,b)         AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b)
+# define AS_HEAVY_DBG_3(fmt,a,b,c)       AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c)
+# define AS_HEAVY_DBG_4(fmt,a,b,c,d)     AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c,d)
+# define AS_HEAVY_DBG_5(fmt,a,b,c,d,e)   AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c,d,e)
+# define AS_HEAVY_DBG_6(fmt,a,b,c,d,e,f) AS_LOG (AS_LOG_HEAVY_DEBUG), fmt,a,b,c,d,e,f)
 #else
 # define AS_HEAVY_DBG(fmt)
 # define AS_HEAVY_DBG_1(fmt,a)
@@ -102,6 +103,7 @@ extern ASLogger *g_logger;
 # define AS_HEAVY_DBG_3(fmt,a,b,c)
 # define AS_HEAVY_DBG_4(fmt,a,b,c,d)
 # define AS_HEAVY_DBG_5(fmt,a,b,c,d,e)
+# define AS_HEAVY_DBG_6(fmt,a,b,c,d,e,f)
 #endif /* HEAVY_DEBUG */
 
 #define AS_WARN(fmt)             AS_LOG (AS_LOG_WARNING), fmt)

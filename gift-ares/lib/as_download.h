@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.12 2004/10/17 17:43:03 mkern Exp $
+ * $Id: as_download.h,v 1.13 2004/10/26 19:31:12 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,7 +45,9 @@ struct as_download_t
 	size_t  received;  /* total number of bytes already received */
 	FILE   *fp;        /* file pointer */
 
-	List *conns;       /* List of ASDownConn's with sources */
+	List *conns;       /* List of ASDownConn's with sources. Sorted by the
+	                    * connection's past bandwidth and whether it is
+	                    * currently in use. */
 
 	List *chunks;      /* List of chunks sorted by chunk->start and always
 	                    * kept without holes and overlap */

@@ -29,8 +29,7 @@ Optimizations:
 
 - Create sources from X-Alt headers and add them
 
-- Calculate average bandwidth for sources and use faster ones during end game.
-  Generally sort connection list by b/w so faster ones are always used first.
+- Revisit current solution for endgame mode effects.
 
 - Parse index node list packet
 

@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.23 2004/10/10 15:22:48 mkern Exp $
+# $Id: Makefile.msvc,v 1.24 2004/10/26 19:31:12 mkern Exp $
 
 
 !include ../Make.msvc
@@ -46,7 +46,8 @@ OBJECTS = \
 	as_share_man$(O) \
 	as_push$(O) \
 	as_push_man$(O) \
-	as_upload$(O)
+	as_upload$(O) \
+	as_upload_man$(O)
 	
 
 all: $(OBJECTS)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.13 2004/10/23 16:06:18 mkern Exp $
+ * $Id: as_download_conn.c,v 1.14 2004/10/26 19:31:12 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -91,6 +91,10 @@ static void downconn_update_stats (ASDownConn *conn)
 	          net_ip_str (conn->source->host),
 	          (float)conn->curr_downloaded / (time (NULL) - conn->request_time) / 1024,
 	          (float)conn->hist_downloaded / conn->hist_time / 1024);
+
+	/* Reset values for last request so we do not add it multiple times */
+	conn->curr_downloaded = 0;
+	conn->request_time = 0;
 }
 
 /*****************************************************************************/
@@ -205,7 +209,7 @@ void as_downconn_cancel (ASDownConn *conn)
 	if (conn->client)
 		as_http_client_cancel (conn->client);
 
-	/* Still update stats since this might be request cancelled because the
+	/* Still update stats since this might be a request cancelled because the
 	 * chunk was shrunk */
 	downconn_update_stats (conn);
 
