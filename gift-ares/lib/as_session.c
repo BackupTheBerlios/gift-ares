@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.30 2004/10/29 16:27:28 HEx Exp $
+ * $Id: as_session.c,v 1.31 2004/10/30 01:08:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -400,9 +400,10 @@ static as_bool session_send_handshake (ASSession *session,
 
 	if (AS->upman)
 	{
+		/* FIXME: These values are not accurate if queuing is done by giFT */
 		as_packet_put_le16 (packet, 0); /* unknown */
 		as_packet_put_8 (packet, AS->upman->nuploads);
-		as_packet_put_8 (packet, AS->upman->max);
+		as_packet_put_8 (packet, AS->upman->max_active);
 		as_packet_put_8 (packet, 0); /* unknown */
 		as_packet_put_8 (packet, AS->upman->nqueued);
 	}
@@ -552,8 +553,9 @@ static as_bool session_ping (ASSession *session)
 	/* send transfer stats */
 	if (AS->upman)
 	{
+		/* FIXME: These values are not accurate if queuing is done by giFT */
 		as_packet_put_8 (p, AS->upman->nuploads);
-		as_packet_put_8 (p, AS->upman->max);
+		as_packet_put_8 (p, AS->upman->max_active);
 		as_packet_put_8 (p, 0); /* unknown */
 		as_packet_put_8 (p, AS->upman->nqueued);
 		as_packet_put_le16 (p, 0); /* unknown */
