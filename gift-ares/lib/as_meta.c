@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.3 2004/09/07 15:57:57 mkern Exp $
+ * $Id: as_meta.c,v 1.4 2004/09/09 15:10:33 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -192,11 +192,13 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 			case REALM_AUDIO:
 				/* bitrate */
 				i = as_packet_get_le16 (p);
-				as_meta_add_tag (meta, "bitrate", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "bitrate", buf);
 				
 				/* duration */
 				i = as_packet_get_le32 (p);
-				as_meta_add_tag (meta, "duration", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "duration", buf);
 				break;
 				
 			case REALM_SOFTWARE:
@@ -218,25 +220,31 @@ static as_bool meta_parse_result (ASMeta *meta, ASPacket *p, ASRealm realm)
 			case REALM_VIDEO:
 				/* width/height */
 				i = as_packet_get_le16 (p);
-				as_meta_add_tag (meta, "width", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "width", buf);
 				i = as_packet_get_le16 (p);
-				as_meta_add_tag (meta, "height", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "height", buf);
 				
 				/* duration? */
 				i = as_packet_get_le32 (p);
-				as_meta_add_tag (meta, "video-duration?", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "video-duration?", buf);
 				break;
 				
 			case REALM_IMAGE:
 				/* width/height */
 				i = as_packet_get_le16 (p);
-				as_meta_add_tag (meta, "width", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "width", buf);
 				i = as_packet_get_le16 (p);
-				as_meta_add_tag (meta, "height", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "height", buf);
 				
 				/* unknown (depth?) */
 				i = as_packet_get_le32 (p);
-				as_meta_add_tag (meta, "bitdepth?", itoa (i, buf, 10));
+				sprintf (buf, "%u", i);
+				as_meta_add_tag (meta, "bitdepth?", buf);
 				break;
 
 			case REALM_DOCUMENT:
