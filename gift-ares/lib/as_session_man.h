@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.h,v 1.2 2004/08/31 17:44:18 mkern Exp $
+ * $Id: as_session_man.h,v 1.3 2004/09/01 18:05:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -41,6 +41,9 @@ unsigned int as_sessman_established (ASSessMan *man);
  * connecting.
  */
 void as_sessman_connect (ASSessMan *man, unsigned int connections);
+
+/* search all connected hosts, returns number of searches sent */
+int as_send_search (ASSessMan *man, unsigned char *query);
 
 /*****************************************************************************/
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.10 2004/09/01 17:49:26 HEx Exp $
+ * $Id: as_session_man.c,v 1.11 2004/09/01 18:05:55 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -357,8 +357,14 @@ static int send_search (ASSession *session, unsigned char *query)
 
 int as_send_search (ASSessMan *man, unsigned char *query)
 {
-	return list_foreach (man->connecting,
-			     (ListForeachFunc)send_search, query);
+	List *l;
+	int count = 0;
+	
+	for (l = man->connecting; l; l = l->next)
+		if (send_search (l->data, query))
+			count++;
+	
+	return count;
 }
 
 /*****************************************************************************/
