@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.5 2004/10/30 23:51:14 mkern Exp $
+ * $Id: as_http_server.c,v 1.6 2004/11/19 21:16:34 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -110,7 +110,7 @@ static void server_accept (int fd, input_id input, ASHttpServer *server)
 	}
 
 	servcon->server = server;
-	servcon->remote_ip = net_peer_ip (servcon->tcpcon->fd, NULL);
+	servcon->remote_ip = net_peer (servcon->tcpcon->fd);
 	servcon->buf = NULL;
 
 #if 0

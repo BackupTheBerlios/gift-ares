@@ -1,15 +1,18 @@
 #CFLAGS=-O2 -Wall -DNDEBUG
 CFLAGS= -g3 -Wall -DDEBUG #-DHEAVY_DEBUG
 
-OBJECTS = \
-	as_list.o \
-	as_hashtable.o \
-	as_parse.o \
+# stuff also available in libgift
+GIFT_OBJECTS = \
+	as_event.o \
 	as_strobj.o \
+	as_list.o \
+	as_tcp.o \
+	as_parse.o
+
+OBJECTS = \
+	as_hashtable.o \
 	as_file.o \
 	as_log.o \
-	as_event.o \
-	as_tcp.o \
 	as_ares.o \
 	as_crypt.o \
 	as_config.o \
@@ -42,9 +45,19 @@ OBJECTS = \
 	as_push.o \
 	as_push_man.o \
 	as_upload.o \
-	as_upload_man.o
+	as_upload_man.o \
+	as_util.o
 
-all: libares.a($(OBJECTS))
+all: libares.a
+
+libares.a: libares.a($(OBJECTS) $(GIFT_OBJECTS))
+
+libaresgift-temp: libaresgift.a($(OBJECTS))
+
+libaresgift.a:
+	make libaresgift-temp CFLAGS="$(CFLAGS) -DGIFT_PLUGIN"
 
 clean:
-	rm -f libares.a $(OBJECTS)
+	rm -f libares.a libaresgift.a $(OBJECTS) $(GIFT_OBJECTS)
+
+.PHONY: libares libaresgift libaresgift-temp

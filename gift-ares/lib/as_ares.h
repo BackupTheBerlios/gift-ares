@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.51 2004/11/06 18:08:17 mkern Exp $
+ * $Id: as_ares.h,v 1.52 2004/11/19 21:16:34 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -48,6 +48,17 @@
 # include <io.h> /* _findfirst and friends */
 #endif
 
+#ifdef GIFT_PLUGIN
+#include <libgift/libgift.h>
+#include <libgift/proto/protocol.h>
+#include <libgift/proto/share.h>
+#include <libgift/file.h>
+#include <libgift/mime.h>
+#include <libgift/proto/if_event_api.h>
+#define INVALID_INPUT 0
+#define INVALID_TIMER 0
+#endif
+
 /*****************************************************************************/
 
 typedef signed char    as_int8;
@@ -90,15 +101,26 @@ typedef int            as_bool;
 /*****************************************************************************/
 
 /* beware the ordering of these */
-#include "as_list.h"
+#ifndef GIFT_PLUGIN
+#  include "as_list.h"
+#endif
+
 #include "as_hashtable.h"
-#include "as_parse.h"
-#include "as_strobj.h"
+
+#ifndef GIFT_PLUGIN
+#  include "as_parse.h"
+#  include "as_strobj.h"
+#endif
+
 #include "as_file.h"
 #include "as_log.h"
-#include "as_event.h"
-#include "as_tcp.h"
 
+#ifndef GIFT_PLUGIN
+#  include "as_event.h"
+#  include "as_tcp.h"
+#endif
+
+#include "as_util.h"
 #include "as_config.h"
 #include "as_sha1.h"
 #include "as_encoding.h"
