@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.6 2004/09/07 17:37:24 mkern Exp $
+ * $Id: as_hashtable.c,v 1.7 2004/09/19 18:27:42 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -122,6 +122,8 @@ static ASHashTableEntry *hashtable_entry (void *key, unsigned int key_len,
 
 	entry->next = NULL;
 	entry->h = 0;
+	entry->key = NULL;
+	entry->int_key = 0;
 	entry->key_len = key_len;
 
 	if (copy)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.h,v 1.3 2004/09/03 16:18:14 mkern Exp $
+ * $Id: as_hashtable.h,v 1.4 2004/09/19 18:27:42 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,11 +35,8 @@
 
 typedef struct as_hashtable_entry_t
 {
-	union
-	{
-		void *key;
-		as_uint32 int_key;
-	};
+	void *key;
+	as_uint32 int_key;
 	unsigned int key_len;
 
 	void *val;

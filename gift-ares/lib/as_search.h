@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.5 2004/09/19 17:53:43 mkern Exp $
+ * $Id: as_search.h,v 1.6 2004/09/19 18:27:42 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -43,21 +43,12 @@ struct as_search_t
 
 	int sent;    /* number of supernodes this search was sent to */
 
-	union
-	{
-		/* data for normal searches */
-		struct
-		{
-			unsigned char *query; /* query string */
-			ASRealm realm;        /* realm to search in */
-		};
+	/* data for normal searches */
+	unsigned char *query; /* query string */
+	ASRealm realm;        /* realm to search in */
 
-		/* data for hash searches */
-		struct
-		{
-			ASHash *hash;
-		};
-	};
+	/* data for hash searches */
+	ASHash *hash;
 	
 	ASHashTable *results; /* hash table keyed by file hash and containing a
 	                       * list of results per hash. */

@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.16 2004/09/16 16:21:23 mkern Exp $
+ * $Id: as_event.c,v 1.17 2004/09/19 18:27:42 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -41,7 +41,7 @@ typedef struct as_event_t
 			as_bool validate;
 			InputCallback cb;
 		} input;
-	};
+	} d;
 
 	/* user data */
 	void *udata;
@@ -133,17 +133,17 @@ static ASEvent *event_create (ASEventType type, void *udata)
 	ev->type = type;
 	ev->udata = udata;
 
-	ev->timer.interval.tv_sec = 0;
-	ev->timer.interval.tv_usec = 0;
-	ev->timer.cb = NULL;
+	ev->d.timer.interval.tv_sec = 0;
+	ev->d.timer.interval.tv_usec = 0;
+	ev->d.timer.cb = NULL;
 
-	ev->input.fd = -1;
-	ev->input.state = 0;
-	ev->input.suspended = 0;
-	ev->input.timeout.tv_sec = 0;
-	ev->input.timeout.tv_usec = 0;
-	ev->input.validate = FALSE;
-	ev->input.cb = NULL;
+	ev->d.input.fd = -1;
+	ev->d.input.state = 0;
+	ev->d.input.suspended = 0;
+	ev->d.input.timeout.tv_sec = 0;
+	ev->d.input.timeout.tv_usec = 0;
+	ev->d.input.validate = FALSE;
+	ev->d.input.cb = NULL;
 
 	ev->in_callback = FALSE;
 	ev->in_callback_removed = FALSE;
@@ -186,7 +186,7 @@ static void libevent_cb (int fd, short event, void *arg)
 		ev->in_callback_removed = FALSE;
 
 		/* raise the callback */
-		ret = ev->timer.cb (ev->udata);
+		ret = ev->d.timer.cb (ev->udata);
 
 		ev->in_callback = FALSE;
 
@@ -213,22 +213,22 @@ static void libevent_cb (int fd, short event, void *arg)
 	}
 	else if (ev->type == AS_EVINPUT)
 	{
-		assert (fd == ev->input.fd);
+		assert (fd == ev->d.input.fd);
 		assert (fd >= 0);
 
 		if (event & EV_TIMEOUT)
 		{
 			/* libgift closes fd and removes all inputs. WTF? */
-			net_close (ev->input.fd);
+			net_close (ev->d.input.fd);
 #if 0
-			input_remove_all (ev->input.fd);
+			input_remove_all (ev->d.input.fd);
 #endif
 	
 			ev->in_callback = TRUE;
 			ev->in_callback_removed = FALSE;
 			
 			/* raise callback with bad fd and no input_id */
-			ev->input.cb (-1, 0, ev->udata);
+			ev->d.input.cb (-1, 0, ev->udata);
 
 			ev->in_callback = FALSE;
 
@@ -242,9 +242,9 @@ static void libevent_cb (int fd, short event, void *arg)
 			 * event. libevent resets the timeout so we remove the input and
 			 * add it again without a timer.
 			 */
-			if (ev->input.validate)
+			if (ev->d.input.validate)
 			{
-				ev->input.validate = FALSE;
+				ev->d.input.validate = FALSE;
 	
 				if (event_del (&ev->ev) != 0)
 					AS_ERR ("libevent_cb: event_del() failed!");
@@ -254,7 +254,7 @@ static void libevent_cb (int fd, short event, void *arg)
 					AS_ERR ("libevent_cb: event_add() failed!");
 					/* remove from hash table */
 					as_hashtable_remove_int (input_table,
-					                         (as_uint32) ev->input.fd);
+					                         (as_uint32) ev->d.input.fd);
 					event_free (ev);
 
 					assert (0);
@@ -266,7 +266,7 @@ static void libevent_cb (int fd, short event, void *arg)
 			ev->in_callback_removed = FALSE;
 			
 			/* raise callback */
-			ev->input.cb (fd, (input_id)ev, ev->udata);
+			ev->d.input.cb (fd, (input_id)ev, ev->udata);
 
 			ev->in_callback = FALSE;
 	
@@ -302,17 +302,17 @@ input_id input_add (int fd, void *udata, InputState state,
 	if (!(ev = event_create (AS_EVINPUT, udata)))
 		return INVALID_INPUT;
 
-	ev->input.fd = fd;
-	ev->input.state = state;
-	ev->input.suspended = FALSE;
-	ev->input.timeout.tv_sec = timeout / 1000;
-	ev->input.timeout.tv_usec = (timeout % 1000) * 1000;
-	ev->input.validate = (ev->input.timeout.tv_sec > 0) || 
-	                     (ev->input.timeout.tv_usec > 0);
-	ev->input.cb = callback;
+	ev->d.input.fd = fd;
+	ev->d.input.state = state;
+	ev->d.input.suspended = FALSE;
+	ev->d.input.timeout.tv_sec = timeout / 1000;
+	ev->d.input.timeout.tv_usec = (timeout % 1000) * 1000;
+	ev->d.input.validate = (ev->d.input.timeout.tv_sec > 0) || 
+	                     (ev->d.input.timeout.tv_usec > 0);
+	ev->d.input.cb = callback;
 
-	trigger = ((ev->input.state & INPUT_READ)  ? EV_READ   : 0) |
-	          ((ev->input.state & INPUT_WRITE) ? EV_WRITE  : 0) |
+	trigger = ((ev->d.input.state & INPUT_READ)  ? EV_READ   : 0) |
+	          ((ev->d.input.state & INPUT_WRITE) ? EV_WRITE  : 0) |
 	          EV_PERSIST;
 
 	/* Not supported by libevent except for my hacked windows build.
@@ -320,12 +320,12 @@ input_id input_add (int fd, void *udata, InputState state,
 	 * set by libevent to work around non-standard behaviour in window's
 	 * select().
 	 */
-	assert ((ev->input.state & INPUT_ERROR) == 0);
+	assert ((ev->d.input.state & INPUT_ERROR) == 0);
 
-	event_set (&ev->ev, ev->input.fd, trigger, libevent_cb, (void *)ev);
+	event_set (&ev->ev, ev->d.input.fd, trigger, libevent_cb, (void *)ev);
 
-	if (ev->input.validate)
-		ret = event_add (&ev->ev, &ev->input.timeout);
+	if (ev->d.input.validate)
+		ret = event_add (&ev->ev, &ev->d.input.timeout);
 	else
 		ret = event_add (&ev->ev, NULL);
 	
@@ -338,9 +338,9 @@ input_id input_add (int fd, void *udata, InputState state,
 
 	/* Add to hash table. If there already is an entry with this fd keep it. */
 	ev->next = as_hashtable_lookup_int (input_table, (as_uint32) fd);
-	if (!as_hashtable_insert_int (input_table, (as_uint32) ev->input.fd, ev))
+	if (!as_hashtable_insert_int (input_table, (as_uint32) ev->d.input.fd, ev))
 	{
-		AS_ERR_1 ("Failed to add fd 0x%X into hashtable", ev->input.fd);
+		AS_ERR_1 ("Failed to add fd 0x%X into hashtable", ev->d.input.fd);
 		assert (0);
 	}
 
@@ -366,9 +366,9 @@ void input_remove (input_id id)
 		AS_ERR ("input_remove: event_del() failed!");
 
 	/* Remove from hash table. */
-	if (!(head_ev = as_hashtable_remove_int (input_table, (as_uint32) ev->input.fd)))
+	if (!(head_ev = as_hashtable_remove_int (input_table, (as_uint32) ev->d.input.fd)))
 	{
-		AS_ERR_1 ("Failed to remove fd 0x%X from hashtable", ev->input.fd);
+		AS_ERR_1 ("Failed to remove fd 0x%X from hashtable", ev->d.input.fd);
 		assert (0);
 	}
 	
@@ -391,9 +391,9 @@ void input_remove (input_id id)
 
 	if (head_ev)
 	{
-		if (!as_hashtable_insert_int (input_table, (as_uint32) head_ev->input.fd, head_ev))
+		if (!as_hashtable_insert_int (input_table, (as_uint32) head_ev->d.input.fd, head_ev))
 		{
-			AS_ERR_1 ("Failed to readd fd 0x%X into hashtable", head_ev->input.fd);
+			AS_ERR_1 ("Failed to readd fd 0x%X into hashtable", head_ev->d.input.fd);
 			assert (0);
 		}	
 	}
@@ -447,13 +447,13 @@ timer_id timer_add (time_t interval, TimerCallback callback, void *udata)
 	if (!(ev = event_create (AS_EVTIMER, udata)))
 		return INVALID_TIMER;
 
-	ev->timer.cb = callback;
-	ev->timer.interval.tv_sec = interval / 1000;
-	ev->timer.interval.tv_usec = (interval % 1000) * 1000;
+	ev->d.timer.cb = callback;
+	ev->d.timer.interval.tv_sec = interval / 1000;
+	ev->d.timer.interval.tv_usec = (interval % 1000) * 1000;
 
 	event_set (&ev->ev, -1, 0, libevent_cb, (void *)ev);
 	
-	if (event_add (&ev->ev, &ev->timer.interval) != 0)
+	if (event_add (&ev->ev, &ev->d.timer.interval) != 0)
 	{
 		AS_ERR ("timer_add: event_add() failed!");
 		event_free (ev);
@@ -478,7 +478,7 @@ void timer_reset (timer_id id)
 	}
 
 	/* simply add it again, this reset the timeout if it was already added */
-	if (event_add (&ev->ev, &ev->timer.interval) != 0)
+	if (event_add (&ev->ev, &ev->d.timer.interval) != 0)
 	{
 		AS_ERR ("timer_reset: event_add() failed!");
 		event_free (ev);
