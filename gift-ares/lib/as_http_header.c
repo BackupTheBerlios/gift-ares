@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_header.c,v 1.3 2004/09/09 21:50:46 HEx Exp $
+ * $Id: as_http_header.c,v 1.4 2004/10/03 18:00:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -263,7 +263,7 @@ static as_bool http_header_compile_field (ASHashTableEntry *entry,
 {
 	string_appendf (str, "%s: %s\r\n", (char*)entry->key, (char*)entry->val);
 
-	return TRUE; /* keep entry */
+	return FALSE; /* keep entry */
 }
 
 /* compile header, caller frees returned libgift string */

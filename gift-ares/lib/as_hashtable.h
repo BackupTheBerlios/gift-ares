@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.h,v 1.4 2004/09/19 18:27:42 mkern Exp $
+ * $Id: as_hashtable.h,v 1.5 2004/10/03 18:00:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -143,7 +143,7 @@ void *as_hashtable_lookup_int (ASHashTable *table, as_uint32 key);
 
 /*****************************************************************************/
 
-/* Call func for each entry. If func returns FALSE the entry is removed. */
+/* Call func for each entry. If func returns TRUE the entry is removed. */
 void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
                            void *udata);
 
