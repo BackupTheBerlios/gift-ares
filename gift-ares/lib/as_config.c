@@ -1,5 +1,5 @@
 /*
- * $Id: as_config.c,v 1.3 2004/11/19 21:11:40 HEx Exp $
+ * $Id: as_config.c,v 1.4 2004/11/20 03:02:15 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -341,7 +341,7 @@ const char *as_config_get_str (ASConfig *config, ASConfValId id)
 /* Saves all values for which value->name != NULL in file. */
 as_bool as_config_save (ASConfig *config, const char *file)
 {
-	abort (0);
+	assert (0);
 }
 
 /* Loads all vaulues for which value->name != NULL from file. Triggers change
@@ -349,7 +349,7 @@ as_bool as_config_save (ASConfig *config, const char *file)
  */
 as_bool as_config_load (ASConfig *config, const char *file)
 {
-	abort (0);
+	assert (0);
 }
 
 #endif
