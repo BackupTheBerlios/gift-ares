@@ -1,5 +1,5 @@
 /*
- * $Id: asp_plugin.c,v 1.4 2004/12/10 02:00:09 hex Exp $
+ * $Id: asp_plugin.c,v 1.5 2004/12/10 02:23:13 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -68,7 +68,9 @@ static int asp_giftcb_source_cmp (Protocol *p, Source *a, Source *b)
 
 static int asp_giftcb_user_cmp (Protocol *p, const char *a, const char *b)
 {
-	return strcmp (a, b);
+	const char *aa = strrchr (a, '@'), *bb = strrchr (b, '@');
+
+	return strcmp ((aa ? aa : a), (bb ? bb : b));
 }
 
 static int asp_giftcb_chunk_suspend (Protocol *p, Transfer *transfer,
