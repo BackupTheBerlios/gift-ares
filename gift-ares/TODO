@@ -17,6 +17,8 @@ Essential stuff:
 - Determine when to look for more sources for a download and start hash 
   search. Make use of pushes resulting from said search.
 
+- Figured out how to do realm searches.
+
 
 Optimizations:
 
