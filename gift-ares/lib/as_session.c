@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.34 2004/11/06 18:08:17 mkern Exp $
+ * $Id: as_session.c,v 1.35 2004/11/06 19:51:27 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -420,7 +420,7 @@ static as_bool session_send_handshake (ASSession *session,
 
 	/* user name, zero terminated */
 	as_packet_put_ustr (packet, AS_CONF_STR (AS_USER_NAME),
-	                    strlen (AS_CONF_STR (AS_USER_NAME)));
+	                    strlen (AS_CONF_STR (AS_USER_NAME)) + 1);
 
 	/* client GUID, 16 bytes */
 	as_packet_put_ustr (packet, AS->netinfo->guid, 16);
