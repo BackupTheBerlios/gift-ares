@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.10 2004/09/16 18:15:47 HEx Exp $
+ * $Id: as_ares.c,v 1.11 2004/09/18 19:11:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -104,6 +104,20 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+	if (!(AS->downman = as_downman_create ()))
+	{
+		AS_ERR ("Failed to create download manager");
+		as_shareman_free (AS->shareman);
+		as_searchman_free (AS->searchman);
+		as_http_server_free (AS->server);
+		as_netinfo_free (AS->netinfo);
+		as_sessman_free (AS->sessman);
+		as_nodeman_free (AS->nodeman);
+		free (AS);
+		AS = NULL;
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -116,6 +130,7 @@ as_bool as_cleanup ()
 
 	AS_DBG ("Cleaning up Ares library...");
 
+	as_downman_free (AS->downman);
 	as_searchman_free (AS->searchman);
 	as_netinfo_free (AS->netinfo);
 	as_shareman_free (AS->shareman);

@@ -11,7 +11,9 @@ Essential stuff:
 
 - Filter multiple results from same user.
 
-- Make file hashing non-blocking.
+- Make file hashing non-blocking. Don't remove state data until file is
+  moved to final destiantin so we can resume verification if it is aborted
+  on shutdown.
 
 - Determine when to look for more sources for a download and start hash 
   search. Make use of pushes resulting from said search.

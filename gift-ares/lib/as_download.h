@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.h,v 1.8 2004/09/16 19:13:16 mkern Exp $
+ * $Id: as_download.h,v 1.9 2004/09/18 19:11:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -14,6 +14,8 @@
 
 typedef enum
 {
+	DOWNLOAD_INVALID,    /* Used in as_downman_state to signal invalid
+	                      * download. */
 	DOWNLOAD_NEW,        /* Initial state before download is started. */
 	DOWNLOAD_ACTIVE,     /* Download is transfering/looking for sources. */
 	DOWNLOAD_QUEUED,     /* Download is locally queued (because
@@ -53,8 +55,10 @@ struct as_download_t
 
 	/* download state */
 	ASDownloadState state;
-
 	ASDownloadStateCb state_cb;
+
+	/* pointer to download manager controlling this download */
+	struct as_downman_t *downman; 
 
 	void *udata; /* arbitrary user data */
 };

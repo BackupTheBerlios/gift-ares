@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.14 2004/09/17 11:40:34 mkern Exp $
+ * $Id: main.c,v 1.15 2004/09/18 19:11:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -128,7 +128,11 @@ int main (int argc, char *argv[])
 	as_event_init ();
 
 	/* init lib */
-	as_init ();
+	if (!as_init ())
+	{
+		printf ("FATA: as_init() failed\n");
+		exit (1);
+	}
 
 #ifdef WIN32
 	/* create console reading thread on windows */

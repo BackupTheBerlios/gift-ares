@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.27 2004/09/17 11:52:17 mkern Exp $
+ * $Id: cmd.c,v 1.28 2004/09/18 19:11:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -426,46 +426,38 @@ COMMAND_FUNC (clear)
 
 /*****************************************************************************/
 
-as_bool download_cb (ASDownload *dl, ASDownloadState state)
+as_bool downman_cb (ASDownMan *man, ASDownload *dl, ASDownloadState state)
 {
+	printf ("Download [%s]: %s\n", as_download_state_str (dl), dl->filename);
+
 	switch (state)
 	{
 	case DOWNLOAD_ACTIVE:
-		printf ("Download ACTIVE: %s\n", dl->filename);
 		break;
 	case DOWNLOAD_QUEUED:
-		printf ("Download QUEUED: %s\n", dl->filename);
 		break;
 	case DOWNLOAD_PAUSED:
-		printf ("Download PAUSED: %s\n", dl->filename);
-		break;
-	case DOWNLOAD_COMPLETE:
-		printf ("Download COMPLETE: %s\n", dl->filename);
-		break;
-	case DOWNLOAD_FAILED:
-		printf ("Download FAILED: %s\n", dl->filename);
-		break;
-	case DOWNLOAD_CANCELLED:
-		printf ("Download CANCELLED: %s\n", dl->filename);
 		break;
 	case DOWNLOAD_VERIFYING:
-		printf ("Download VERIFYING: %s\n", dl->filename);
+		break;
+	case DOWNLOAD_COMPLETE:
+	case DOWNLOAD_FAILED:
+	case DOWNLOAD_CANCELLED:
+		/* remove download */
+		printf ("Removing finished download\n");
+		if (!as_downman_remove (man, dl))
+			printf ("Error: Couldn't remove download\n");
 		break;
 	}
 
 	return TRUE;
 }
 
-/* max number of sources added to download */
-#define NUM_SOURCES 100
-
 COMMAND_FUNC (dl)
 {
 	int rnum;
-	int i;
 	ASResult *r;
 	ASDownload *dl;
-	List *l;
 
 	if (argc < 2)
 		return FALSE;
@@ -477,39 +469,13 @@ COMMAND_FUNC (dl)
 		printf ("Invalid result number\n");
 		return TRUE;
 	}
+	
+	/* make sure callback is set */
+	as_downman_set_state_cb (AS->downman, downman_cb);
 
-	if (!(dl = as_download_create (download_cb)))
-	{
-		printf ("Download creation failed\n");
-		return TRUE;
-	}
-
-	/* add all sources of all results with the same hash */
-	for (i = 0, l = results; l && i < NUM_SOURCES; l = l->next)
-	{
-		ASResult *res  = l->data;
-
-		if (as_hash_equal (res->hash, r->hash))
-		{
-			as_download_add_source (dl, res->source);
-			i++;
-		}
-	}
-
-	if (i == 0)
-	{
-		printf ("Failed to add any sources\n");
-		as_download_free (dl);
-		return TRUE;
-	}
-
-	printf ("Added %d sources to download\n", i);
-
-	/* start download */
-	if (!as_download_start (dl, r->hash, r->filesize, r->filename))
+	if (!(dl = as_downman_start_result (AS->downman, r, r->filename)))
 	{
 		printf ("Download start failed\n");
-		as_download_free (dl);
 		return TRUE;
 	}
 
@@ -528,17 +494,13 @@ COMMAND_FUNC (resume)
 
 	filename = argv[1];
 
-	if (!(dl = as_download_create (download_cb)))
-	{
-		printf ("Download creation failed\n");
-		return TRUE;
-	}
+	/* make sure callback is set */
+	as_downman_set_state_cb (AS->downman, downman_cb);
 
 	/* restart download */
-	if (!as_download_restart (dl, filename))
+	if (!(dl = as_downman_restart_file (AS->downman, filename)))
 	{
 		printf ("Download restart failed\n");
-		as_download_free (dl);
 		return TRUE;
 	}
 

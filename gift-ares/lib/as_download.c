@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.14 2004/09/16 19:13:15 mkern Exp $
+ * $Id: as_download.c,v 1.15 2004/09/18 19:11:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -101,6 +101,7 @@ ASDownload *as_download_create (ASDownloadStateCb state_cb)
 	dl->state    = DOWNLOAD_NEW;
 	dl->state_cb = state_cb;
 	
+	dl->downman = NULL;
 	dl->udata = NULL;
 
 	return dl;
@@ -113,9 +114,10 @@ void as_download_free (ASDownload *dl)
 
 	if (!dl)
 		return;
-	
-	/* TODO: save state */
 
+	/* Cancel all active connections. */
+	stop_all_connections (dl);
+	
 	as_hash_free (dl->hash);
 	free (dl->filename);
 	if (dl->fp)
@@ -221,8 +223,9 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 		return TRUE;
 	}
 
-	/* start things off */
-	download_maintain (dl);
+	/* start things off if we are still in active state */
+	if (dl->state == DOWNLOAD_ACTIVE)
+		download_maintain (dl);
 
 	return TRUE;
 }
@@ -303,8 +306,9 @@ as_bool as_download_restart (ASDownload *dl, const char *path)
 	if (!download_set_state (dl, dl->state, TRUE))
 		return FALSE;
 
-	/* start things off */
-	download_maintain (dl);
+	/* start things off if we are in active state */
+	if (dl->state == DOWNLOAD_ACTIVE)
+		download_maintain (dl);
 
 	return TRUE;
 }

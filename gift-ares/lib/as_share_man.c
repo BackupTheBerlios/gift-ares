@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.4 2004/09/18 02:21:18 HEx Exp $
+ * $Id: as_share_man.c,v 1.5 2004/09/18 19:11:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -136,7 +136,8 @@ as_bool as_shareman_submit (ASShareMan *man, ASSession *session)
 	/* dammit, WTF does this return void?! */
 	list_foreach (man->shares, (ListForeachFunc)share_send, &glob);
 
-	conglobulator_flush (&glob);
+	if (glob.data)
+		conglobulator_flush (&glob);
 		
 	return TRUE;
 }
