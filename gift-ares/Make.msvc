@@ -1,4 +1,4 @@
-# $Id: Make.msvc,v 1.10 2004/12/24 16:10:25 mkern Exp $
+# $Id: Make.msvc,v 1.11 2004/12/24 16:45:22 mkern Exp $
 
 
 VERSION = 0.1.1
@@ -62,7 +62,7 @@ DEFS = $(DEFS) -DHEAVY_DEBUG
 INCLUDES = $(INCLUDES) -I$(ZLIB_ROOT)
 DEFS     = $(DEFS)     -DUSE_ZLIB
 LDFLAGS  = $(LDFLAGS)  -libpath:"$(ZLIB_ROOT)"
-LIBS     = $(LIBS)     zlib$(D).lib
+LIBS     = $(LIBS)     zlib.lib
 
 ##########################
 # general
