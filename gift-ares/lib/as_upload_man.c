@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.13 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_upload_man.c,v 1.14 2005/01/01 01:56:59 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -278,7 +278,7 @@ static int upload_auth_cb (ASUpload *up, int *queue_length)
 		length = man->nqueued;
 	}
 
-	AS_DBG_3 ("Auth status for '%s': pos: %d, length: %d",
+	AS_HEAVY_DBG_3 ("Auth status for '%s': pos: %d, length: %d",
 	          net_ip_str (up->host), pos, length);
 
 	*queue_length = length;
