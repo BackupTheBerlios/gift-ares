@@ -1,5 +1,5 @@
 /*
- * $Id: asp_upload.c,v 1.4 2004/12/04 18:48:41 hex Exp $
+ * $Id: asp_upload.c,v 1.5 2004/12/04 19:17:11 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -67,7 +67,12 @@ as_bool up_data_cb (ASUpload *up, as_uint32 sent)
 {
 	wrote (up, sent);
 	
-	return TRUE;
+	/* Since giFT will call asp_giftcb_upload_stop if this completes the
+	 * upload we don't know at this point if we were freed at this point.
+	 * We thus always return FALSE with the side effect that UPLOAD_COMPLETE
+	 * is never triggered by the ares library. 
+	 */
+	return FALSE;
 }
 
 /* Called by ares library for upload state changes. */
@@ -107,6 +112,8 @@ static as_bool up_state_cb (ASUpMan *man, ASUpload *up,
 
 		break;
 	case UPLOAD_COMPLETE:
+		/* This should never happen since we return FALSE from up_data_cb. */
+		assert (0);
 		/* May make giFT call asp_giftcb_upload_stop. */
 		send_progress (up);
 		break;

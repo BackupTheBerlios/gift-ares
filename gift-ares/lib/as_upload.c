@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.14 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_upload.c,v 1.15 2004/12/04 19:17:11 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -621,7 +621,10 @@ static void send_file (int fd, input_id input, ASUpload *up)
 
 	/* Raise data callback if there is one */
 	if (up->data_cb)
-		up->data_cb (up, out);
+	{
+		if (!up->data_cb (up, out))
+			return; /* We were freed. */
+	}
 
 	/* Check if upload is complete */
 	assert (up->sent <= up->stop - up->start);
