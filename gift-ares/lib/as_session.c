@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.12 2004/09/02 11:30:57 mkern Exp $
+ * $Id: as_session.c,v 1.13 2004/09/02 16:31:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -383,8 +383,9 @@ static as_bool session_send_handshake (ASSession *session,
 	as_packet_put_8 (packet, 0x00);
 	/* unknown, 1 byte, (always?) zero */
 	as_packet_put_8 (packet, 0x00);
-	/* unknown, 2 bytes, (always?) 0x84D6 */
-	as_packet_put_le16 (packet, 0x84D6);
+
+	/* our listening port. FIXME: faked for now */
+	as_packet_put_le16 (packet, 0xDEAD);
 
 	/* unknown string, (always?) zero string */
 	as_packet_put_ustr (packet, "", 1);
