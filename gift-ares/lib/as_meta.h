@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.5 2004/09/15 22:18:25 HEx Exp $
+ * $Id: as_meta.h,v 1.6 2004/09/18 02:13:03 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -83,6 +83,9 @@ as_bool as_meta_remove_tag (ASMeta *meta, const char *name);
 
 /* Call func for each tag. Returns number of times func returned TRUE. */
 int as_meta_foreach_tag (ASMeta *meta, ASMetaForeachFunc func, void *udata);
+
+/* wrapper around as_meta_get_tag */
+int as_meta_get_int (ASMeta *meta, const char *name);
 
 const ASTagMapping *as_meta_tag_name (const char *name);
 const ASTagMapping *as_meta_tag_type (ASTagType type);

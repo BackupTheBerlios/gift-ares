@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.8 2004/09/16 15:45:32 HEx Exp $
+ * $Id: as_meta.c,v 1.9 2004/09/18 02:13:03 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -131,6 +131,16 @@ const char *as_meta_get_tag (ASMeta *meta, const char *name)
 		return NULL;
 
 	return ((ASMetaTag *) link->data)->value;
+}
+
+int as_meta_get_int (ASMeta *meta, const char *name)
+{
+	const char *value = as_meta_get_tag (meta, name);
+	
+	if (!value)
+		return 0;
+
+	return atoi (value);
 }
 
 /* remove gift style meta tag */
