@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.13 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_ares.c,v 1.14 2004/10/03 14:59:22 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -75,9 +75,9 @@ as_bool as_init ()
 			AS_ERR_1 ("Failed to create server on port %d",
 				  AS_LISTEN_PORT);
 		}
-
-		/* Set port so we can use it for pushes, sharing, etc */
-		AS->netinfo->port = AS->server->port;
+		else
+			/* Set port so we can use it for pushes, sharing, etc */
+			AS->netinfo->port = AS->server->port;
 	}
 	else
 	{
