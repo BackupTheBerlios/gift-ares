@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.3 2004/09/02 21:00:26 HEx Exp $
+ * $Id: as_search.c,v 1.4 2004/09/02 21:57:50 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,7 +22,9 @@ typedef enum {
 } ASTagType;
 
 typedef enum {
+	REALM_ARCHIVE = 0,
 	REALM_AUDIO = 1,
+	REALM_SOFTWARE = 3,
 	REALM_VIDEO = 5,
 	REALM_DOCUMENT = 6,
 	REALM_IMAGE = 7
@@ -74,7 +76,9 @@ struct search_result {
 
 void parse_metadata (ASPacket *packet, struct search_result *r)
 {
-	while (as_packet_remaining (packet))
+	/* Some packets seem to have a couple of stray bytes
+	 * at the end; just hack around this for now */
+	while (as_packet_remaining (packet) > 2)
 	{
 		int meta_type = as_packet_get_8 (packet);
 		unsigned char *meta;
@@ -102,6 +106,10 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 		case TAG_XXX:
 			switch (r->realm)
 			{
+			case REALM_ARCHIVE:
+				/* nothing */
+				break;
+
 			case REALM_AUDIO:
 				/* bitrate */
 				as_packet_get_le16 (packet);
@@ -110,6 +118,19 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 				as_packet_get_le32 (packet);
 				break;
 				
+			case REALM_SOFTWARE:
+			{
+				as_uint8 c = as_packet_get_8 (packet);
+				if (c != 2)
+				{
+					printf ("c=%d, offset %x\n", c, packet->read_ptr-packet->data);
+					as_packet_dump (packet);
+				}
+				
+				/* version */
+				free (as_packet_get_strnul (packet));
+				break;
+			}
 			case REALM_VIDEO:
 				/* width/height */
 				as_packet_get_le16 (packet);
@@ -127,6 +148,7 @@ void parse_metadata (ASPacket *packet, struct search_result *r)
 				/* unknown (depth?) */
 				as_packet_get_le32 (packet);
 				break;
+
 			case REALM_DOCUMENT:
 				/* nothing */
 				break;
