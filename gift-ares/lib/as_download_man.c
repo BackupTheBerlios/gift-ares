@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_man.c,v 1.6 2004/10/19 16:18:38 mkern Exp $
+ * $Id: as_download_man.c,v 1.7 2004/10/19 19:21:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -314,19 +314,81 @@ ASDownload *as_downman_restart_file (ASDownMan *man, const char *path)
 	return dl;
 }
 
+static as_bool restart_file_itr (ASDownMan *man, const char *dir,
+                                 const char* file)
+{
+	char *path;
+
+	/* only resume files with prefix */
+	if (strncmp (file, AS_DOWNLOAD_INCOMPLETE_PREFIX,
+		         strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX)) != 0)
+	{
+		return FALSE;
+	}
+
+	if (!(path = stringf_dup ("%s/%s", (dir && *dir) ? dir : ".", file)))
+		return FALSE;
+
+	AS_HEAVY_DBG_1 ("Restoring download '%s'", path);
+
+	if (!as_downman_restart_file (man, path))
+	{
+		free (path);
+		return FALSE;
+	}
+
+	free (path);
+	return TRUE;
+}
+
 /* Resumes all incomplete downloads in specified directory. Returns the number
  * of resumed downloads or -1 on error. Callback is raised for each started
  * download as usual.
  */
 int as_downman_restart_dir (ASDownMan *man, const char *dir)
 {
+	int files = 0;
 
 #ifdef HAVE_DIRENT_H
-	/* TODO */
-	abort (0);
-#else
+	DIR *dh;
+	struct dirent *de;
 
+	if (!(dh = opendir ((dir && *dir) ? dir : ".")))
+	{
+		AS_ERR_1 ("Couldn't open directory '%s'", dir);
+		return -1;
+	}
+
+	while ((de = readdir (dh)))
+	{
+		if (restart_file_itr (man, dir, de.d_name))
+			files++;
+	}
+
+	closedir (dh);
+#else
+	long fh;
+	struct _finddata_t fi;
+	char *glob = stringf_dup ("%s/%s*", (dir && *dir) ? dir : ".",
+	                          AS_DOWNLOAD_INCOMPLETE_PREFIX);
+	assert (glob);
+
+	if ((fh = _findfirst (glob, &fi)) != -1)
+	{
+		do
+		{
+			if (restart_file_itr (man, dir, fi.name))
+				files++;
+		}
+		while (_findnext (fh, &fi) == 0);
+
+		_findclose (fh);
+	}
+
+	free (glob);
 #endif
+
+	return files;
 }
 
 /*****************************************************************************/
@@ -512,7 +574,7 @@ static as_bool download_state_cb (ASDownload *dl, ASDownloadState state)
 	/* start or stop progress timer */
 	if (active > 0)
 	{
-		if (man->progress_timer == INVALID_TIMER)
+		if (man->progress_timer == INVALID_TIMER && man->progress_cb)
 		{
 			man->progress_timer = timer_add (AS_DOWNLOAD_PROGRESS_INTERVAL,
 		                             (TimerCallback)progress_timer_func, man);

@@ -1,5 +1,5 @@
 /*
- * $Id: as_source.c,v 1.9 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_source.c,v 1.10 2004/10/19 19:21:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -82,7 +82,8 @@ as_bool as_source_equal (ASSource *a, ASSource *b)
 	        a->parent_host == b->parent_host &&
 	        a->parent_port == b->parent_port &&
 #endif
-	        gift_strcmp (a->username, b->username) == 0); 
+			(a->username == NULL && b->username == NULL) ||
+	        (gift_strcmp (a->username, b->username) == 0)); 
 }
 
 /* returns TRUE if the source is firewalled */

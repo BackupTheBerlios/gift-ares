@@ -1,5 +1,5 @@
 /*
- * $Id: as_download.c,v 1.21 2004/10/19 16:18:38 mkern Exp $
+ * $Id: as_download.c,v 1.22 2004/10/19 19:21:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,9 +18,6 @@
 /* Interval of maintenance timer used to check on queued sources and save
  * download state. */
 #define MAINTENANCE_TIMER_INTERVAL (30 * SECONDS)
-
-/* Filename prefix for incomplete files */
-#define INCOMPLETE_PREFIX "___ARESTRA___"
 
 /* If defined failed downloads will not be deleted */
 #define KEEP_FAILED
@@ -171,7 +168,7 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 
 	/* create incomplete file path */
 	dir = gift_strndup (save_path, as_get_filename (save_path) - save_path);
-	incomplete = stringf_dup ("%s%s%s", dir ? dir : "", INCOMPLETE_PREFIX,
+	incomplete = stringf_dup ("%s%s%s", dir ? dir : "", AS_DOWNLOAD_INCOMPLETE_PREFIX,
 	                          as_get_filename (save_path));
 	free (dir);
 
@@ -187,8 +184,9 @@ as_bool as_download_start (ASDownload *dl, ASHash *hash, size_t filesize,
 
 	/* set filename after __ARESTRA__prefix */
 	dl->filename = as_get_filename (dl->path);
-	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
-		dl->filename += strlen (INCOMPLETE_PREFIX);
+	if (strncmp (dl->filename, AS_DOWNLOAD_INCOMPLETE_PREFIX,
+	             strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX)) == 0)
+		dl->filename += strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX);
 
 	/* open file */
 	if (!(dl->fp = fopen (dl->path, "w+b")))
@@ -262,8 +260,9 @@ as_bool as_download_restart (ASDownload *dl, const char *path)
 
 	/* set filename after __ARESTRA__prefix */
 	dl->filename = as_get_filename (dl->path);
-	if (strncmp (dl->filename, INCOMPLETE_PREFIX, strlen (INCOMPLETE_PREFIX)) == 0)
-		dl->filename += strlen (INCOMPLETE_PREFIX);
+	if (strncmp (dl->filename, AS_DOWNLOAD_INCOMPLETE_PREFIX,
+		         strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX)) == 0)
+		dl->filename += strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX);
 
 	/* make sure the file exists */
 	if (!as_file_exists (dl->path))
@@ -1399,15 +1398,15 @@ static as_bool download_complete (ASDownload *dl)
 	/* rename complete file to not include the prefix. */
 	prefixed_name = as_get_filename (dl->path);
 
-	if (strncmp (prefixed_name, INCOMPLETE_PREFIX,
-	             strlen (INCOMPLETE_PREFIX)) == 0)
+	if (strncmp (prefixed_name, AS_DOWNLOAD_INCOMPLETE_PREFIX,
+	             strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX)) == 0)
 	{
 		char *completed_path, *uniq_path, *dir;
 
 		/* construct path without ___ARESTRA___ prefix */
 		dir = gift_strndup (dl->path, prefixed_name - dl->path);
 		completed_path = stringf_dup ("%s%s", dir ? dir : "",
-		                        prefixed_name + strlen (INCOMPLETE_PREFIX));
+		                        prefixed_name + strlen (AS_DOWNLOAD_INCOMPLETE_PREFIX));
 		free (dir);
 
 		if ((uniq_path = get_available_filename (completed_path)))

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.44 2004/10/19 16:18:38 mkern Exp $
+ * $Id: as_ares.h,v 1.45 2004/10/19 19:21:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -35,6 +35,10 @@
 #else /* WIN32 */
 # include <winsock.h>
 #endif /* WIN32 */
+
+#ifndef HAVE_DIRENT_H
+# include <io.h> /* _findfirst and friends */
+#endif
 
 /*****************************************************************************/
 
@@ -164,6 +168,9 @@ typedef int            as_bool;
 
 /* Time between download manager's progress callbacks */
 #define AS_DOWNLOAD_PROGRESS_INTERVAL (1 * SECONDS)
+
+/* Filename prefix for incomplete files */
+#define AS_DOWNLOAD_INCOMPLETE_PREFIX "___ARESTRA___"
 
 /* Timeout for tcp connect to firewalled source's supernode. */
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)
