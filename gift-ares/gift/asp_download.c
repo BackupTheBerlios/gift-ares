@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.8 2005/01/04 21:33:43 hex Exp $
+ * $Id: asp_download.c,v 1.9 2005/01/04 22:16:19 hex Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -69,7 +69,7 @@ static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
 	PROTO->source_status (PROTO, source, status, status_str);
 
 	/* Handle failure case in a special way. */
-	if (state == DOWNCONN_FAILED)
+	if (state == DOWNCONN_FAILED || state == DOWNCONN_COMPLETE)
 	{
 #if 1
 		/* Remove failed source. */
