@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.62 2004/12/31 22:42:48 mkern Exp $
+ * $Id: as_ares.h,v 1.63 2005/01/05 01:20:28 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -142,9 +142,15 @@ typedef int            as_bool;
 #include "as_push_man.h"
 #include "as_download_chunk.h"
 #include "as_download_conn.h"
-#include "as_download.h"
-#include "as_download_state.h"
-#include "as_download_man.h"
+
+#ifndef GIFT_PLUGIN
+#  include "as_download.h"
+#  include "as_download_state.h"
+#  include "as_download_man.h"
+#else
+typedef void ASDownMan;
+#endif
+
 #include "as_incoming.h"
 #include "as_share.h"
 #include "as_share_man.h"

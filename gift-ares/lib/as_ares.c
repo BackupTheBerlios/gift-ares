@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.20 2004/12/24 13:45:37 mkern Exp $
+ * $Id: as_ares.c,v 1.21 2005/01/05 01:20:28 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -193,12 +193,14 @@ as_bool as_init ()
 		return FALSE;
 	}
 
+#ifndef GIFT_PLUGIN
 	if (!(AS->downman = as_downman_create ()))
 	{
 		AS_ERR ("Failed to create download manager");
 		as_cleanup ();
 		return FALSE;
 	}
+#endif
 
 	if (!(AS->upman = as_upman_create ()))
 	{

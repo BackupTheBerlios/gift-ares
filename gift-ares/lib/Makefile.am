@@ -1,4 +1,4 @@
-# $Id: Makefile.am,v 1.2 2004/12/18 15:19:56 hex Exp $
+# $Id: Makefile.am,v 1.3 2005/01/05 01:20:28 hex Exp $
 AM_CFLAGS = -Wall
 
 noinst_LTLIBRARIES = libaresgift.la
@@ -29,9 +29,6 @@ libaresgift_la_SOURCES = \
 	as_http_server.c     as_http_server.h \
 	as_download_chunk.c  as_download_chunk.h \
 	as_download_conn.c   as_download_conn.h \
-	as_download_state.c  as_download_state.h \
-	as_download_man.c    as_download_man.h \
-	as_download.c        as_download.h \
 	as_incoming.c        as_incoming.h \
 	as_share.c           as_share.h \
 	as_share_man.c       as_share_man.h \
@@ -42,6 +39,11 @@ libaresgift_la_SOURCES = \
 	as_util.c            as_util.h \
 	as_push_reply.c      as_push_reply.h \
 	as_log.h
+
+# These are not required by the plugin
+#	as_download_state.c  as_download_state.h
+#	as_download_man.c    as_download_man.h
+#	as_download.c        as_download.h
 
  
 INCLUDES = \
