@@ -1,5 +1,5 @@
 /*
- * $Id: as_config.c,v 1.1 2004/11/06 18:08:18 mkern Exp $
+ * $Id: as_config.c,v 1.2 2004/11/07 11:32:30 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -191,6 +191,10 @@ as_bool as_config_set_int (ASConfig *config, ASConfValId id, int integer)
 		return FALSE;
 	}
 
+	/* If value didn't change there is nothing to do. */
+	if (val->data.i == interger)
+		return TRUE;
+
 	/* Create new val. */
 	if (!(new_val = value_create (val)))
 		return FALSE;
@@ -229,6 +233,10 @@ as_bool as_config_set_str (ASConfig *config, ASConfValId id, const char *str)
 		assert (val->type == AS_CONF_STR);
 		return FALSE;
 	}
+
+	/* If value didn't change there is nothing to do. */
+	if (gift_strcmp (val->data.s, str) == 0)
+		return TRUE;
 
 	/* Create new val. */
 	if (!(new_val = value_create (val)))
