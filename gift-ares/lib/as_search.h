@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.h,v 1.7 2004/10/13 13:28:41 mkern Exp $
+ * $Id: as_search.h,v 1.8 2004/10/20 17:36:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,6 +19,17 @@ typedef enum
 	SEARCH_QUERY = 0,
 	SEARCH_LOCATE
 } ASSearchType;
+
+/* May be ASRealm + 100 (see as_meta.h) */
+typedef enum
+{
+	SEARCH_ANY      = 0x64,
+	SEARCH_AUDIO    = 0x65,
+	SEARCH_SOFTWARE = 0x67,
+	SEARCH_VIDEO    = 0x69,
+	SEARCH_DOCUMENT = 0x6a,
+	SEARCH_IMAGE    = 0x6b	
+} ASSearchRealm;
 
 typedef struct as_search_t ASSearch;
 
@@ -47,7 +58,7 @@ struct as_search_t
 
 	/* data for normal searches */
 	unsigned char *query; /* query string */
-	ASRealm realm;        /* realm to search in */
+	ASSearchRealm realm;  /* realm to search in */
 
 	/* data for hash searches */
 	ASHash *hash;
@@ -64,7 +75,7 @@ struct as_search_t
 
 /* create new search */
 ASSearch *as_search_create (as_uint16 id, ASSearchResultCb result_cb,
-                            const char *query, ASRealm realm);
+                            const char *query, ASSearchRealm realm);
 
 /* create new hash search */
 ASSearch *as_search_create_locate (as_uint16 id, ASSearchResultCb result_cb,

@@ -18,8 +18,6 @@ Essential stuff:
 - Determine when to look for more sources for a download and start hash 
   search.
 
-- Figured out how to do realm searches.
-
 - Time out inactive download connections. It hangs the download indefinitely.
   
 

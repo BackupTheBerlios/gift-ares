@@ -1,5 +1,5 @@
 /*
- * $Id: as_search.c,v 1.11 2004/10/13 13:28:41 mkern Exp $
+ * $Id: as_search.c,v 1.12 2004/10/20 17:36:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,7 +18,7 @@ static ASPacket *search_locate_packet (ASSearch *search);
 
 /* create new search */
 ASSearch *as_search_create (as_uint16 id, ASSearchResultCb result_cb,
-                            const char *query, ASRealm realm)
+                            const char *query, ASSearchRealm realm)
 {
 	ASSearch *search;
 
@@ -250,8 +250,10 @@ static ASPacket *search_query_packet (ASSearch *search)
 		return NULL;
 	}
 
+	/* realm */
+	as_packet_put_8 (packet, (as_uint8) search->realm);
 	/* no idea what this magic number is */
-	as_packet_put_le16 (packet, 0xf64);
+	as_packet_put_8 (packet, 0x0f);
 	as_packet_put_le16 (packet, search->id);
 
 	/* Add query tokens.

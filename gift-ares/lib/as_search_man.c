@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.c,v 1.7 2004/10/17 17:50:55 mkern Exp $
+ * $Id: as_search_man.c,v 1.8 2004/10/20 17:36:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -123,7 +123,7 @@ static as_bool send_search_itr (ASSession *session, ASSearch *search)
 
 /* create and run new query search */
 ASSearch *as_searchman_search (ASSearchMan *man, ASSearchResultCb result_cb,
-                               const char *query, ASRealm realm)
+                               const char *query, ASSearchRealm realm)
 {
 	ASSearch *search;
 	int count;

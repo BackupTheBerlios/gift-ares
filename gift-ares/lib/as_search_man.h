@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.h,v 1.3 2004/10/17 17:50:55 mkern Exp $
+ * $Id: as_search_man.h,v 1.4 2004/10/20 17:36:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,7 +49,7 @@ as_bool as_searchman_result (ASSearchMan *man, ASSession *session,
 
 /* create and run new query search */
 ASSearch *as_searchman_search (ASSearchMan *man, ASSearchResultCb result_cb,
-                               const char *query, ASRealm realm);
+                               const char *query, ASSearchRealm realm);
 
 /* create and run new hash search */
 ASSearch *as_searchman_locate (ASSearchMan *man, ASSearchResultCb result_cb,

@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.33 2004/10/13 13:28:42 mkern Exp $
+ * $Id: cmd.c,v 1.34 2004/10/20 17:36:43 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -348,7 +348,7 @@ COMMAND_FUNC (search)
 
 	test_search = as_searchman_search (AS->searchman,
 	                                   (ASSearchResultCb) search_callback,
-	                                   query, REALM_ANY);
+	                                   query, SEARCH_ANY);
 
 	if (!test_search)
 	{
