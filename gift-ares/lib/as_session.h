@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.h,v 1.8 2004/09/01 17:49:26 HEx Exp $
+ * $Id: as_session.h,v 1.9 2004/09/10 17:27:10 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -53,6 +53,8 @@ struct as_session_t
 	ASSessionPacketCb packet_cb;
 
 	as_uint16      search_id;
+
+	timer_id       ping_timer;
 
 	void *udata; /* user data */
 };

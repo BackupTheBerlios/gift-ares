@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.15 2004/09/07 13:05:33 mkern Exp $
+ * $Id: as_session.c,v 1.16 2004/09/10 17:27:10 HEx Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,6 +25,9 @@ static as_bool session_set_state (ASSession *session, ASSessionState state,
 
 static as_bool session_error (ASSession *session);
 
+static as_bool session_ping (ASSession *session);
+static as_bool session_ping_timeout (ASSession *session);
+
 /*****************************************************************************/
 
 /* Create new session with specified callbacks. */
@@ -47,6 +50,7 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 	session->packet_cb = packet_cb;
 	session->udata     = NULL;
 	session->search_id = 0;
+	session->ping_timer= NULL;
 
 	return session;
 }
@@ -54,6 +58,8 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 static void session_cleanup (ASSession *session)
 {
 	input_remove (session->input);
+	timer_remove_zero (&session->ping_timer);
+
 	tcp_close (session->c);
 	as_cipher_free (session->cipher);
 	as_packet_free (session->packet);
@@ -295,6 +301,11 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 		as_packet_free (packet);
 	}
 
+	timer_remove (session->ping_timer);
+
+	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
+					 (TimerCallback)session_ping, session);
+
 	return; /* wait for more */
 }
 
@@ -508,7 +519,46 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
 		return FALSE; /* session was freed */
 
+	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
+					 (TimerCallback)session_ping, session);
+
 	return TRUE;
+}
+
+/*****************************************************************************/
+
+/* no activity for a while, send a ping */
+static as_bool session_ping (ASSession *session)
+{
+	ASPacket *p = as_packet_create ();
+
+	/* not a clue what any of these are */
+	as_packet_put_le32 (p, 0x400);
+	as_packet_put_8 (p, 0);
+	as_packet_put_le16 (p, 0);
+	
+	AS_ERR_2 ("Sent ping to %s:%d",
+		  net_ip_str (session->host), session->port);
+
+	as_session_send (session, PACKET_STATS2, p, PACKET_ENCRYPTED);
+
+	as_packet_free (p);
+
+	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
+					 (TimerCallback)session_ping_timeout,
+					 session);
+
+	return FALSE;
+}
+
+/* we sent a ping and got no response: disconnect */
+static as_bool session_ping_timeout (ASSession *session)
+{
+	AS_ERR_2 ("Ping timeout for %s:%d",
+		  net_ip_str (session->host), session->port);
+	session_error (session);
+
+	return FALSE;
 }
 
 /*****************************************************************************/
