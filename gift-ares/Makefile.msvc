@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.1 2004/08/21 12:32:22 mkern Exp $
+# $Id: Makefile.msvc,v 1.2 2004/10/03 14:32:51 mkern Exp $
 # Microsoft Visual C++ 6.0 makefile
 # see README.msvc for usage
 
@@ -10,7 +10,7 @@ BUILD_ROOT=$(MAKEDIR)
 
 MAKEOPTS=-nologo -C BUILD_ROOT=$(BUILD_ROOT)
 
-all: test delphi
+all: test aresdll delphi
 
 test: aslib
 	cd test
@@ -18,8 +18,13 @@ test: aslib
 	cd ..
 
 
-delphi: aslib
+delphi: asdll
 	cd delphi
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	cd ..
+
+aresdll: aslib
+	cd aresdll
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
 	cd ..
 
@@ -37,6 +42,9 @@ clean:
 	cd ..\test
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
 
+	cd ..\aresdll
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
+
 	cd ..\delphi
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc clean
 
@@ -52,6 +60,11 @@ install:
 	cd ..\test
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
 
+	cd ..\aresdll
+	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
+
 	cd ..\delphi
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc install
+
+	cd ..
 	

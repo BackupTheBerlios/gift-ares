@@ -1,5 +1,5 @@
 /*
- * $Id: as_log.c,v 1.7 2004/09/02 20:46:51 HEx Exp $
+ * $Id: as_log.c,v 1.8 2004/10/03 14:32:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -45,6 +45,9 @@ void as_logger_free (ASLogger *logger)
 	int i;
 
 	if (!logger)
+		logger = g_logger;
+
+	if (!logger)
 		return;
 
 	for (i = 0; i < MAX_LOG_OUTPUTS; i++)
@@ -57,7 +60,8 @@ void as_logger_free (ASLogger *logger)
 	}
 
 	/* bad */
-	g_logger = NULL;
+	if (logger == g_logger)
+		g_logger = NULL;
 
 	free (logger);
 }

@@ -1,14 +1,15 @@
-# $Id: Make.msvc,v 1.5 2004/09/15 23:42:46 mkern Exp $
+# $Id: Make.msvc,v 1.6 2004/10/03 14:32:51 mkern Exp $
 
 
 VERSION = 0.0.1
 HEAVY_DEBUG = 1
 
-ASLIB_ROOT  = $(BUILD_ROOT)\lib
-TEST_ROOT   = $(BUILD_ROOT)\test
-DELPHI_ROOT = $(BUILD_ROOT)\delphi
-BIN_ROOT    = $(BUILD_ROOT)\bin
-ZLIB_ROOT   = $(BUILD_ROOT)\zlib
+ASLIB_ROOT   = $(BUILD_ROOT)\lib
+TEST_ROOT    = $(BUILD_ROOT)\test
+DELPHI_ROOT  = $(BUILD_ROOT)\delphi
+BIN_ROOT     = $(BUILD_ROOT)\bin
+ZLIB_ROOT    = $(BUILD_ROOT)\zlib
+ARESDLL_ROOT = $(BUILD_ROOT)\aresdll
 
 O = .obj
 
@@ -67,9 +68,11 @@ LIBS     = $(LIBS)     zlib$(D).lib
 ##########################
 
 
-ASLIB_LIB  = aslib$(DEXT).lib
-TEST_EXE   = astest$(DEXT).exe
-DELPHI_LIB = asdelphi$(DEXT).lib
+ASLIB_LIB    = aslib$(DEXT).lib
+TEST_EXE     = astest$(DEXT).exe
+DELPHI_LIB   = asdelphi$(DEXT).lib
+ARES_DLL     = aresdll$(DET).dll
+ARES_DLL_LIB = aresdll$(DET).lib   # import lib
 
 # threaded clib
 CFLAGS   = $(CFLAGS) -MT$(D)
