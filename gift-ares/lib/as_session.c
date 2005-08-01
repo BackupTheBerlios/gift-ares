@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.38 2005/08/01 16:01:56 mkern Exp $
+ * $Id: as_session.c,v 1.39 2005/08/01 16:47:57 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -532,7 +532,6 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 		as_nodeman_update_reported (AS->nodeman, host, port);
 	}
 
-#if 0	
 	if (children > 350)
 	{
 		/* Ares disconnects if there are more than 350 children. Do the
@@ -544,7 +543,6 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 		free (supernode_guid);
 		return FALSE;
 	}
-#endif	
 
 	/* Set up cipher. */
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
