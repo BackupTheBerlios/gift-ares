@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.6 2005/03/07 23:40:29 mkern Exp $
+ * $Id: sniff.c,v 1.7 2005/08/19 00:07:56 hex Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -33,7 +33,8 @@ enum {
 	STATE_ESTABLISHED,
 	STATE_UNSUPPORTED,
 	STATE_HTTP,
-	STATE_PUSH
+	STATE_PUSH,
+	STATE_TRANSFER
 };
 
 static int id=0;
@@ -244,26 +245,40 @@ void decrypt_packet (unsigned char *data, int len, unsigned short key)
 	}
 }	
 
+static void munge (unsigned char *data, int len, unsigned short key,
+                   unsigned short mul, unsigned short add)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		data[i] = data[i] ^ (key >> 8);
+		key = (key + data[i]) * mul + add;
+	}
+}
+
+static void unmunge (unsigned char *data, int len, unsigned short key,
+                     unsigned short mul, unsigned short add)
+{
+	unsigned char c;
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		c = data[i] ^ (key >> 8);
+		key = (key + data[i]) * mul + add;
+		data[i] = c;
+	}
+}
+
 /*
  * Decrypts packet type 0x33 which contains encryption state. The key is the
  * listening port the connection was made to.
  */
 void decrypt_handshake_packet (unsigned char *data, int len, unsigned short key)
 {
-	unsigned char decoded;
-	int i;
-
-	for (i = 0; i < len; i++)
-	{
-		decoded = data[i] ^ (key >> 8);
-		key = (key + data[i]) * 0x5CA0 + 0x15EC;
-
-		data[i] = decoded;
-	}
+	unmunge (data, len, key, 0x5CA0, 0x15EC);
 }	
-
-
-
 
 
 
@@ -402,6 +417,23 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				}
 			}
 
+			if (len>20 && !server) {
+				/* binary transfer? */
+				unsigned char tmpbuf[512];
+				int skip;
+				int llen=(len > 512) ? 512 : len;
+				memcpy (tmpbuf, data, llen);
+				unmunge (tmpbuf, llen, 0xfd1c, 0x5ca0, 0x15ec);
+				skip = tmpbuf[2];
+				if (len >= skip + 5) {
+					//fprintf(stderr, "%s maybe binary? llen=%d, skip=%d, strlen=%d len=%d\n", buf, llen, skip, tmpbuf[skip+3]+tmpbuf[skip+4]*256, len-skip-5);				
+					if (tmpbuf[skip+3]+tmpbuf[skip+4]*256 == len-skip-5) {
+						c->state=STATE_TRANSFER;
+						break;
+					}
+				}
+			}
+
 			if (len>=3 && server) {
 				int type, plen;
 				plen=data[0]+(data[1]<<8);
@@ -441,8 +473,17 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				}
 				else
 					done=1;
-			} else
+			} else {
+				if ((len >= 3) && ((data[0]+data[1]*256+3)==len)) {
+					fprintf(stderr, "%s message type %02x, len %d [initial]\n", buf, data[2], len);
+					print_bin_data(data+3,len-3);
+					read=len;
+					
+				} else
+					c->state=STATE_UNSUPPORTED;
+
 				done=1;
+			}
 
 			break;
 
@@ -518,6 +559,44 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 			read=len;
 			done=1;
 			c->state=STATE_HTTP;
+			break;
+		case STATE_TRANSFER:
+			if (!server) {
+				/* now we know for sure, we can scribble on the real data */
+				int skip;
+				unmunge (data, len, 0xfd1c, 0x5ca0, 0x15ec);
+				skip = data[2]+5;
+				unmunge (data+skip, len-skip, 0x3faa, 0xd7fb, 0x3efd);
+				c->enc_state_16 = data[skip+5]+data[skip+6]*256;
+				fprintf(stderr, "%s binary transfer, skip=%d, key=%02x\n", buf, skip, c->enc_state_16);				
+				print_bin_data (data+skip, len-skip);
+				read=len;
+				done=1;
+			} else {
+				if (len < 3 || len < data[2]+3) {
+					done=1;
+				} else {
+					int skip;
+					int i;
+					unmunge (data, len, c->enc_state_16, 0xcb6f, 0x41ba);
+					skip=data[2]+3;
+					for(i=skip;i<len;i++) {
+						if ((i<=len-4 && !memcmp(data+i, "\r\n\r\n", 4)) ||
+						    (i<=len-2 && !memcmp(data+i, "\n\n", 2))) {
+							fprintf(stderr, "%s encrypted HTTP reply (key=%02x skip=%d):\n", buf, c->enc_state_16, skip);
+							fwrite(data+skip, i+2-skip, 1, stderr);
+							c->state=STATE_UNSUPPORTED; /* ignore the body */
+							read=i+2;
+							done=1;
+							break;
+						}
+					}
+//					if (i==len)
+//						fprintf(stderr, "[HTTP reply key=%02x skip=%d len=%d...],", c->enc_state_16, skip, len);
+
+					done=1;
+				}
+			}
 			break;
 		default:
 			/* fprintf(stderr, "%s %d skipped\n", buf,len); */
