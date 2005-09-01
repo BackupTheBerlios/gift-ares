@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.7 2005/08/19 00:07:56 hex Exp $
+ * $Id: sniff.c,v 1.8 2005/09/01 08:15:14 hex Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -568,8 +568,29 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				skip = data[2]+5;
 				unmunge (data+skip, len-skip, 0x3faa, 0xd7fb, 0x3efd);
 				c->enc_state_16 = data[skip+5]+data[skip+6]*256;
-				fprintf(stderr, "%s binary transfer, skip=%d, key=%02x\n", buf, skip, c->enc_state_16);				
+				fprintf(stderr, "%s binary transfer [type %d], skip=%d, key=%02x\n", buf, data[skip], skip, c->enc_state_16);
 				print_bin_data (data+skip, len-skip);
+				{
+				  unsigned char *ptr=data+skip+1, *end=data+len;
+				  while (ptr+3<=end) {
+				    int l=ptr[0]+ptr[1]*256, t=ptr[2];
+				    fprintf(stderr, "type 0x%02x, len %d\n", t, l);
+				    if (ptr+l+3<=end) {
+					    switch (t) {
+					    case 0x6:
+						    unmunge (ptr+3, l, 0xb334, 0xce6D, 0x58bf);
+						    break;
+					    case 0xa:
+						    unmunge (ptr+3, l, 0x5f40, 0x310f, 0x3a4e);
+						    unmunge (ptr+3, l, 0x15d9, 0x5ab3, 0x8d1e);
+						    if (l>9)
+							    unmunge (ptr+12, l-9, 0xb334, 0xce6d, 0x58bf);
+					    }
+					    print_bin_data (ptr+3,l);
+				    }
+				    ptr+=l+3;
+				  }
+				}
 				read=len;
 				done=1;
 			} else {
