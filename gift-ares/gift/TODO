@@ -1,4 +1,6 @@
 
+- Check the /* WTF? nonce2 is only 20 bytes? */ in as_session.c
+
 - Don't add unroutable ips to node cache and remove them on connect if they are there.
 
 - Do we have to 'switch off' hash searches when we don't want any more results?

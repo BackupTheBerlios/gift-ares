@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.40 2005/08/01 16:53:15 mkern Exp $
+ * $Id: as_session.c,v 1.41 2005/09/15 21:24:52 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -330,10 +330,10 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 {
 	if (as_session_state (session) == SESSION_HANDSHAKING)
 	{
-		if (type != PACKET_ACK)
+		if (type != PACKET_ACK && type != PACKET_ACK2)
 		{
-			AS_ERR_2 ("Handshake with %s:%d failed. Got something else than ACK.",
-			          net_ip_str (session->host), session->port);
+			AS_ERR_3 ("Handshake with %s:%d failed. Got 0x%02x instead of ACK/ACK2.",
+			          net_ip_str (session->host), session->port, (int)type);
 			session_error (session);
 			return FALSE;
 		}
@@ -375,11 +375,11 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
   
 /*****************************************************************************/
 
-static as_bool session_send_handshake (ASSession *session,
+static as_bool session_send_handshake (ASSession *session, ASPacketType type,
                                        as_uint8 supernode_guid[16])
 {
 	ASPacket *packet;
-	as_uint8 *nonce;
+	as_uint8 *nonce = NULL;
 
 	/* Create our part of the handshake */
 	if (!(packet = as_packet_create ()))
@@ -388,27 +388,43 @@ static as_bool session_send_handshake (ASSession *session,
 		return FALSE;
 	}
 
-	/* hardcoded zero byte */
-	as_packet_put_8 (packet, 0x00);
+	/* There are two different nonces used by the supernode to determine
+	 * whether we are a legitimate client. The first nonce is used by Ares
+	 * versions prior to 2962 and sent in response to PACKET_ACK (0x33). The
+	 * second is used in Ares 2962 and later and sent in response to
+	 * PACKET_ACK2 (0x38). Calculation of the later is slightly more complex
+	 * as can be seen in as_crypt_boring.c.
+	 */
+	if (type == PACKET_ACK)
+	{
+		/* hardcoded zero byte (only if original nonce is used) */
+		as_packet_put_8 (packet, 0x00);
+		/* 22 byte nonce created from supernode guid */
+		nonce = as_cipher_nonce (session->cipher, supernode_guid);
+	}
+	else if (type == PACKET_ACK2)
+	{
+		/* 20 byte nonce2 created from supernode guid */
+		nonce = as_cipher_nonce2 (supernode_guid);
+	}
 
-	/* 22 byte nonce created from supernode guid */
-	if (!(nonce = as_cipher_nonce (session->cipher, supernode_guid)))
+	if (!nonce)
 	{
 		AS_ERR ("Handshake nonce creation failed");
 		as_packet_free (packet);
 		return FALSE;
 	}
-	as_packet_put_ustr (packet, nonce, 22);
+	as_packet_put_ustr (packet, nonce, 22); /* WTF? nonce2 is only 20 bytes? */
 	free (nonce);
 
 	if (AS->upman)
 	{
 		/* FIXME: These values are not accurate if queuing is done by giFT */
 		as_packet_put_le16 (packet, 0); /* unknown */
-		as_packet_put_8 (packet, AS->upman->nuploads);
-		as_packet_put_8 (packet, AS->upman->max_active);
-		as_packet_put_8 (packet, 0); /* unknown */
-		as_packet_put_8 (packet, AS->upman->nqueued);
+		as_packet_put_8 (packet, (as_uint8)AS->upman->nuploads);
+		as_packet_put_8 (packet, (as_uint8)AS->upman->max_active);
+		as_packet_put_8 (packet, (as_uint8)0); /* unknown */
+		as_packet_put_8 (packet, (as_uint8)AS->upman->nqueued);
 	}
 	else
 	{	
@@ -438,7 +454,9 @@ static as_bool session_send_handshake (ASSession *session,
 	as_packet_put_ip (packet, net_local_ip (session->c->fd, NULL));
 
 #ifdef AS_LOGIN_STRING
-	/* Append encrypted login string added in Ares 2951. */
+	/* Append encrypted login string added in Ares 2951. Removed again in
+	 * Ares 2955. See as_ares.h.
+	 */
 	{
 		as_uint8 *login_str, *login_hex;
 
@@ -476,7 +494,7 @@ static as_bool session_send_handshake (ASSession *session,
 	return TRUE;
 }
 
-static as_bool session_handshake (ASSession *session,  ASPacketType type,
+static as_bool session_handshake (ASSession *session, ASPacketType type,
                                   ASPacket *packet)
 {
 	as_uint16 children;
@@ -484,7 +502,10 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	as_uint8 seed_8;
 	as_uint8 *supernode_guid;
 
-	assert (type == PACKET_ACK);
+	/* PACKET_ACK and PACKET_ACK2 have exactly the same payload. The later was
+	 * only added in Ares 2962 to keep off old nodes.
+	 */
+	assert (type == PACKET_ACK || type == PACKET_ACK2);
 
 	if (as_packet_remaining (packet) < 0x15)
 	{
@@ -550,7 +571,7 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
 
 	/* Send our part of the handshake. */
-	if (!session_send_handshake (session, supernode_guid))
+	if (!session_send_handshake (session, type, supernode_guid))
 	{
 		AS_ERR_2 ("Handshake send failed to %s:%d",
 		          net_ip_str (session->host), session->port);
@@ -562,8 +583,8 @@ static as_bool session_handshake (ASSession *session,  ASPacketType type,
 	free (supernode_guid);
 
 	/* Handshake is complete now. */
-	AS_DBG_4 ("Handshake with %s:%d complete. seeds: 0x%04X and 0x%02X",
-		      net_ip_str (session->host), session->port,
+	AS_DBG_5 ("Handshake with %s:%d complete. ACK: 0x%02X, seeds: 0x%04X and 0x%02X",
+		      net_ip_str (session->host), session->port, (int)type,
 			  (int)seed_16, (int)seed_8);
 
 	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
@@ -586,10 +607,10 @@ static as_bool session_ping (ASSession *session)
 	if (AS->upman)
 	{
 		/* FIXME: These values are not accurate if queuing is done by giFT */
-		as_packet_put_8 (p, AS->upman->nuploads);
-		as_packet_put_8 (p, AS->upman->max_active);
-		as_packet_put_8 (p, 0); /* unknown */
-		as_packet_put_8 (p, AS->upman->nqueued);
+		as_packet_put_8 (p, (as_uint8)AS->upman->nuploads);
+		as_packet_put_8 (p, (as_uint8)AS->upman->max_active);
+		as_packet_put_8 (p, (as_uint8)0); /* unknown */
+		as_packet_put_8 (p, (as_uint8)AS->upman->nqueued);
 		as_packet_put_le16 (p, 0); /* unknown */
 	}
 	else
