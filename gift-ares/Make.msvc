@@ -1,4 +1,4 @@
-# $Id: Make.msvc,v 1.15 2005/03/17 14:34:09 mkern Exp $
+# $Id: Make.msvc,v 1.16 2005/09/15 21:13:52 mkern Exp $
 
 
 VERSION = 0.2.2
@@ -6,6 +6,7 @@ VERSION = 0.2.2
 
 ASLIB_ROOT   = $(ARES_ROOT)\lib
 TEST_ROOT    = $(ARES_ROOT)\test
+CRAWLER_ROOT = $(ARES_ROOT)\crawler
 DELPHI_ROOT  = $(ARES_ROOT)\delphi
 BIN_ROOT     = $(ARES_ROOT)\bin
 ARESDLL_ROOT = $(ARES_ROOT)\aresdll
@@ -70,6 +71,7 @@ LIBS     = $(LIBS)     zlib.lib
 ASLIB_LIB     = aslib$(DEXT).lib
 ASLIBGIFT_LIB = aslibgift$(DEXT).lib
 TEST_EXE      = astest$(DEXT).exe
+CRAWLER_EXE   = ascrawl$(DEXT).exe
 DELPHI_LIB    = asdelphi$(DEXT).lib
 ARES_DLL      = aresdll$(DET).dll
 ARES_DLL_LIB  = aresdll$(DET).lib   # import lib

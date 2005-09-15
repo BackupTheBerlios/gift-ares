@@ -1,4 +1,12 @@
 
+- Don't add unroutable ips to node cache and remove them on connect if they are there.
+
+- Do we have to 'switch off' hash searches when we don't want any more results?
+
+- Is there a general limit on the number of shares we should upload like in fasttrac?
+
+- Does HTTP downloading work from Ares 2962 nodes?
+
 - Why do so many source go into 'timed out' state and are not removed? should they be?
   Update: I think it is giFT which times out the sources. Not sure what to do about it.
 

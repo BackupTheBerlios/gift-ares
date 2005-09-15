@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.27 2005/01/08 13:57:49 mkern Exp $
+# $Id: Makefile.msvc,v 1.28 2005/09/15 21:13:53 mkern Exp $
 
 
 !include ../Make.msvc
@@ -10,7 +10,7 @@ INCLUDES = -I. -Ilibevent $(INCLUDES)
 LIBS = $(LIBS) $(LIBGIFT_LIB) $(LIBGIFTPROTO_LIB) $(GIFT_LIB)
 
 
-LIBIGIFT_OBJECTS = \
+LIBGIFT_OBJECTS = \
 	as_log$(O) \
 	as_event$(O) \
 	as_list$(O) \
@@ -30,6 +30,7 @@ OBJECTS = \
 	as_util$(O) \
 	as_config$(O) \
 	as_crypt$(O) \
+#	as_crypt_boring$(O) \
 	as_packet$(O) \
 	as_sha1$(O) \
 	as_hash$(O) \
@@ -61,7 +62,7 @@ OBJECTS = \
 
 
 # this breaks the non-plugin build
-DEFS = $(DEFS) -DGIFT_PLUGIN
+#DEFS = $(DEFS) -DGIFT_PLUGIN
 
 
 aslib: $(OBJECTS) $(HEX_OPTIMIZATION_OBJECTS) $(LIBGIFT_OBJECTS)
@@ -69,7 +70,7 @@ aslib: $(OBJECTS) $(HEX_OPTIMIZATION_OBJECTS) $(LIBGIFT_OBJECTS)
 	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
 	cd ..
 
-	$(LT) -nologo -out:$(ASLIB_LIB) $(OBJECTS) $(LIBGIFT_OBJECTS) libevent\libevent$(DEXT).lib
+	$(LT) -nologo -out:$(ASLIB_LIB) $(OBJECTS) $(HEX_OPTIMIZATION_OBJECTS) $(LIBGIFT_OBJECTS) libevent\libevent$(DEXT).lib
 
 
 aslibgift: $(OBJECTS)

@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.10 2005/01/07 20:05:00 mkern Exp $
+ * $Id: as_crypt.h,v 1.11 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -49,10 +49,17 @@ void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
 void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
 void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
 
+/*****************************************************************************/
+
 /* Calculate 22 byte nonce used in handshake from supernode GUID and session
- * seeds. Caller free returned memory.
+ * seeds. Caller frees returned memory.
  */
 as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16]);
+
+/* Calculate 20 byte nonce used in handshake with Ares 2962 and later.
+ * Requires supernode GUID from 0x38 packet. Caller frees returned memory.
+ */
+as_uint8 *as_cipher_nonce2 (as_uint8 guid[16]);
 
 /*****************************************************************************/
 

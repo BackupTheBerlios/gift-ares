@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_client.h,v 1.4 2004/10/28 14:00:39 mkern Exp $
+ * $Id: as_http_client.h,v 1.5 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -13,9 +13,9 @@
 /*****************************************************************************/
 
 /* some time outs in ms */
-#define HTCL_CONNECT_TIMEOUT	(20*SECONDS)
-#define HTCL_REQUEST_TIMEOUT	(20*SECONDS)
-#define HTCL_DATA_TIMEOUT		(20*SECONDS)
+#define HTCL_CONNECT_TIMEOUT	(30*SECONDS)
+#define HTCL_REQUEST_TIMEOUT	(30*SECONDS)
+#define HTCL_DATA_TIMEOUT		(30*SECONDS)
 
 /* size of download data buffer,
  * must be large enough to contain http reply header

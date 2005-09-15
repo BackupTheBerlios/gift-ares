@@ -1,5 +1,5 @@
 /*
- * $Id: as_tcp.c,v 1.10 2004/11/19 21:16:13 HEx Exp $
+ * $Id: as_tcp.c,v 1.11 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -446,6 +446,11 @@ in_addr_t net_peer (int fd)
 		ip = addr.sin_addr.s_addr;
 
 	return ip;
+}
+
+char *net_peer_ip (int fd)
+{
+	return net_ip_str (net_peer (fd));
 }
 
 in_addr_t net_local_ip (int fd, in_port_t *portret)

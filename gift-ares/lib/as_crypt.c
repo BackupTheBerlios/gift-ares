@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.15 2005/02/15 14:07:42 mkern Exp $
+ * $Id: as_crypt.c,v 1.16 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,6 +8,10 @@
  */
 
 #include "as_ares.h"
+
+#if 0 /* see comment in as_cipher_nonce2 below */
+#include "as_crypt_boring.h"
+#endif
 
 /*****************************************************************************/
 
@@ -356,8 +360,10 @@ void as_cipher_decrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
 	unmunge (data, len, cipher->handshake_key, 0x5CA0, 0x15EC);
 }
 
+/*****************************************************************************/
+
 /* Calculate 22 byte nonce used in handshake from supernode GUID and session
- * seeds. Caller free returned memory.
+ * seeds. Caller frees returned memory.
  */
 as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16])
 {
@@ -422,6 +428,101 @@ as_uint8 *as_cipher_nonce (ASCipher *cipher, as_uint8 guid[16])
 	token = hash_lowered_token (nonce, 20);
 	nonce[20] = (token     ) & 0xFF;
 	nonce[21] = (token >> 8) & 0xFF;
+
+	return nonce;
+}
+
+/* Calculate 20 byte nonce used in handshake with Ares 2962 and later.
+ * Requires supernode GUID from 0x38 packet. Caller frees returned memory.
+ */
+as_uint8 *as_cipher_nonce2 (as_uint8 guid[16])
+{
+	/*
+	 * Pseudo code of what this does:
+	 * 
+	 * input: string guid
+	 * vars: byte a = 128, byte b = 128, string nonce
+	 *
+	 * nonce = SHA1 (guid)
+	 * while (length (nonce) < 512)
+	 * {
+	 *     nonce = nonce + SHA1 (byte_string (a) + nonce + byte_string (b));
+	 *     a++;
+	 *     b--;
+	 * }
+	 * truncate (nonce, 512)
+	 * apply_boring_munging (nonce)
+	 * nonce = SHA1 (nonce)
+	 *	
+	 */
+	as_uint8 a = 128, b = 128;
+	as_uint8 buf[512+20], *nonce;
+	as_uint32 buf_len = 0;
+	ASSHA1State sha1_state;
+
+	/* Calc SHA1 of GUID. */
+	as_sha1_init (&sha1_state);
+	as_sha1_update (&sha1_state, guid, 16);
+	as_sha1_final (&sha1_state, buf);
+	buf_len = 20;
+
+	/* Make 512 byte SHA1 concat */
+	while (buf_len < 512)
+	{
+		/* Calc SHA1 (a + buf + b) and append to buffer. */
+		as_sha1_init (&sha1_state);
+		as_sha1_update (&sha1_state, &a, 1);
+		as_sha1_update (&sha1_state, buf, buf_len);
+		as_sha1_update (&sha1_state, &b, 1);
+		as_sha1_final (&sha1_state, buf + buf_len);
+		buf_len += 20;
+		a++;
+		b--;
+	}
+
+	/* Truncate buffer. */
+	buf_len = 512;
+
+	/* Munge buffer with boring code. */
+
+	/* On 2005-09-15 the Ares source code was released at
+	 * http://sourceforge.net/projects/aresgalaxy/ . The source no longer
+	 * contains this encryption code and all supernodes should simply ignore
+	 * the nonce from now on. We keep this code in case someone changes his
+	 * mind again.
+	 */
+#if 0
+#define INVOKE(func,buf) __asm lea eax, buf __asm call func
+	INVOKE(sub_5F0FF4, buf);
+	INVOKE(sub_5EFB14, buf);
+	INVOKE(sub_5ECD08, buf);
+	INVOKE(sub_5F1D64, buf);
+	INVOKE(sub_5EEAD0, buf);
+	INVOKE(sub_5F01D8, buf);
+	INVOKE(sub_5F251C, buf);
+	INVOKE(sub_5F0C40, buf);
+	INVOKE(sub_5F2F54, buf);
+	INVOKE(sub_5ED4C0, buf);
+	INVOKE(sub_5F05C4, buf);
+	INVOKE(sub_5F3744, buf);
+	INVOKE(sub_5F45FC, buf);
+	INVOKE(sub_5EC6A0, buf);
+	INVOKE(sub_5F1878, buf);
+	INVOKE(sub_5EDE08, buf);
+	INVOKE(sub_5EE220, buf);
+	INVOKE(sub_5EF3AC, buf);
+	INVOKE(sub_5F3E8C, buf);
+	INVOKE(sub_5F2828, buf);
+#undef INVOKE
+#endif
+
+	/* Create nonce from buffer. */
+	if (!(nonce = malloc (sizeof (as_uint8) * 20)))
+		return NULL;
+
+	as_sha1_init (&sha1_state);
+	as_sha1_update (&sha1_state, buf, buf_len);
+	as_sha1_final (&sha1_state, nonce);
 
 	return nonce;
 }

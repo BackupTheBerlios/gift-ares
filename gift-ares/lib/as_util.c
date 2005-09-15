@@ -1,5 +1,5 @@
 /*
- * $Id: as_util.c,v 1.2 2004/12/04 14:11:27 mkern Exp $
+ * $Id: as_util.c,v 1.3 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,6 +21,7 @@ as_bool net_ip_routable (in_addr_t ip)
 	    ((ip & 0xffff0000) == 0xc0a80000) || /* 192.168.0.0 */
 	    ((ip & 0xfff00000) == 0xac100000) || /* 172.16-31.0.0 */
 	    ((ip & 0xff000000) == 0x0a000000) || /* 10.0.0.0 */
+	    ((ip & 0xE0000000) == 0xE0000000) || /* Classes D,E,F */
 		(ip == 0) ||
 		(ip == INADDR_NONE)) /* invalid ip */
 	{

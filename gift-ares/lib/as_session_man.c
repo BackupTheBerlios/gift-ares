@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.34 2004/12/24 11:27:57 mkern Exp $
+ * $Id: as_session_man.c,v 1.35 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -358,6 +358,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		break;
 
 	case PACKET_NODELIST:
+	case PACKET_NODELIST2:
 		/* FIXME */
 		break;
 	case PACKET_SUPERINFO:

@@ -1,5 +1,5 @@
 /*
- * $Id: as_node_man.c,v 1.15 2004/12/24 11:27:57 mkern Exp $
+ * $Id: as_node_man.c,v 1.16 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -92,6 +92,9 @@ void as_nodeman_free (ASNodeMan *man)
 
 	as_nodeman_empty (man);
 
+	/* free hashtable */
+	as_hashtable_free (man->index, FALSE);
+
 	free (man);
 }
 
@@ -111,8 +114,16 @@ void as_nodeman_empty (ASNodeMan *man)
 	/* remove index */
 	as_hashtable_free (man->index, FALSE);
 
+	/* recreate emtpy index */
+	man->index = as_hashtable_create_int ();
+	assert (man->index); /* hmm */
+
 	/* free nodes */
-	list_foreach_remove (man->nodes, (ListForeachFunc)node_free_itr, &used);
+	man->nodes = list_foreach_remove (man->nodes,
+	                                  (ListForeachFunc)node_free_itr, &used);
+
+	man->oldest_first_seen = time (NULL);
+	man->oldest_last_seen = time (NULL);
 
 	if (used > 0)
 		AS_WARN_1 ("%d nodes still in use when emptying node cache", used);

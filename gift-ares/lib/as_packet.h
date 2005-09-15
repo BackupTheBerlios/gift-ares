@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.19 2004/10/20 17:47:28 HEx Exp $
+ * $Id: as_packet.h,v 1.20 2005/09/15 21:13:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -26,27 +26,32 @@ typedef struct as_packet_t
 typedef enum
 {
 	/* unencrypted */
-	PACKET_NODE_REQ   = 70, /* 0x46, request nodes from index node */
-	PACKET_SYN        = 90, /* 0x5A, first packet sent by connecting party */
+	PACKET_NODE_REQ    = 70, /* 0x46, request nodes from index node */
+	PACKET_SYN         = 90, /* 0x5A, first packet sent by connecting party */
 
 	/* otherwise specially handled */
-	PACKET_COMPRESSED = 50, /* 0x32, zlib compression encapsulation layer */
-	PACKET_ACK        = 51, /* 0x33, first packet sent back by supernode */
-	PACKET_PUSH2      = 7,  /* 0x07, push request */
+	PACKET_COMPRESSED  = 50, /* 0x32, zlib compression encapsulation layer */
+	PACKET_ACK         = 51, /* 0x33, first packet sent back by supernode */
+	PACKET_ACK2        = 56, /* 0x38, new ACK packet in Ares 2962 */
+	PACKET_PUSH2       = 7,  /* 0x07, push request */
 
 	/* encrypted */
-	PACKET_HANDSHAKE  = 0,  /* 0x00, info about our node */
-	PACKET_STATS      = 1,  /* 0x01, network stats 1 */
-	PACKET_STATS2     = 30, /* 0x1E, network stats 2 */
-	PACKET_LOCALIP    = 37, /* 0x25, local (external) IP */
-	PACKET_NICKNAME   = 5,  /* 0x05, your nickname */
-	PACKET_SHARE      = 28, /* 0x1C, used to send shares to supernode */
-	PACKET_SEARCH     = 9,  /* 0x09, token search */
-	PACKET_LOCATE     = 80, /* 0x50, hash search */
-	PACKET_RESULT     = 18, /* 0x12, search result */
-	PACKET_NODELIST   = 54, /* 0x36, list of index nodes? */
-	PACKET_PUSH       = 8,  /* 0x08, push request */
-	PACKET_SUPERINFO  = 58, /* 0x3a, info about this supernode? */
+	PACKET_HANDSHAKE   = 0,  /* 0x00, info about our node */
+	PACKET_STATS       = 1,  /* 0x01, network stats 1 */
+	PACKET_STATS2      = 30, /* 0x1E, network stats 2 */
+	PACKET_LOCALIP     = 37, /* 0x25, local (external) IP */
+	PACKET_NICKNAME    = 5,  /* 0x05, your nickname */
+	PACKET_SHARE       = 28, /* 0x1C, used to send shares to supernode */
+	PACKET_SEARCH      = 9,  /* 0x09, token search */
+	PACKET_LOCATE      = 80, /* 0x50, hash search */
+	PACKET_LOCALT_STOP = 81, /* 0x51, seems to be sent when download is
+	                          *       cancelled to stop supernode from sending
+							  *       more locate results */
+	PACKET_RESULT      = 18, /* 0x12, search result */
+	PACKET_NODELIST    = 54, /* 0x36, list of index nodes? */
+	PACKET_NODELIST2   = 55, /* 0x37, replaces PACKET_NODELIST in Ares 2962 */
+	PACKET_PUSH        = 8,  /* 0x08, push request */
+	PACKET_SUPERINFO   = 58, /* 0x3a, info about this supernode? */
 } ASPacketType;
 
 typedef enum
