@@ -45,6 +45,7 @@ LIBARES_OBJECTS = \
 	$(LIBARES_DIR)as_share.o \
 	$(LIBARES_DIR)as_share_man.o \
 	$(LIBARES_DIR)as_push.o \
+	$(LIBARES_DIR)as_push_reply.o \
 	$(LIBARES_DIR)as_push_man.o \
 	$(LIBARES_DIR)as_upload.o \
 	$(LIBARES_DIR)as_upload_man.o \
