@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.11 2005/02/28 14:19:15 mkern Exp $
+ * $Id: as_meta.h,v 1.12 2005/10/04 23:04:38 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -69,7 +69,8 @@ typedef enum
 	TAG_YEAR      = 6,
 	TAG_CODEC     = 7,
 	TAG_KEYWORDS  = 15, /* verify */
-	TAG_FILENAME  = 16
+	TAG_FILENAME  = 16,
+	TAG_UNK_HASH  = 19  /* base64-encoded 20-byte hash... but of what? */
 } ASTagType2;
 
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.c,v 1.18 2005/02/28 14:19:15 mkern Exp $
+ * $Id: as_meta.c,v 1.19 2005/10/04 23:04:38 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,6 +29,7 @@ static const ASTagMapping2 tag_types_2[] = {
 	{ "year",      TAG_YEAR,       FALSE },
 	{ "codec",     TAG_CODEC,      FALSE },
 	{ "keywords",  TAG_KEYWORDS,   TRUE  },
+	{ "unk_hash",  TAG_UNK_HASH,   FALSE },
 	{ "filename",  TAG_FILENAME,   FALSE } /* yes, really FALSE :( */
 };
 
