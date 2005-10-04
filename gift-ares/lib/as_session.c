@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.41 2005/09/15 21:24:52 mkern Exp $
+ * $Id: as_session.c,v 1.42 2005/10/04 23:12:53 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -414,7 +414,8 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 		as_packet_free (packet);
 		return FALSE;
 	}
-	as_packet_put_ustr (packet, nonce, 22); /* WTF? nonce2 is only 20 bytes? */
+	as_packet_put_ustr (packet, nonce, 20); /* WTF? nonce2 is only 20 bytes? */
+	as_packet_put_le16 (packet, 0);
 	free (nonce);
 
 	if (AS->upman)
@@ -552,6 +553,16 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		 */
 		as_nodeman_update_reported (AS->nodeman, host, port);
 	}
+
+		if (type == PACKET_ACK) {
+			session_error (session);
+			free (supernode_guid);
+/*
+			session_cleanup (session);
+			session_set_state (session, SESSION_DISCONNECTED, TRUE);
+*/
+			return FALSE;
+		}
 
 #if 0	
 	if (children > 350)
