@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.42 2005/10/04 23:12:53 hex Exp $
+ * $Id: as_session.c,v 1.43 2005/10/06 14:28:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -235,9 +235,9 @@ static void session_connected (int fd, input_id input, ASSession *session)
 	}
 
 	/* packet body */
-	as_packet_put_8 (packet, 0x04);
-	as_packet_put_8 (packet, 0x03);
-	as_packet_put_8 (packet, 0x05);
+	as_packet_put_8 (packet, 0x04); /* randomized by ares */
+	as_packet_put_8 (packet, 0x03); /* randomized by ares */
+	as_packet_put_8 (packet, 0x05); /* hardcoded to 0x05 by ares */
 
 	if (!as_session_send (session, PACKET_SYN, packet, PACKET_PLAIN))
 	{
@@ -392,39 +392,46 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 	 * whether we are a legitimate client. The first nonce is used by Ares
 	 * versions prior to 2962 and sent in response to PACKET_ACK (0x33). The
 	 * second is used in Ares 2962 and later and sent in response to
-	 * PACKET_ACK2 (0x38). Calculation of the later is slightly more complex
-	 * as can be seen in as_crypt_boring.c.
+	 * PACKET_ACK2 (0x38). Calculation of the later nonce required almost 1 MB
+	 * of code in Ares but was removed when Ares went open source. It is now
+	 * sufficient to simply randomize the nonce.
 	 */
 	if (type == PACKET_ACK)
 	{
 		/* hardcoded zero byte (only if original nonce is used) */
 		as_packet_put_8 (packet, 0x00);
 		/* 22 byte nonce created from supernode guid */
-		nonce = as_cipher_nonce (session->cipher, supernode_guid);
+		if(!(nonce = as_cipher_nonce (session->cipher, supernode_guid))
+		{
+			AS_ERR ("Handshake nonce creation failed");
+			as_packet_free (packet);
+			return FALSE;
+		}
+	
+		as_packet_put_ustr (packet, nonce, 22);
 	}
 	else if (type == PACKET_ACK2)
 	{
 		/* 20 byte nonce2 created from supernode guid */
-		nonce = as_cipher_nonce2 (supernode_guid);
+		if(!(nonce = as_cipher_nonce2 (supernode_guid))
+		{
+			AS_ERR ("Handshake nonce2 creation failed");
+			as_packet_free (packet);
+			return FALSE;
+		}
+
+		as_packet_put_ustr (packet, nonce, 20);
 	}
 
-	if (!nonce)
-	{
-		AS_ERR ("Handshake nonce creation failed");
-		as_packet_free (packet);
-		return FALSE;
-	}
-	as_packet_put_ustr (packet, nonce, 20); /* WTF? nonce2 is only 20 bytes? */
-	as_packet_put_le16 (packet, 0);
 	free (nonce);
 
 	if (AS->upman)
 	{
 		/* FIXME: These values are not accurate if queuing is done by giFT */
-		as_packet_put_le16 (packet, 0); /* unknown */
+		as_packet_put_le16 (packet, 0); /* 'my_speed' */
 		as_packet_put_8 (packet, (as_uint8)AS->upman->nuploads);
 		as_packet_put_8 (packet, (as_uint8)AS->upman->max_active);
-		as_packet_put_8 (packet, (as_uint8)0); /* unknown */
+		as_packet_put_8 (packet, (as_uint8)0); /* 'proxy_count' */
 		as_packet_put_8 (packet, (as_uint8)AS->upman->nqueued);
 	}
 	else
@@ -554,15 +561,17 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		as_nodeman_update_reported (AS->nodeman, host, port);
 	}
 
-		if (type == PACKET_ACK) {
-			session_error (session);
-			free (supernode_guid);
-/*
-			session_cleanup (session);
-			session_set_state (session, SESSION_DISCONNECTED, TRUE);
-*/
-			return FALSE;
-		}
+#if 1
+	/* Don't connect to older nodes for testing (but still use them to
+	 * get new IPs).
+	 */
+	if (type == PACKET_ACK)
+	{
+		session_error (session);
+		free (supernode_guid);
+		return FALSE;
+	}
+#endif
 
 #if 0	
 	if (children > 350)

@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.28 2005/09/15 21:13:53 mkern Exp $
+# $Id: Makefile.msvc,v 1.29 2005/10/06 14:28:24 mkern Exp $
 
 
 !include ../Make.msvc
@@ -30,7 +30,6 @@ OBJECTS = \
 	as_util$(O) \
 	as_config$(O) \
 	as_crypt$(O) \
-#	as_crypt_boring$(O) \
 	as_packet$(O) \
 	as_sha1$(O) \
 	as_hash$(O) \

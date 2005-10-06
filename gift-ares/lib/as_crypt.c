@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.16 2005/09/15 21:13:53 mkern Exp $
+ * $Id: as_crypt.c,v 1.17 2005/10/06 14:28:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -8,10 +8,6 @@
  */
 
 #include "as_ares.h"
-
-#if 0 /* see comment in as_cipher_nonce2 below */
-#include "as_crypt_boring.h"
-#endif
 
 /*****************************************************************************/
 
