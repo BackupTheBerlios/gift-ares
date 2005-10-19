@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.11 2005/09/15 21:13:53 mkern Exp $
+ * $Id: as_crypt.h,v 1.12 2005/10/19 01:58:34 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -94,6 +94,14 @@ void as_encrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
 
 void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
                               as_uint8 seed_8);
+
+/* FIXME */
+#include "as_packet.h"
+ASPacket *as_encrypt_transfer (ASPacket *packet);
+ASPacket *as_encrypt_transfer_0a (ASPacket *packet);
+
+ASPacket *as_decrypt_transfer (ASPacket *packet);
+ASPacket *as_decrypt_transfer_0a (ASPacket *packet);
 
 /*****************************************************************************/
 

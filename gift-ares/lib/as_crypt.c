@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.17 2005/10/06 14:28:24 mkern Exp $
+ * $Id: as_crypt.c,v 1.18 2005/10/19 01:58:34 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -670,6 +670,51 @@ void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
 {
 	unmunge (data, len, (seed_16 - seed_8) + 0x0B, 0x310F, 0x3A4E);
 	unmunge (data, len, seed_16 + 0x0C, 0xCE6D, 0x58BF);
+}
+
+ASPacket *as_encrypt_transfer_0a (ASPacket *packet)
+{
+	ASPacket *p = as_packet_create();
+	unsigned long t = 0x123456;//rand()& 0xffffff;
+
+	as_packet_put_8 (p, rand() & 0xff);
+	as_packet_put_le32 (p, t);
+	as_packet_put_8 (p, 0);
+	as_packet_put_8 (p, 0x77);//rand() & 0xff);
+	as_packet_put_le16 (p, hash_lowered_token(p->data+1,4)+0x15);
+
+	munge (packet->data, packet->used, 0xb334, 0xce6d, 0x58bf);
+
+	as_packet_append (p, packet);
+	as_packet_free (packet);
+
+	munge (p->data, p->used, 0x15d9, 0x5ab3, 0x8d1e);
+	munge (p->data, p->used, 0x5f40, 0x310f, 0x3a4e);
+
+	return p;
+}
+
+ASPacket *as_encrypt_transfer (ASPacket *packet)
+{
+	ASPacket *p = as_packet_create();
+	int i;
+	int skip=(rand()%16)+8;
+	
+	as_packet_put_le16 (p, rand() &0xffff);
+	as_packet_put_8 (p, skip);
+	for (i=0; i<skip; i++)
+		as_packet_put_8 (p, rand() & 0xff);
+
+	as_packet_put_le16 (p, packet->used);
+
+	munge (packet->data, packet->used, 0x3faa, 0xd7fb, 0x3efd);
+
+	as_packet_append (p, packet);
+	as_packet_free (packet);
+
+	munge (p->data, p->used, 0xfd1c, 0x5ca0, 0x15ec);
+
+	return p;
 }
 
 /*****************************************************************************/
