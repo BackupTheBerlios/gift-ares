@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.43 2005/10/06 14:28:24 mkern Exp $
+ * $Id: as_session.c,v 1.44 2005/10/19 02:04:47 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -400,8 +400,10 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 	{
 		/* hardcoded zero byte (only if original nonce is used) */
 		as_packet_put_8 (packet, 0x00);
+
 		/* 22 byte nonce created from supernode guid */
-		if(!(nonce = as_cipher_nonce (session->cipher, supernode_guid))
+		nonce = as_cipher_nonce (session->cipher, supernode_guid);
+		if (!nonce)
 		{
 			AS_ERR ("Handshake nonce creation failed");
 			as_packet_free (packet);
@@ -413,7 +415,7 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 	else if (type == PACKET_ACK2)
 	{
 		/* 20 byte nonce2 created from supernode guid */
-		if(!(nonce = as_cipher_nonce2 (supernode_guid))
+		if (!(nonce = as_cipher_nonce2 (supernode_guid)))
 		{
 			AS_ERR ("Handshake nonce2 creation failed");
 			as_packet_free (packet);
