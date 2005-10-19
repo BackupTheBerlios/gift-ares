@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.35 2005/09/15 21:13:53 mkern Exp $
+ * $Id: as_session_man.c,v 1.36 2005/10/19 01:32:51 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -180,7 +180,13 @@ static as_bool sessman_maintain (ASSessMan *man)
 				/* FIXME: Use Ares http cache by adding download code to
 				 * node manager and calling it from here.
 				 */
-				AS_ERR ("Ran out of nodes");
+				
+				/* only warn if this is likely to be a
+				 * problem, to avoid confusion
+				 */
+				if (!man->connected)
+					AS_ERR ("Ran out of nodes");
+
 				return FALSE;	
 			}
 
