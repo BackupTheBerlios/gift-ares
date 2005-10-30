@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.1 2005/09/15 21:28:45 mkern Exp $
+ * $Id: main.c,v 1.2 2005/10/30 18:16:46 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -28,6 +28,7 @@ int parallel = 0;
 int ndown = 0;
 int nloaded = 0;
 const char *save_filename = NULL;
+List *sessions = NULL;
 
 static void crawl_next();
 
@@ -90,21 +91,34 @@ static as_bool session_state_cb (ASSession *session, ASSessionState new_state)
 
 		/* move to next supernode */
 		parallel--;
+		sessions = list_remove (sessions, session);
+		AS_HEAVY_DBG_2 ("CRAWLER: parallel now %d (%d) after connected decrement",
+		                parallel, list_length (sessions));
+		assert (parallel >= 0);
+		assert (parallel == list_length (sessions));
 		crawl_next ();
 		as_session_free (session);
 		return FALSE;
 
 	case SESSION_FAILED:
 		ndown++;
+		/* fall through */
 	case SESSION_DISCONNECTED:
 		AS_DBG_1 ("CRAWLER: Failed %s", net_ip_str (session->host));
 		parallel--;
+		sessions = list_remove (sessions, session);
+		AS_HEAVY_DBG_2 ("CRAWLER: parallel now %d (%d) after failure decrement",
+		                parallel, list_length (sessions));
+		assert (parallel >= 0);
+		assert (parallel == list_length (sessions));
 		crawl_next ();
 		as_session_free (session);
 		return FALSE;
+	default:
+		abort ();
 	};
 
-	abort();
+	abort ();
 }
 
 /*****************************************************************************/
@@ -133,10 +147,16 @@ static void crawl_next()
 		}
 
 		parallel++;
+		sessions = list_prepend (sessions, sess);
 		as_node_free (node);
 	}
 
-	if (!org_nodes && parallel <= 0)
+	AS_HEAVY_DBG_2 ("CRAWLER: parallel now %d (%d) after new connecting",
+	                parallel, list_length (sessions));
+	assert (parallel >= 0);
+	assert (parallel == list_length (sessions));
+
+	if (!org_nodes && parallel == 0)
 	{
 		if (!new_nodes)
 		{
@@ -144,7 +164,6 @@ static void crawl_next()
 			AS_DBG ("CRAWLER: No nodes were crawled successfully. Exiting with error level 1.");
 			exit (1);
 		}
-
 
 		/* we are finished. save new nodes. */
 		if (!(fp = fopen (save_filename, "wb")))
@@ -168,7 +187,7 @@ static void crawl_next()
 
 		fclose (fp);	
 		AS_DBG_1 ("CRAWLER: Saved %d nodes", saved);
-		AS_DBG_2 ("CRAWLER: %d of %d sourece nodes were down", ndown, nloaded);
+		AS_DBG_2 ("CRAWLER: %d of %d source nodes were down", ndown, nloaded);
 
 		as_event_quit ();
 		return;
