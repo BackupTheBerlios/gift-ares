@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.44 2005/10/19 02:04:47 hex Exp $
+ * $Id: as_session.c,v 1.45 2005/10/30 18:14:25 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -25,8 +25,10 @@ static as_bool session_set_state (ASSession *session, ASSessionState state,
 
 static as_bool session_error (ASSession *session);
 
+/* timer callbacks */
 static as_bool session_ping (ASSession *session);
 static as_bool session_ping_timeout (ASSession *session);
+static as_bool session_handshake_timeout (ASSession *session);
 
 /*****************************************************************************/
 
@@ -50,8 +52,9 @@ ASSession *as_session_create (ASSessionStateCb state_cb,
 	session->packet_cb  = packet_cb;
 	session->udata      = NULL;
 	session->search_id  = 0;
-	session->ping_timer = 0;
-	session->pong_timer = 0;
+	session->ping_timer      = INVALID_TIMER;
+	session->pong_timer      = INVALID_TIMER;
+	session->handshake_timer = INVALID_TIMER;
 
 	return session;
 }
@@ -61,6 +64,7 @@ static void session_cleanup (ASSession *session)
 	input_remove (session->input);
 	timer_remove_zero (&session->ping_timer);
 	timer_remove_zero (&session->pong_timer);
+	timer_remove_zero (&session->handshake_timer);
 
 	tcp_close (session->c);
 	as_cipher_free (session->cipher);
@@ -254,8 +258,16 @@ static void session_connected (int fd, input_id input, ASSession *session)
 
 	/* wait for supernode handshake packet */
 	session->input = input_add (session->c->fd, session, INPUT_READ, 
-	                            (InputCallback)session_get_packet,
-	                            AS_SESSION_HANDSHAKE_TIMEOUT);
+	                            (InputCallback)session_get_packet, 0);
+
+	/* Add explicit handshake timeout since the input timeout is removed once
+	 * the first data has arrived. Since that may not be the entire handshake
+	 * packet we can be made to wait indefinitely by the supernode without an
+	 * separate timeout.
+	 */
+	session->handshake_timer = timer_add (AS_SESSION_HANDSHAKE_TIMEOUT,
+	                               (TimerCallback)session_handshake_timeout,
+	                               session);
 
 	return;
 }
@@ -609,11 +621,15 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		      net_ip_str (session->host), session->port, (int)type,
 			  (int)seed_16, (int)seed_8);
 
+
+	/* remove handshake timeout */
+	timer_remove_zero (&session->handshake_timer);
+
 	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
 		return FALSE; /* session was freed */
 
 	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
-					 (TimerCallback)session_ping, session);
+	                                 (TimerCallback)session_ping, session);
 
 	return TRUE;
 }
@@ -648,7 +664,7 @@ static as_bool session_ping (ASSession *session)
 
 	as_packet_free (p);
 
-	assert (!session->pong_timer);
+	assert (session->pong_timer == INVALID_TIMER);
 	session->pong_timer = timer_add (AS_SESSION_PING_TIMEOUT,
 	                                 (TimerCallback)session_ping_timeout,
 	                                 session);
@@ -660,6 +676,17 @@ static as_bool session_ping (ASSession *session)
 static as_bool session_ping_timeout (ASSession *session)
 {
 	AS_ERR_2 ("Ping timeout for %s:%d",
+	          net_ip_str (session->host), session->port);
+
+	session_error (session); /* callback may free us */
+
+	return FALSE;
+}
+
+/* we connected but didn't get a full handshake: disconnect */
+static as_bool session_handshake_timeout (ASSession *session)
+{
+	AS_ERR_2 ("Handshake timeout for %s:%d",
 	          net_ip_str (session->host), session->port);
 
 	session_error (session); /* callback may free us */
