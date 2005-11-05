@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.h,v 1.7 2004/12/20 12:22:58 mkern Exp $
+ * $Id: as_share_man.h,v 1.8 2005/11/05 20:12:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -39,6 +39,9 @@ as_bool as_shareman_add (ASShareMan *man, ASShare *share);
 
 /* Remove and free share with specified hash. */
 as_bool as_shareman_remove (ASShareMan *man, ASHash *hash);
+
+/* Remove and free all shares. */
+void as_shareman_remove_all (ASShareMan *man);
 
 /* Lookup share by file hash. */
 ASShare *as_shareman_lookup (ASShareMan *man, ASHash *hash);

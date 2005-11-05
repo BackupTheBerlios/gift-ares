@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.15 2004/12/24 16:30:18 mkern Exp $
+ * $Id: as_share_man.c,v 1.16 2005/11/05 20:12:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -29,7 +29,6 @@ ASShareMan *as_shareman_create (void)
 static int free_share (ASShare *share, void *udata)
 {
 	as_share_free (share);
-
 	return TRUE;
 }
 
@@ -101,6 +100,16 @@ as_bool as_shareman_remove (ASShareMan *man, ASHash *hash)
 	man->shares = list_remove_link (man->shares, link);
 
 	return TRUE;
+}
+
+/* Remove and free all shares. */
+void as_shareman_remove_all (ASShareMan *man)
+{
+	as_hashtable_free (man->table, FALSE);
+	man->table = as_hashtable_create_mem (FALSE);
+
+	list_foreach_remove (man->shares, (ListForeachFunc)free_share, NULL);
+	man->shares = NULL;
 }
 
 /* Lookup share by file hash. */
