@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.2 2005/10/30 18:16:46 mkern Exp $
+ * $Id: main.c,v 1.3 2005/11/05 20:15:14 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -266,7 +266,7 @@ int main (int argc, char *argv[])
 	/* init lib */
 	if (!as_init ())
 	{
-		printf ("FATA: as_init() failed\n");
+		printf ("FATAL: as_init() failed\n");
 		exit (1);
 	}
 
