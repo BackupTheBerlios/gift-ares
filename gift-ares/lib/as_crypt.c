@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.18 2005/10/19 01:58:34 hex Exp $
+ * $Id: as_crypt.c,v 1.19 2005/11/08 14:39:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -345,6 +345,54 @@ void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
 	unmunge (data, len, key, 0xCE6D, 0x58BF);
 }
 
+/* Encrypt entire packet using cipher. This will add the two bytes of seed
+ * to the beginning of the packet.
+ */
+as_bool as_cipher_encrypt_packet (ASCipher *cipher, ASPacket *packet)
+{
+	as_uint8 seed_a = 0x00; /* always use zero for out packet seeds */
+	as_uint8 seed_b = 0x00;
+
+	/* encrypt packet with choosen seeds */
+	as_cipher_encrypt (cipher, seed_a, packet->data, as_packet_size (packet));
+
+	/* make enough room for seeds */
+	if (!as_packet_resize (packet, as_packet_size (packet) + 2))
+		return FALSE;
+
+	/* move data towards end by two bytes */
+	memmove (packet->data + 2, packet->data, as_packet_size (packet));
+	packet->used += 2;
+
+	/* add seeds at front */
+	packet->data[0] = seed_a;
+	packet->data[1] = seed_b;
+
+	return TRUE;
+}
+
+/* Decrypt entire packet using cipher. This will remove the two bytes of seed
+ * at the beginning of the packet.
+ */
+as_bool as_cipher_decrypt_packet (ASCipher *cipher, ASPacket *packet)
+{
+	as_uint8 seed_a, seed_b;
+
+	if (as_packet_remaining (packet) < 3)
+		return FALSE;
+
+	/* read packet seeds an remove them from packet */
+	seed_a = as_packet_get_8 (packet);
+	seed_b = as_packet_get_8 (packet);
+	as_packet_truncate (packet);
+
+	/* decrypt packet using first seed */
+	as_cipher_decrypt (cipher, seed_a, packet->read_ptr,
+	                   as_packet_remaining (packet));
+
+	return TRUE;
+}
+
 /* encrypt/decrypt a block of data with handshake key */
 void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len)
 {
@@ -672,49 +720,207 @@ void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
 	unmunge (data, len, seed_16 + 0x0C, 0xCE6D, 0x58BF);
 }
 
-ASPacket *as_encrypt_transfer_0a (ASPacket *packet)
+/*****************************************************************************/
+
+/* encrypt/decrypt binary transfer requests */
+as_bool as_encrypt_transfer_0a (ASPacket *packet)
 {
-	ASPacket *p = as_packet_create();
-	unsigned long t = 0x123456;//rand()& 0xffffff;
+	as_uint16 payload_len = as_packet_size (packet);
+	/* Ares uses milliseconds since system start for ticks. Simulate a
+	 * reasonable value (1-6 hours) */
+	as_uint32 ticks = 3600000 + (as_uint32)(18000000.0*rand()/(RAND_MAX+1.0));
+	as_uint16 ticks_hash;
 
-	as_packet_put_8 (p, rand() & 0xff);
-	as_packet_put_le32 (p, t);
-	as_packet_put_8 (p, 0);
-	as_packet_put_8 (p, 0x77);//rand() & 0xff);
-	as_packet_put_le16 (p, hash_lowered_token(p->data+1,4)+0x15);
+	/* make enough room for header */
+	if (!as_packet_resize (packet, payload_len + 9))
+		return FALSE;
 
-	munge (packet->data, packet->used, 0xb334, 0xce6d, 0x58bf);
+	/* move data towards end by 9 bytes */
+	memmove (packet->data + 9, packet->data, payload_len);
+	packet->used += 9;
 
-	as_packet_append (p, packet);
-	as_packet_free (packet);
+	/* add header */
+	packet->data[0] = rand () % 0x100;
+	packet->data[1] = ticks & 0xFF;          /* little endian */
+	packet->data[2] = (ticks >> 8) & 0xFF;
+	packet->data[3] = (ticks >> 16) & 0xFF;
+	packet->data[4] = (ticks >> 24) & 0xFF;
+	packet->data[5] = 0x00; /* hardcoded in Ares */
+	packet->data[6] = rand () % 0x100;
 
-	munge (p->data, p->used, 0x15d9, 0x5ab3, 0x8d1e);
-	munge (p->data, p->used, 0x5f40, 0x310f, 0x3a4e);
+	ticks_hash = hash_lowered_token (packet->data + 1, 4) + 0x15;
+	packet->data[7] = ticks_hash & 0xFF; /* littel endian */
+	packet->data[8] = ticks_hash >> 8;
 
-	return p;
+	/* munge payload */
+	munge (packet->data + 9, payload_len, 0xb334, 0xce6d, 0x58bf);
+
+	/* munge entire packet */
+	munge (packet->data, packet->used, 0x15d9, 0x5ab3, 0x8d1e);
+	munge (packet->data, packet->used, 0x5f40, 0x310f, 0x3a4e);
+
+	return TRUE;
 }
 
-ASPacket *as_encrypt_transfer (ASPacket *packet)
+as_bool as_decrypt_transfer_0a (ASPacket *packet)
 {
-	ASPacket *p = as_packet_create();
+	as_uint32 ticks;
+	as_uint16 ticks_hash;
+
+	/* remove stuff which may lead us in packet */
+	as_packet_truncate (packet);
+
+	/* unmunge entire packet */
+	unmunge (packet->data, packet->used, 0x5f40, 0x310f, 0x3a4e);
+	unmunge (packet->data, packet->used, 0x15d9, 0x5ab3, 0x8d1e);
+
+	if (as_packet_remaining (packet) < 9)
+		return FALSE;
+
+	/* read header */
+	as_packet_get_8 (packet); /* random */
+	ticks = as_packet_get_le32 (packet);
+	as_packet_get_8 (packet); /* 0x00 */
+	as_packet_get_8 (packet); /* random */
+	ticks_hash = as_packet_get_le16 (packet);
+
+	/* TODO: check if ticks_hash is correct? */
+
+	/* remove header */
+	as_packet_truncate (packet);
+
+	/* unmunge payload */
+	unmunge (packet->data, packet->used, 0xb334, 0xce6d, 0x58bf);
+
+	return TRUE;
+}
+
+as_bool as_encrypt_transfer_request (ASPacket *packet)
+{
+	as_uint8 i;
+	as_uint8 skip = 1 + (rand () % 16); /* Ares does 1 + (rand() % 16) */
+	as_uint16 payload_len = as_packet_size (packet);
+
+	/* make enough room for header */
+	if (!as_packet_resize (packet, payload_len + 5 + skip))
+		return FALSE;
+
+	/* move data towards end by 3 + skip + 2 bytes */
+	memmove (packet->data + 5 + skip, packet->data, payload_len);
+	packet->used += 5 + skip;
+
+	/* add header */
+	packet->data[0] = rand () % 0x100;
+	packet->data[1] = rand () % 0x100;
+
+	for (i = 0; i < skip; i++)
+		packet->data[2 + i] = rand () % 0x100;
+
+	packet->data[2 + skip + 0] = payload_len & 0xFF; /* little endian */
+	packet->data[2 + skip + 1] = payload_len >> 8;
+
+	/* munge payload */
+	munge (packet->data + 5 + skip, payload_len, 0x3faa, 0xd7fb, 0x3efd);
+
+	/* munge entire packet */
+	munge (packet->data, packet->used, 0x5d1c, 0x5ca0, 0x15ec);
+
+	return TRUE;
+}
+
+as_bool as_decrypt_transfer_request (ASPacket *packet)
+{
+	as_uint8 i, skip;
+	as_uint16 payload_len;
+
+	/* remove stuff which may lead us in packet */
+	as_packet_truncate (packet);
+
+	/* unmunge entire packet */
+	unmunge (packet->data, packet->used, 0x5d1c, 0x5ca0, 0x15ec);
+
+	if (as_packet_remaining (packet) < 6)
+		return FALSE;
+
+	/* read header */
+	as_packet_get_le16 (packet); /* random */
+	skip = as_packet_get_8 (packet);
+
+	if (as_packet_remaining (packet) < skip + 2)
+		return FALSE;
+
+	for (i = 0; i < skip; i++)
+		as_packet_get_8 (packet); /* random */
+
+	payload_len = as_packet_get_le16 (packet);
+
+	if (as_packet_remaining (packet) < payload_len)
+		return FALSE;
+
+	/* remove header */
+	as_packet_truncate (packet);
+
+	/* unmunge payload */
+	unmunge (packet->data, packet->used, 0x3faa, 0xd7fb, 0x3efd);
+
+	return TRUE;
+}
+
+/* encrypt/decrypt transfer replies */
+as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 key)
+{
+	as_uint8 i;
+	as_uint8 skip = 1 + (rand () % 16); /* Ares does 1 + (rand() % 16) */
+	as_uint16 payload_len = as_packet_size (packet);
+
+	/* make enough room for header */
+	if (!as_packet_resize (packet, payload_len + 3 + skip))
+		return FALSE;
+
+	/* move data towards end by 3 + skip */
+	memmove (packet->data + 3 + skip, packet->data, payload_len);
+	packet->used += 3 + skip;
+
+	/* add header */
+	packet->data[0] = rand () % 0x100;
+	packet->data[1] = rand () % 0x100;
+	for (i = 0; i < skip; i++)
+		packet->data[2 + i] = rand () % 0x100;
+
+	/* munge entire packet */
+	munge (packet->data, packet->used, key, 0xCB6F, 0x41BA);
+
+	return TRUE;
+}
+
+as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 key)
+{
 	int i;
-	int skip=(rand()%16)+8;
-	
-	as_packet_put_le16 (p, rand() &0xffff);
-	as_packet_put_8 (p, skip);
-	for (i=0; i<skip; i++)
-		as_packet_put_8 (p, rand() & 0xff);
+	int skip;
 
-	as_packet_put_le16 (p, packet->used);
+	/* remove stuff which may lead us in packet */
+	as_packet_truncate (packet);
 
-	munge (packet->data, packet->used, 0x3faa, 0xd7fb, 0x3efd);
+	/* unmunge entire packet */
+	unmunge (packet->data, packet->used, key, 0xCB6F, 0x41BA);
 
-	as_packet_append (p, packet);
-	as_packet_free (packet);
+	if (as_packet_remaining (packet) < 3)
+		return FALSE;
 
-	munge (p->data, p->used, 0xfd1c, 0x5ca0, 0x15ec);
+	/* read header */
+	as_packet_get_le16 (packet); /* random */
+	skip = as_packet_get_8 (packet);
 
-	return p;
+	if (as_packet_remaining (packet) < skip)
+		return FALSE;
+
+	for (i = 0; i < skip; i++)
+		as_packet_get_8 (packet); /* random */
+
+	/* http header follows, remove binary header */
+	as_packet_truncate (packet);
+
+	return TRUE;
 }
 
 /*****************************************************************************/

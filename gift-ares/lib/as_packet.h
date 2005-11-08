@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.20 2005/09/15 21:13:53 mkern Exp $
+ * $Id: as_packet.h,v 1.21 2005/11/08 14:39:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -86,6 +86,9 @@ void as_packet_rewind(ASPacket *packet);
 /* removes everything from before read_ptr from packet */
 void as_packet_truncate(ASPacket *packet);
 
+/* increase size of packet so it can hold at least len bytes */
+as_bool as_packet_resize (ASPacket *packet, size_t len);
+
 /* returns size of entire packet */
 size_t as_packet_size(ASPacket* packet);
 
@@ -159,16 +162,6 @@ ASPacket *as_packet_slurp (void);
 
 /*****************************************************************************/
 
-/* Encrypt entire packet using cipher. This will add the two bytes of seed
- * to the beginning of the packet.
- */
-as_bool as_packet_encrypt (ASPacket *packet, ASCipher *cipher);
-
-/* Decrypt entire packet using cipher. This will remove the two bytes of seed
- * at the beginning of the packet.
- */
-as_bool as_packet_decrypt (ASPacket *packet, ASCipher *cipher);
-
 /* Compress packet with zlib */
 as_bool as_packet_compress (ASPacket *packet);
 
@@ -184,7 +177,5 @@ as_bool as_packet_send (ASPacket *packet, TCPC *tcpcon);
 as_bool as_packet_recv (ASPacket *packet, TCPC *tcpcon);
 
 /*****************************************************************************/
-
-void as_packet_dump(ASPacket *packet);
 
 #endif /* __AS_PACKET_H */

@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.66 2005/01/17 13:25:57 mkern Exp $
+ * $Id: as_ares.h,v 1.67 2005/11/08 14:39:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -122,8 +122,8 @@ typedef int            as_bool;
 #include "as_sha1.h"
 #include "as_encoding.h"
 #include "as_hash.h"
-#include "as_crypt.h"
 #include "as_packet.h"
+#include "as_crypt.h"
 #include "as_node.h"
 #include "as_node_man.h"
 #include "as_session.h"

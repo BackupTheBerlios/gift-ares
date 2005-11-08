@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.c,v 1.23 2005/02/01 19:53:09 hex Exp $
+ * $Id: as_packet.c,v 1.24 2005/11/08 14:39:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,7 +11,6 @@
 
 /*****************************************************************************/
 
-static as_bool packet_resize (ASPacket *packet, size_t len);
 static as_bool packet_write (ASPacket *packet, const void *data, size_t size);
 static as_bool packet_read (ASPacket *packet, void *data, size_t size);
 
@@ -60,7 +59,7 @@ as_bool as_packet_append(ASPacket *packet, ASPacket *append)
 
 as_bool as_packet_pad (ASPacket *packet, as_uint8 c, size_t count)
 {
-	if (!packet_resize (packet, packet->used + count))
+	if (!as_packet_resize (packet, packet->used + count))
 		return FALSE;
 
 	memset (packet->data + packet->used, c, count);
@@ -87,6 +86,41 @@ void as_packet_truncate(ASPacket *packet)
 	packet->used = remaining;
 }
 
+as_bool as_packet_resize (ASPacket *packet, size_t len)
+{
+	as_uint8 *new_mem;
+	size_t new_alloc, read_offset;
+
+	if (!packet)
+		return FALSE;
+
+	/* there is always space for no bytes */
+	if (len == 0)
+		return TRUE;
+
+	/* the buffer we have allocated is already large enough */
+	if (packet->allocated >= len)
+		return TRUE;
+
+	/* determine an appropriate resize length */
+	new_alloc = packet->allocated;
+	while (new_alloc < len)
+		new_alloc += 512;
+
+	read_offset = packet->read_ptr - packet->data;
+
+	/* gracefully fail if we are unable to resize the buffer */
+	if (!(new_mem = realloc (packet->data, new_alloc)))
+		return FALSE;
+
+	/* modify the packet structure to reflect this resize */
+	packet->data = new_mem;
+	packet->read_ptr = packet->data + read_offset;
+	packet->allocated = new_alloc;
+
+	return TRUE;
+}
+
 size_t as_packet_size(ASPacket* packet)
 {
 	return packet->used;
@@ -104,7 +138,7 @@ size_t as_packet_remaining(ASPacket* packet)
 
 as_bool as_packet_put_8 (ASPacket *packet, as_uint8 data)
 {
-	if (!packet_resize (packet, packet->used + sizeof (as_uint8)))
+	if (!as_packet_resize (packet, packet->used + sizeof (as_uint8)))
 		return FALSE;
 
 	packet->data[packet->used] = data;
@@ -115,7 +149,7 @@ as_bool as_packet_put_8 (ASPacket *packet, as_uint8 data)
 
 as_bool as_packet_put_le16 (ASPacket *packet, as_uint16 data)
 {
-	if (!packet_resize (packet, packet->used + sizeof (as_uint16)))
+	if (!as_packet_resize (packet, packet->used + sizeof (as_uint16)))
 		return FALSE;
 
 	packet->data[packet->used++] = data & 0xFF;
@@ -125,7 +159,7 @@ as_bool as_packet_put_le16 (ASPacket *packet, as_uint16 data)
 
 as_bool as_packet_put_be16 (ASPacket *packet, as_uint16 data)
 {
-	if (!packet_resize (packet, packet->used + sizeof (as_uint16)))
+	if (!as_packet_resize (packet, packet->used + sizeof (as_uint16)))
 		return FALSE;
 
 	packet->data[packet->used++] = data >> 8;
@@ -135,7 +169,7 @@ as_bool as_packet_put_be16 (ASPacket *packet, as_uint16 data)
 
 as_bool as_packet_put_le32 (ASPacket *packet, as_uint32 data)
 {
-	if (!packet_resize (packet, packet->used + sizeof (as_uint32)))
+	if (!as_packet_resize (packet, packet->used + sizeof (as_uint32)))
 		return FALSE;
 
 	packet->data[packet->used++] = data & 0xFF;
@@ -147,7 +181,7 @@ as_bool as_packet_put_le32 (ASPacket *packet, as_uint32 data)
 
 as_bool as_packet_put_be32 (ASPacket *packet, as_uint32 data)
 {
-	if (!packet_resize (packet, packet->used + sizeof (as_uint32)))
+	if (!as_packet_resize (packet, packet->used + sizeof (as_uint32)))
 		return FALSE;
 
 	packet->data[packet->used++] = (data >> 24) & 0xFF;
@@ -319,54 +353,6 @@ ASHash *as_packet_get_hash (ASPacket *packet)
 
 /*****************************************************************************/
 
-/* Encrypt entire packet using cipher. This will add the two bytes of seed
- * to the beginning of the packet.
- */
-as_bool as_packet_encrypt (ASPacket *packet, ASCipher *cipher)
-{
-	as_uint8 seed_a = 0x00; /* always use zero for out packet seeds */
-	as_uint8 seed_b = 0x00;
-
-	/* encrypt packet with choosen seeds */
-	as_cipher_encrypt (cipher, seed_a, packet->data, as_packet_size (packet));
-
-	/* make enough room for seeds */
-	if (!packet_resize (packet, as_packet_size (packet) + 2))
-		return FALSE;
-
-	/* move data towards end by two bytes */
-	memmove (packet->data + 2, packet->data, as_packet_size (packet));
-	packet->used += 2;
-
-	/* add seeds at front */
-	packet->data[0] = seed_a;
-	packet->data[1] = seed_b;
-
-	return TRUE;
-}
-
-/* Decrypt entire packet using cipher. This will remove the two bytes of seed
- * at the beginning of the packet.
- */
-as_bool as_packet_decrypt (ASPacket *packet, ASCipher *cipher)
-{
-	as_uint8 seed_a, seed_b;
-
-	if (as_packet_remaining (packet) < 3)
-		return FALSE;
-
-	/* read packet seeds an remove them from packet */
-	seed_a = as_packet_get_8 (packet);
-	seed_b = as_packet_get_8 (packet);
-	as_packet_truncate (packet);
-
-	/* decrypt packet using first seed */
-	as_cipher_decrypt (cipher, seed_a, packet->read_ptr,
-	                   as_packet_remaining (packet));
-
-	return TRUE;
-}
-
 as_bool as_packet_compress (ASPacket *packet)
 {
 	int ret;
@@ -387,7 +373,7 @@ as_bool as_packet_compress (ASPacket *packet)
 	ret = compress (buf, &len, packet->data, packet->used);
 
 	if (ret != Z_OK ||
-	    !packet_resize (packet, len))
+	    !as_packet_resize (packet, len))
 	{
 		free (buf);
 		return FALSE;
@@ -406,7 +392,7 @@ as_bool as_packet_header (ASPacket *packet, ASPacketType type)
 	int len;
 
 	/* make enough room for length and type */
-	if (!packet_resize (packet, as_packet_size (packet) + 3))
+	if (!as_packet_resize (packet, as_packet_size (packet) + 3))
 		return FALSE;
 
 	/* move data towards end by three bytes */
@@ -447,7 +433,7 @@ as_bool as_packet_recv (ASPacket *packet, TCPC *tcpcon)
 {
 	int ret;
 
-	packet_resize(packet, packet->used + 1024);
+	as_packet_resize(packet, packet->used + 1024);
 
 	ret = tcp_recv(tcpcon, packet->data + packet->used,
 	               packet->allocated - packet->used);
@@ -501,45 +487,9 @@ ASPacket *as_packet_slurp (void)
 
 /*****************************************************************************/
 
-/* make sure packet->mem is large enough to hold len bytes */
-static as_bool packet_resize (ASPacket *packet, size_t len)
-{
-	as_uint8 *new_mem;
-	size_t new_alloc, read_offset;
-
-	if (!packet)
-		return FALSE;
-
-	/* there is always space for no bytes */
-	if (len == 0)
-		return TRUE;
-
-	/* the buffer we have allocated is already large enough */
-	if (packet->allocated >= len)
-		return TRUE;
-
-	/* determine an appropriate resize length */
-	new_alloc = packet->allocated;
-	while (new_alloc < len)
-		new_alloc += 512;
-
-	read_offset = packet->read_ptr - packet->data;
-
-	/* gracefully fail if we are unable to resize the buffer */
-	if (!(new_mem = realloc (packet->data, new_alloc)))
-		return FALSE;
-
-	/* modify the packet structure to reflect this resize */
-	packet->data = new_mem;
-	packet->read_ptr = packet->data + read_offset;
-	packet->allocated = new_alloc;
-
-	return TRUE;
-}
-
 static as_bool packet_write (ASPacket *packet, const void *data, size_t size)
 {
-	if (!packet_resize (packet, packet->used + size))
+	if (!as_packet_resize (packet, packet->used + size))
 		return FALSE;
 
 	memcpy(packet->data + packet->used, data, size);
@@ -558,5 +508,3 @@ static as_bool packet_read(ASPacket *packet, void *data, size_t size)
 
 	return TRUE;
 }
-
-

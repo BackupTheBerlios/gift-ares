@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.12 2005/10/19 01:58:34 hex Exp $
+ * $Id: as_crypt.h,v 1.13 2005/11/08 14:39:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -44,6 +44,16 @@ void as_cipher_encrypt (ASCipher *cipher, as_uint8 packet_seed,
 
 void as_cipher_decrypt (ASCipher *cipher, as_uint8 packet_seed,
                         as_uint8 *data, int len);
+
+/* Encrypt entire packet using cipher. This will add the two bytes of seed
+ * to the beginning of the packet.
+ */
+as_bool as_cipher_encrypt_packet (ASCipher *cipher, ASPacket *packet);
+
+/* Decrypt entire packet using cipher. This will remove the two bytes of seed
+ * at the beginning of the packet.
+ */
+as_bool as_cipher_decrypt_packet (ASCipher *cipher, ASPacket *packet);
 
 /* encrypt/decrypt a block of data with handshake key */
 void as_cipher_encrypt_handshake (ASCipher *cipher, as_uint8 *data, int len);
@@ -95,13 +105,17 @@ void as_encrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
 void as_decrypt_login_string (as_uint8 *data, int len, as_uint16 seed_16,
                               as_uint8 seed_8);
 
-/* FIXME */
-#include "as_packet.h"
-ASPacket *as_encrypt_transfer (ASPacket *packet);
-ASPacket *as_encrypt_transfer_0a (ASPacket *packet);
+/*****************************************************************************/
 
-ASPacket *as_decrypt_transfer (ASPacket *packet);
-ASPacket *as_decrypt_transfer_0a (ASPacket *packet);
+/* encrypt/decrypt binary transfer requests */
+as_bool as_encrypt_transfer_0a (ASPacket *packet);
+as_bool as_decrypt_transfer_0a (ASPacket *packet);
+as_bool as_encrypt_transfer_request (ASPacket *packet);
+as_bool as_decrypt_transfer_request (ASPacket *packet);
+
+/* encrypt/decrypt transfer replies */
+as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 key);
+as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 key);
 
 /*****************************************************************************/
 

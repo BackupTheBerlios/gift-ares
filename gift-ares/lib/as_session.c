@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.45 2005/10/30 18:14:25 mkern Exp $
+ * $Id: as_session.c,v 1.46 2005/11/08 14:39:09 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -165,7 +165,7 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		else
 #endif
 		{
-			if (!as_packet_encrypt (body, session->cipher))
+			if (!as_cipher_encrypt_packet (session->cipher, body))
 			{
 				AS_ERR ("Encrypt failed");
 				return FALSE;
@@ -367,7 +367,7 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 		else
 		{
 			/* encrypted packet */
-			if (!as_packet_decrypt (packet, session->cipher))
+			if (!as_cipher_decrypt_packet (session->cipher, packet))
 			{
 				AS_ERR_3 ("Packet decrypt failed for type 0x%02X from %s:%d",
 				          (int)type, net_ip_str (session->host),
