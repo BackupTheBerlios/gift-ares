@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.20 2005/11/08 20:17:32 mkern Exp $
+ * $Id: as_upload.c,v 1.21 2005/11/08 20:58:17 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -190,7 +190,12 @@ as_bool as_upload_start (ASUpload *up)
 	if (upload_is_binary (up))
 	{
 		as_uint8 cmd, enc_branch = 0x01, reply_with_filesize = FALSE;
-		char *stats_string = NULL, *user_agent = NULL;
+		as_uint8 *stats_string = NULL;
+		char *user_agent = NULL;
+
+#if 0
+		as_packet_dump (up->binary_request);
+#endif
 
 		cmd = as_packet_get_8 (up->binary_request);
 		assert (cmd == 0x01); /* GET */
@@ -203,8 +208,8 @@ as_bool as_upload_start (ASUpload *up)
 
 			if (as_packet_remaining (up->binary_request) < len)
 			{
-				AS_ERR_1 ("Binary request from '%s' too short",
-				          net_ip_str (up->host));
+				AS_ERR_3 ("Binary request from '%s' too short. Type 0x%02x, len %d.",
+				          net_ip_str (up->host), type, len);
 				send_reply_error (up, FALSE);
 				return FALSE;
 			}
@@ -221,7 +226,7 @@ as_bool as_upload_start (ASUpload *up)
 				break;
 
 			case 0x02: /* username */
-				up->username = as_packet_get_strnul (up->binary_request);
+				up->username = as_packet_get_str (up->binary_request, len);
 				break;
 
 			case 0x05: /* whether to reply with file size */
@@ -229,19 +234,43 @@ as_bool as_upload_start (ASUpload *up)
 				break;
 
 			case 0x06: /* stats string */
-				stats_string = as_packet_get_strnul (up->binary_request);
+				stats_string = as_packet_get_ustr (up->binary_request, len);
 				break;
 
 			case 0x07: /* range */
 				up->start = as_packet_get_le32 (up->binary_request);
 				up->stop = as_packet_get_le32 (up->binary_request);
+				up->stop++; /* make range exclusive end ??? */
 				break;
 
 			case 0x09: /* client name and version */
-				user_agent = as_packet_get_strnul (up->binary_request);
+				user_agent = as_packet_get_str (up->binary_request, len);
 				break;
 
+			case 0x0a: /* encrypted stats */
+				up->binary_request->read_ptr += len;
+				break;
+
+			case 0x0b: /* 64 bit range fields */
+				up->binary_request->read_ptr += len;
+				break;
+
+			default:
+				/* skip unknown fields */
+				up->binary_request->read_ptr += len;
+				
 			}
+		}
+
+		if (enc_branch != 0x1)
+		{
+			AS_ERR_2 ("Upload request enc_branch not 0x01 but 0x%02x from %s",
+			          enc_branch, net_ip_str (up->host));
+			as_hash_free (hash);
+			free (user_agent);
+			free (stats_string);
+			send_reply_error (up, FALSE);
+			return FALSE;
 		}
 
 		if (!hash)
@@ -284,20 +313,19 @@ as_bool as_upload_start (ASUpload *up)
 
 			if (!i)
 				i = sscanf (range, "bytes %u-%u", &up->start, &up->stop);
-		
-			if (i == 1) /* only start specified */
-				up->stop = up->share->size;
-			else
-				up->stop++; /* make range exclusive end */
 
-			if (i == 0 || up->stop <= up->start ||
-			    up->start >= up->share->size || up->stop > up->share->size)
+			if (i == 0)
 			{
 				AS_ERR_2 ("Invalid range header '%s' from %s",
 				          range, net_ip_str (up->host));
 				send_reply_error (up, FALSE);
 				return FALSE;
 			}
+			
+			if (i == 1) /* only start specified */
+				up->stop = up->share->size;
+			else
+				up->stop++; /* make range exclusive end */
 		}
 		else
 		{
@@ -332,7 +360,6 @@ as_bool as_upload_start (ASUpload *up)
 
 	as_hash_free (hash);
 
-	up->stop++; /* make range exclusive end ??? */
 	if (up->stop <= up->start ||
 		up->start >= up->share->size || up->stop > up->share->size)
 	{
