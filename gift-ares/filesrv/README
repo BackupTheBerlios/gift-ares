@@ -1,0 +1,11 @@
+$Id: README,v 1.1 2005/11/08 21:12:06 mkern Exp $
+
+This is a simple file server for the Ares network.
+
+It consists of a hashing tool (asfilehasher) which recursively hashes a
+directory tree and creates a plain text file with share data.
+
+The file server itself (asfileserver) is a daemon which reads this shares file
+and simply serves up any of the files if it receives a request from an Ares
+client. The shares file is reloaded on HUP.
+

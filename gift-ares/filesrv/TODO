@@ -1,0 +1,5 @@
+$Id: TODO,v 1.1 2005/11/08 21:12:06 mkern Exp $
+
+- Write access log from server.
+
+- Does <max uploads> parameter actually work?
