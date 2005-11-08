@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.8 2005/09/01 08:15:14 hex Exp $
+ * $Id: sniff.c,v 1.9 2005/11/08 21:12:16 hex Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -423,7 +423,7 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				int skip;
 				int llen=(len > 512) ? 512 : len;
 				memcpy (tmpbuf, data, llen);
-				unmunge (tmpbuf, llen, 0xfd1c, 0x5ca0, 0x15ec);
+				unmunge (tmpbuf, llen, 0x5d1c, 0x5ca0, 0x15ec);
 				skip = tmpbuf[2];
 				if (len >= skip + 5) {
 					//fprintf(stderr, "%s maybe binary? llen=%d, skip=%d, strlen=%d len=%d\n", buf, llen, skip, tmpbuf[skip+3]+tmpbuf[skip+4]*256, len-skip-5);				
@@ -564,7 +564,7 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 			if (!server) {
 				/* now we know for sure, we can scribble on the real data */
 				int skip;
-				unmunge (data, len, 0xfd1c, 0x5ca0, 0x15ec);
+				unmunge (data, len, 0x5d1c, 0x5ca0, 0x15ec);
 				skip = data[2]+5;
 				unmunge (data+skip, len-skip, 0x3faa, 0xd7fb, 0x3efd);
 				c->enc_state_16 = data[skip+5]+data[skip+6]*256;
@@ -611,6 +611,12 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 							done=1;
 							break;
 						}
+					}
+					if (i==len) {
+					  fprintf(stderr, "%s encrypted HTTP reply? (key=%02x skip=%d):\n", buf, c->enc_state_16, skip);
+					  print_bin_data(data+skip, len-skip);
+					  read=len;
+					  done=1;
 					}
 //					if (i==len)
 //						fprintf(stderr, "[HTTP reply key=%02x skip=%d len=%d...],", c->enc_state_16, skip, len);
