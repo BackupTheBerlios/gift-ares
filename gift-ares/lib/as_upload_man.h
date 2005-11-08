@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.9 2004/12/05 01:53:57 hex Exp $
+ * $Id: as_upload_man.h,v 1.10 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -81,6 +81,11 @@ void as_upman_set_progress_cb (ASUpMan *man,
  * connection and request in all cases (even if no download is created).
  */
 ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req);
+
+/* Create and register a new upload from binary request. Takes ownership of
+ * connection and request in all cases (even if no download is created).
+ */
+ASUpload *as_upman_start_binary (ASUpMan *man, TCPC *c, ASPacket *req);
 
 /*****************************************************************************/
 

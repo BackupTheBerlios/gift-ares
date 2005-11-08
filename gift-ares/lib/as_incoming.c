@@ -1,5 +1,5 @@
 /*
- * $Id: as_incoming.c,v 1.9 2004/10/30 16:48:08 mkern Exp $
+ * $Id: as_incoming.c,v 1.10 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,6 +18,17 @@ int as_incoming_http (ASHttpServer *server, TCPC *tcpcon,
 	as_upman_start (AS->upman, tcpcon, request);
 
 	return TRUE; /* as_upman_start always handles connection and request */
+}
+
+/*****************************************************************************/
+
+int as_incoming_binary (ASHttpServer *server, TCPC *tcpcon, ASPacket *request)
+{
+	assert (AS->upman);
+	as_upman_start_binary (AS->upman, tcpcon, request);
+
+	return TRUE; /* as_upman_start_binary always handles connection and
+	              * request */
 }
 
 /*****************************************************************************/

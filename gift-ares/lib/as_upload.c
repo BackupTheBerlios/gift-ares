@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.19 2005/01/07 20:23:44 hex Exp $
+ * $Id: as_upload.c,v 1.20 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -27,6 +27,7 @@
 
 /*****************************************************************************/
 
+static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply);
 static as_bool send_reply_success (ASUpload *up);
 static as_bool send_reply_queued (ASUpload *up, int queue_pos,
                                   int queue_length);
@@ -48,7 +49,45 @@ static as_bool upload_set_state (ASUpload *up, ASUploadState state,
 	return TRUE;
 }
 
+static as_bool upload_is_binary (ASUpload *up)
+{
+	assert (!(up->request && up->binary_request));
+	assert (up->request || up->binary_request);
+	
+	return (up->binary_request != NULL);
+}
+
 /*****************************************************************************/
+
+static ASUpload *upload_new ()
+{
+	ASUpload *up;
+
+	if (!(up = malloc (sizeof (ASUpload))))
+		return NULL;
+
+	up->c = NULL;
+	up->host = INADDR_NONE;
+	up->username = NULL;
+	up->request = NULL;
+	up->binary_request = NULL;
+	up->enc_key = 0;
+	up->share = NULL;
+	up->file = NULL;
+	up->start = up->stop = up->sent = 0;
+	up->input = INVALID_INPUT;
+	
+	up->state = UPLOAD_NEW;
+	up->state_cb = NULL;
+	up->auth_cb = NULL;
+	up->data_cb = NULL;
+	up->throttle_cb = NULL;
+
+	up->upman = NULL;
+	up->udata = NULL;
+
+	return up;
+}
 
 /* Create new upload from HTTP request. Takes ownership of tcp connection and
  * request object if successful.
@@ -61,27 +100,39 @@ ASUpload *as_upload_create (TCPC *c, ASHttpHeader *request,
 
 	assert (c);
 	assert (request);
-	
-	if (!(up = malloc (sizeof (ASUpload))))
+
+	if (!(up = upload_new ()))
 		return NULL;
 
 	up->c = c;
 	up->host = up->c->host;
-	up->username = NULL;
 	up->request = request;
-	up->share = NULL;
-	up->file = NULL;
-	up->start = up->stop = up->sent = 0;
-	up->input = INVALID_INPUT;
-	
-	up->state = UPLOAD_NEW;
 	up->state_cb = state_cb;
 	up->auth_cb = auth_cb;
-	up->data_cb = NULL;
-	up->throttle_cb = NULL;
 
-	up->upman = NULL;
-	up->udata = NULL;
+	return up;
+}
+
+/* Create new upload from binary request. Takes ownership of tcp connection and
+ * request object if successful.
+ */
+ASUpload *as_upload_create_binary (TCPC *c, ASPacket *request,
+                                   ASUploadStateCb state_cb,
+                                   ASUploadAuthCb auth_cb)
+{
+	ASUpload *up;
+
+	assert (c);
+	assert (request);
+
+	if (!(up = upload_new ()))
+		return NULL;
+
+	up->c = c;
+	up->host = up->c->host;
+	up->binary_request = request;
+	up->state_cb = state_cb;
+	up->auth_cb = auth_cb;
 
 	return up;
 }
@@ -96,6 +147,7 @@ void as_upload_free (ASUpload *up)
 	tcp_close_null (&up->c);
 
 	as_http_header_free (up->request);
+	as_packet_free (up->binary_request);
 	as_share_free (up->share);
 
 	if (up->file)
@@ -126,8 +178,7 @@ void as_upload_set_throttle_cb (ASUpload *up, ASUploadThrottleCb throttle_cb)
  */
 as_bool as_upload_start (ASUpload *up)
 {
-	ASHash *hash;
-	const char *range;
+	ASHash *hash = NULL;
 	int queue_pos, queue_length;
 
 	if (up->state != UPLOAD_NEW)
@@ -136,24 +187,137 @@ as_bool as_upload_start (ASUpload *up)
 		return FALSE;
 	}
 
-	/* Get username from request. */
-	if ((up->username = as_http_header_get_field (up->request, "X-My-Nick")))
+	if (upload_is_binary (up))
 	{
-		if (*up->username == '\0')
-			up->username = NULL;
-		else
-			up->username = strdup (up->username);
-	}
+		as_uint8 cmd, enc_branch = 0x01, reply_with_filesize = FALSE;
+		char *stats_string = NULL, *user_agent = NULL;
 
-	/* Get hash from request header. */
-	if ((strncmp (up->request->uri, "sha1:", 5) &&
-	     strncmp (up->request->uri, "/hack", 5)) || /* for debugging */
-	    !(hash = as_hash_decode (up->request->uri + 5)))
+		cmd = as_packet_get_8 (up->binary_request);
+		assert (cmd == 0x01); /* GET */
+
+		/* FIXME: This needs some refactoring. */
+		while (as_packet_remaining (up->binary_request) > 3)
+		{
+			as_uint16 len = as_packet_get_le16 (up->binary_request);
+			as_uint8 type = as_packet_get_8 (up->binary_request);
+
+			if (as_packet_remaining (up->binary_request) < len)
+			{
+				AS_ERR_1 ("Binary request from '%s' too short",
+				          net_ip_str (up->host));
+				send_reply_error (up, FALSE);
+				return FALSE;
+			}
+
+			switch (type)
+			{
+			case 0x32: /* encryption branch and key*/
+				enc_branch = as_packet_get_8 (up->binary_request);
+				up->enc_key = as_packet_get_le16 (up->binary_request);
+				break;
+
+			case 0x01: /* hash */
+				hash = as_packet_get_hash (up->binary_request);
+				break;
+
+			case 0x02: /* username */
+				up->username = as_packet_get_strnul (up->binary_request);
+				break;
+
+			case 0x05: /* whether to reply with file size */
+				reply_with_filesize = as_packet_get_8 (up->binary_request);
+				break;
+
+			case 0x06: /* stats string */
+				stats_string = as_packet_get_strnul (up->binary_request);
+				break;
+
+			case 0x07: /* range */
+				up->start = as_packet_get_le32 (up->binary_request);
+				up->stop = as_packet_get_le32 (up->binary_request);
+				break;
+
+			case 0x09: /* client name and version */
+				user_agent = as_packet_get_strnul (up->binary_request);
+				break;
+
+			}
+		}
+
+		if (!hash)
+		{
+			AS_ERR_1 ("No hash in request from %s", net_ip_str (up->host));
+			free (user_agent);
+			free (stats_string);
+			send_reply_error (up, FALSE);
+			return FALSE;
+		}
+		
+		/* FIXME: handle reply_with_filesize somewhere */
+
+#if 1
+		AS_DBG_2 ("Binary user agent of %s is '%s'",
+		          net_ip_str (up->host), user_agent);
+#endif
+		free (user_agent);
+		free (stats_string);
+
+		/* what follows are various ips, ports and alternate sources */
+	}
+	else /* http request */
 	{
-		AS_WARN_2 ("Malformed uri '%s' from %s",
-		           up->request->uri, net_ip_str (up->host));
-		send_reply_error (up, FALSE);
-		return FALSE;
+		const char *range;
+
+		/* Get username from request. */
+		if ((up->username = as_http_header_get_field (up->request, "X-My-Nick")))
+		{
+			if (*up->username == '\0')
+				up->username = NULL;
+			else
+				up->username = strdup (up->username);
+		}
+
+		/* Get range from request header. */
+		if ((range = as_http_header_get_field (up->request, "Range")))
+		{
+			int i = sscanf (range, "bytes=%u-%u", &up->start, &up->stop);
+
+			if (!i)
+				i = sscanf (range, "bytes %u-%u", &up->start, &up->stop);
+		
+			if (i == 1) /* only start specified */
+				up->stop = up->share->size;
+			else
+				up->stop++; /* make range exclusive end */
+
+			if (i == 0 || up->stop <= up->start ||
+			    up->start >= up->share->size || up->stop > up->share->size)
+			{
+				AS_ERR_2 ("Invalid range header '%s' from %s",
+				          range, net_ip_str (up->host));
+				send_reply_error (up, FALSE);
+				return FALSE;
+			}
+		}
+		else
+		{
+			AS_DBG_1 ("No range header from %s, assuming whole file",
+			          net_ip_str (up->host));
+
+			up->start = 0;
+			up->stop = up->share->size;
+		}
+
+		/* Get hash from request header. */
+		if ((strncmp (up->request->uri, "sha1:", 5) &&
+		     strncmp (up->request->uri, "/hack", 5)) || /* for debugging */
+		    !(hash = as_hash_decode (up->request->uri + 5)))
+		{
+			AS_WARN_2 ("Malformed uri '%s' from %s",
+			           up->request->uri, net_ip_str (up->host));
+			send_reply_error (up, FALSE);
+			return FALSE;
+		}
 	}
 
 	/* Lookup share. */
@@ -168,6 +332,16 @@ as_bool as_upload_start (ASUpload *up)
 
 	as_hash_free (hash);
 
+	up->stop++; /* make range exclusive end ??? */
+	if (up->stop <= up->start ||
+		up->start >= up->share->size || up->stop > up->share->size)
+	{
+		AS_ERR_3 ("Invalid range [%u,%u) from %s",
+		          up->start, up->stop, net_ip_str (up->host));
+		send_reply_error (up, FALSE);
+		return FALSE;
+	}
+
 	/* Make copy of share object in case share list changes during upload. */
 	if (!(up->share = as_share_copy (up->share)))
 	{
@@ -176,39 +350,8 @@ as_bool as_upload_start (ASUpload *up)
 		return FALSE;
 	}
 
-	/* Get range from request header. */
-	if ((range = as_http_header_get_field (up->request, "Range")))
-	{
-		int i = sscanf (range, "bytes=%u-%u", &up->start, &up->stop);
-
-		if (!i)
-			i = sscanf (range, "bytes %u-%u", &up->start, &up->stop);
-		
-		if (i == 1) /* only start specified */
-			up->stop = up->share->size;
-		else
-			up->stop++; /* make range exclusive end */
-
-		if (i == 0 || up->stop <= up->start ||
-		    up->start >= up->share->size || up->stop > up->share->size)
-		{
-			AS_ERR_2 ("Invalid range header '%s' from %s",
-			          range, net_ip_str (up->host));
-			send_reply_error (up, FALSE);
-			return FALSE;
-		}
-
-	}
-	else
-	{
-		AS_DBG_1 ("No range header from %s, assuming whole file",
-		          net_ip_str (up->host));
-
-		up->start = 0;
-		up->stop = up->share->size;
-	}
-
-	AS_DBG_4 ("Upload request: '%s' (%d, %d) from %s",
+	AS_DBG_5 ("Upload request (%s): '%s' (%d, %d) from %s",
+	          upload_is_binary (up) ? "binary" : "http",
 	          up->share->path, up->start, up->stop, net_ip_str (up->host));
 
 	/* Ask auth callback what to do. */
@@ -403,11 +546,47 @@ static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
 
 /*****************************************************************************/
 
+static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply)
+{
+	String *str;
+	ASPacket *packet;
+
+	if (!(str = as_http_header_compile (reply)))
+		return NULL;
+
+	if (!(packet = as_packet_create ()))
+	{
+		string_free (str);
+		return NULL;
+	}
+
+	if (!as_packet_put_ustr (packet, str->str, str->len))
+	{
+		as_packet_free (packet);
+		string_free (str);
+		return NULL;
+	}
+
+	string_free (str);
+
+	if (upload_is_binary (up))
+	{
+		if (!as_encrypt_transfer_reply (packet, up->enc_key))
+		{
+			as_packet_free (packet);
+			return NULL;
+		}
+	}
+
+	return packet;
+}
+
+
 static as_bool send_reply_success (ASUpload *up)
 {
 	ASHttpHeader *reply;
 	char buf[64];
-	String *str;
+	ASPacket *reply_packet;
 
 	reply = as_http_header_reply (HTHD_VER_11,
 	                              (up->start == 0 &&
@@ -427,26 +606,28 @@ static as_bool send_reply_success (ASUpload *up)
 
 	set_common_headers (up, reply);
 
-	str = as_http_header_compile (reply);
+	reply_packet = as_compile_http_reply (up, reply);
+	assert (reply_packet);
 
 #ifdef LOG_HTTP_REPLIES
-	AS_DBG_1 ("Reply Success:\n%s", str->str);
+	as_packet_dump (reply_packet);
 #endif
 
 	/* Immediately send reply since there might be a race condition between
 	 * the tcp write queue and our file send input. I think it is not defined
 	 * which input event gets triggered first if there are multiple.
 	 */
-	if (tcp_send (up->c, str->str, str->len) != str->len)
+	if (tcp_send (up->c, reply_packet->data, reply_packet->used)
+	    != (int) reply_packet->used)
 	{
 		AS_ERR_1 ("Short send in reply for upload '%s'", up->share->path);
 
-		string_free (str);
+		as_packet_free (reply_packet);
 		as_http_header_free (reply);
 		return FALSE;
 	}
 
-	string_free (str);
+	as_packet_free (reply_packet);
 	as_http_header_free (reply);
 
 	return TRUE;
@@ -456,7 +637,7 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
                                   int queue_length)
 {
 	ASHttpHeader *reply;
-	String *str;
+	ASPacket *reply_packet;
 	char buf[128];
 
 	assert (queue_pos != 0);
@@ -475,17 +656,18 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 		as_http_header_set_field (reply, "X-Queued", buf);
 	}
 
-	str = as_http_header_compile (reply);
+	reply_packet = as_compile_http_reply (up, reply);
+	assert (reply_packet);
 
 #ifdef LOG_HTTP_REPLIES
-	AS_DBG_1 ("Reply Queued:\n%s", str->str);
+	as_packet_dump (reply_packet);
 #endif
 
 	/* Immediately send reply and close connection. */
-	tcp_send (up->c, str->str, str->len);
+	tcp_send (up->c, reply_packet->data, reply_packet->used);
 	tcp_close_null (&up->c);
 
-	string_free (str);
+	as_packet_free (reply_packet);
 	as_http_header_free (reply);
 
 	if (!upload_set_state (up, UPLOAD_QUEUED, TRUE))
@@ -497,21 +679,23 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 static as_bool send_reply_error (ASUpload *up, as_bool our_fault)
 {
 	ASHttpHeader *reply;
-	String *str;
+	ASPacket *reply_packet;
 
 	reply = as_http_header_reply (HTHD_VER_11, our_fault ? 500 : 400);
 	set_common_headers (up, reply);
-	str = as_http_header_compile (reply);
+	
+	reply_packet = as_compile_http_reply (up, reply);
+	assert (reply_packet);
 
 #ifdef LOG_HTTP_REPLIES
-	AS_DBG_1 ("Reply Error:\n%s", str->str);
+	as_packet_dump (reply_packet);
 #endif
 
 	/* Immediately send reply and close connection. */
-	tcp_send (up->c, str->str, str->len);
+	tcp_send (up->c, reply_packet->data, reply_packet->used);
 	tcp_close_null (&up->c);
 
-	string_free (str);
+	as_packet_free (reply_packet);
 	as_http_header_free (reply);
 
 	if (!upload_set_state (up, UPLOAD_FAILED, TRUE))
@@ -523,21 +707,23 @@ static as_bool send_reply_error (ASUpload *up, as_bool our_fault)
 static as_bool send_reply_not_found (ASUpload *up)
 {
 	ASHttpHeader *reply;
-	String *str;
+	ASPacket *reply_packet;
 
 	reply = as_http_header_reply (HTHD_VER_11, 404);
 	set_common_headers (up, reply);
-	str = as_http_header_compile (reply);
+
+	reply_packet = as_compile_http_reply (up, reply);
+	assert (reply_packet);
 
 #ifdef LOG_HTTP_REPLIES
-	AS_DBG_1 ("Reply Not Found:\n%s", str->str);
+	as_packet_dump (reply_packet);
 #endif
 
 	/* Immediately send reply and close connection. */
-	tcp_send (up->c, str->str, str->len);
+	tcp_send (up->c, reply_packet->data, reply_packet->used);
 	tcp_close_null (&up->c);
 
-	string_free (str);
+	as_packet_free (reply_packet);
 	as_http_header_free (reply);
 
 	if (!upload_set_state (up, UPLOAD_FAILED, TRUE))

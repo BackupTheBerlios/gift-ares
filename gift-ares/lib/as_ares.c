@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.c,v 1.24 2005/04/02 15:48:40 hex Exp $
+ * $Id: as_ares.c,v 1.25 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -36,7 +36,7 @@ static as_bool port_change_cb (const ASConfVal *old_val,
 	if (!(server = as_http_server_create ((in_port_t)new_val->data.i,
 	                              (ASHttpServerRequestCb)as_incoming_http,
 		                          (ASHttpServerPushCb)as_incoming_push,
-	                              (ASHttpServerBinaryCb)NULL)))
+	                              (ASHttpServerBinaryCb)as_incoming_binary)))
 	{
 		AS_WARN_1 ("Failed to move http server to port %d", new_val->data.i);
 		return FALSE; /* Refuse value change. */
@@ -153,7 +153,7 @@ as_bool as_init ()
 			      (in_port_t) AS_CONF_INT (AS_LISTEN_PORT),
 			      (ASHttpServerRequestCb)as_incoming_http,
 			      (ASHttpServerPushCb)as_incoming_push,
-			      (ASHttpServerBinaryCb)NULL
+			      (ASHttpServerBinaryCb)as_incoming_binary
 			      )))
 		{
 			AS_ERR_1 ("Failed to create server on port %d",

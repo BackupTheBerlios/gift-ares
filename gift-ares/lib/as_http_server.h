@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.h,v 1.3 2004/12/14 22:21:19 hex Exp $
+ * $Id: as_http_server.h,v 1.4 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -15,7 +15,7 @@
 /* time after which we disconnect if we didn't get any data */
 #define HTSV_REQUEST_TIMEOUT (20*SECONDS)
 
-/* maximum length of http request.
+/* maximum length of http/binary request.
  * connection is dropped if we receive more data but header is still incomplete
  */
 #define HTSV_MAX_REQUEST_LEN 4096
@@ -39,8 +39,11 @@ typedef int (*ASHttpServerRequestCb)(ASHttpServer *server, TCPC *tcpcon,
 typedef int (*ASHttpServerPushCb)(ASHttpServer *server, TCPC *tcpcon,
                                   String *buf);
 
-/* called for anything else, most likely a fasttrack session attempt */
-typedef int (*ASHttpServerBinaryCb)(ASHttpServer *server, TCPC *tcpcon);
+/* called when a binary download request was received and successfully
+ * decrypted
+ */
+typedef int (*ASHttpServerBinaryCb)(ASHttpServer *server, TCPC *tcpcon,
+                                    ASPacket *request);
 
 
 struct _ASHttpServer
@@ -55,9 +58,9 @@ struct _ASHttpServer
 
 	int banlist_filter;	/* cache for config key main/banlist_filter */
 
-	List *list;             /* list of connection objects */
+	List *list;         /* list of connection objects */
 
-	void *udata;		/* user data */
+	void *udata;        /* user data */
 };
 
 /*****************************************************************************/

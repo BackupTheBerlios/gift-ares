@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.9 2004/12/16 23:27:44 hex Exp $
+ * $Id: as_http_server.c,v 1.10 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -404,7 +404,7 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 		if (len > HTSV_MAX_REQUEST_LEN)
 		{
 			/* invalid data, close connection */
-			AS_DBG_2 ("got more than %d bytes from from %s but no sentinel, closing connection",
+			AS_DBG_2 ("got more than %d bytes from %s but no sentinel, closing connection",
 					   HTSV_MAX_REQUEST_LEN, net_ip_str (servcon->remote_ip));
 
 			servcon_free (servcon, TRUE);
@@ -440,6 +440,11 @@ static void server_push (int fd, input_id input, ServCon *servcon)
 
 static void server_binary (int fd, input_id input, ServCon *servcon)
 {
+	unsigned char buf[1024];
+	int len;
+	ASPacket *request;
+	as_uint8 type;
+
 	input_remove (input);
 	servcon->input = INVALID_INPUT;
 
@@ -453,12 +458,80 @@ static void server_binary (int fd, input_id input, ServCon *servcon)
 		return;
 	}
 
-	/* raise callback */
+	/* get us a buffer */
+	if (!servcon->buf)
+		servcon->buf = string_new (NULL, 0, 0, TRUE);
+
+	/* read a chunk */
+	if ((len = tcp_recv (servcon->tcpcon, buf, sizeof (buf))) <= 0)
+	{
+		AS_DBG_1 ("tcp_recv() < 0 for connection from %s",
+				   net_ip_str (servcon->remote_ip));
+
+		servcon_free (servcon, TRUE);
+		return;
+	}
+
+	/* append to connection buffer */
+	if (string_appendu (servcon->buf, buf, len) != len)
+	{
+		AS_ERR ("Insufficient memory");
+		servcon_free (servcon, TRUE);
+		return;
+	}
+
+	/* check if we got entire request */
+	if (!(request = as_packet_create ()) ||
+		!as_packet_put_ustr (request, servcon->buf->str, servcon->buf->len))
+	{
+		AS_ERR ("Insufficient memory");
+		servcon_free (servcon, TRUE);
+		return;
+	}
+
+	if (!as_decrypt_transfer_request (request))
+	{
+		as_packet_free (request);
+
+		if (servcon->buf->len > HTSV_MAX_REQUEST_LEN)
+		{
+			/* invalid data, close connection */
+			AS_DBG_2 ("got more than %d bytes from %s but decryption failed, closing connection",
+					   HTSV_MAX_REQUEST_LEN, net_ip_str (servcon->remote_ip));
+
+			servcon_free (servcon, TRUE);
+			return;
+		}
+
+		/* wait for more data */
+		AS_HEAVY_DBG_2 ("got %d bytes from %s but decrypt failed, waiting for more",
+						 len, net_ip_str (servcon->remote_ip));
+		servcon->input = input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
+					    (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
+		return;
+	}
+
+	/* FIXME: Handle binary pushes (type == 0x02)? */
+	if (as_packet_remaining (request) < 1 ||
+		(type = as_packet_get_8 (request)) != 0x01)
+	{
+		/* invalid data, close connection */
+		AS_DBG_2 ("Binary request from %s not GET but 0x%02x, closing connection",
+				   net_ip_str (servcon->remote_ip), type);
+
+		servcon_free (servcon, TRUE);
+		return;
+	}
+
+	as_packet_rewind (request);
+
+	/* raise callback and pass it request */
 	if (!servcon->server->binary_cb ||
-		!servcon->server->binary_cb (servcon->server, servcon->tcpcon))
+		!servcon->server->binary_cb (servcon->server, servcon->tcpcon, request))
 	{
 		AS_DBG_1 ("Connection from %s closed on callback's request",
 				   net_ip_str (servcon->remote_ip));
+		as_packet_free (request);
 		servcon_free (servcon, TRUE);
 		return;
 	}

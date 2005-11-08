@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.h,v 1.10 2004/12/24 12:56:29 mkern Exp $
+ * $Id: as_upload.h,v 1.11 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -57,6 +57,8 @@ struct as_upload_t
 	                          * manager for lookups. */
 	char         *username;  /* User name of downloader. */
 	ASHttpHeader *request;
+	ASPacket     *binary_request;
+	as_uint16     enc_key;   /* encryption key for encrypted reply */
 	ASShare      *share;     /* copy of share object */
 	FILE         *file;
 	as_uint32     start, stop, sent;
@@ -83,6 +85,13 @@ struct as_upload_t
 ASUpload *as_upload_create (TCPC *c, ASHttpHeader *request,
                             ASUploadStateCb state_cb,
                             ASUploadAuthCb auth_cb);
+
+/* Create new upload from binary request. Takes ownership of tcp connection and
+ * request object if successful.
+ */
+ASUpload *as_upload_create_binary (TCPC *c, ASPacket *request,
+                                   ASUploadStateCb state_cb,
+                                   ASUploadAuthCb auth_cb);
 
 /* Free upload object. */
 void as_upload_free (ASUpload *up);

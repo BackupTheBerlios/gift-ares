@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.14 2005/01/01 01:56:59 hex Exp $
+ * $Id: as_upload_man.c,v 1.15 2005/11/08 20:17:32 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -122,10 +122,46 @@ ASUpload *as_upman_start (ASUpMan *man, TCPC *c, ASHttpHeader *req)
 	/* Create upload object. */
 	if (!(up = as_upload_create (c, req, upload_state_cb, upload_auth_cb)))
 	{
-		AS_ERR_1 ("Couldn't create upload for request from %s",
+		AS_ERR_1 ("Couldn't create upload for http request from %s",
 		          net_ip_str (c->host));
 		tcp_close (c);
 		as_http_header_free (req);
+		return NULL;
+	}
+
+	up->upman = man;
+
+	/* Insert into list first so it is available in callback triggered
+	 * by as_upload_start.
+	 */
+	man->uploads = list_prepend (man->uploads, up);
+
+	/* Try to start upload. Auth callback will decide if this succeeds */
+	if (!as_upload_start (up))
+	{
+		/* Upload was not started. Failed/queued/404/etc. */
+		man->uploads = list_remove (man->uploads, up);
+		as_upload_free (up);
+		return NULL;
+	}
+
+	return up;
+}
+
+/* Create and register a new upload from binary request. Takes ownership of
+ * connection and request in all cases (even if no download is created).
+ */
+ASUpload *as_upman_start_binary (ASUpMan *man, TCPC *c, ASPacket *req)
+{
+	ASUpload *up;
+
+	/* Create upload object. */
+	if (!(up = as_upload_create_binary (c, req, upload_state_cb, upload_auth_cb)))
+	{
+		AS_ERR_1 ("Couldn't create upload for binary request from %s",
+		          net_ip_str (c->host));
+		tcp_close (c);
+		as_packet_free (req);
 		return NULL;
 	}
 
