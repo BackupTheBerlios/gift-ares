@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.19 2005/11/08 14:39:09 mkern Exp $
+ * $Id: as_crypt.c,v 1.20 2005/11/15 21:49:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -812,9 +812,9 @@ as_bool as_encrypt_transfer_request (ASPacket *packet)
 	/* add header */
 	packet->data[0] = rand () % 0x100;
 	packet->data[1] = rand () % 0x100;
-
+	packet->data[2] = skip;
 	for (i = 0; i < skip; i++)
-		packet->data[2 + i] = rand () % 0x100;
+		packet->data[3 + i] = rand () % 0x100;
 
 	packet->data[2 + skip + 0] = payload_len & 0xFF; /* little endian */
 	packet->data[2 + skip + 1] = payload_len >> 8;
@@ -884,8 +884,9 @@ as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 key)
 	/* add header */
 	packet->data[0] = rand () % 0x100;
 	packet->data[1] = rand () % 0x100;
+	packet->data[2] = skip;
 	for (i = 0; i < skip; i++)
-		packet->data[2 + i] = rand () % 0x100;
+		packet->data[3 + i] = rand () % 0x100;
 
 	/* munge entire packet */
 	munge (packet->data, packet->used, key, 0xCB6F, 0x41BA);

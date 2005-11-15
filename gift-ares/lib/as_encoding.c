@@ -1,5 +1,5 @@
 /*
- * $Id: as_encoding.c,v 1.5 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_encoding.c,v 1.6 2005/11/15 21:49:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -165,3 +165,124 @@ unsigned char *as_hex_decode (const char *data, int *dst_len)
 
 	return dst;
 }
+
+/*****************************************************************************/
+
+static int oct_value_from_hex (char hex_char)
+{
+	if (!isxdigit (hex_char))
+		return 0;
+
+	if (hex_char >= '0' && hex_char <= '9')
+		return (hex_char - '0');
+
+	hex_char = toupper (hex_char);
+
+	return ((hex_char - 'A') + 10);
+}
+
+/* caller frees returned string */
+char *as_url_decode (const char *encoded)
+{
+	char *decoded, *ptr;
+
+	if (!encoded)
+		return NULL;
+
+	/* make sure we are using our own memory here ... */
+	ptr = strdup (encoded);
+
+	/* save the head */
+	decoded = ptr;
+
+	/* convert '+' -> ' ' and %2x -> char value */
+	while (*ptr)
+	{
+		switch (*ptr)
+		{
+		 case '+':
+			*ptr = ' ';
+			break;
+		 case '%':
+			if (isxdigit (ptr[1]) && isxdigit (ptr[2]))
+			{
+				int oct_val;
+
+				oct_val =  oct_value_from_hex (ptr[1]) * 16;
+				oct_val += oct_value_from_hex (ptr[2]);
+
+				*ptr = (char) oct_val;
+
+				memmove (ptr+1, ptr+3, strlen (ptr+3) + 1);
+			}
+			break;
+		 default:
+			break;
+		}
+
+		ptr++;
+	}
+
+	return decoded;
+}
+
+static char *url_encode_char (char *stream, unsigned char c)
+{
+	*stream++ = '%';
+
+	sprintf (stream, "%02x", (unsigned int) c);
+
+	return stream + 2;
+}
+
+/* caller frees returned string */
+char *as_url_encode (const char *decoded)
+{
+	char *encoded, *ptr;
+
+	if (!decoded)
+		return NULL;
+
+	/* allocate a large enough buffer for all cases */
+	encoded = ptr = malloc ((strlen (decoded) * 3) + 1);
+
+	while (*decoded)
+	{
+		/* we can rule out non-printable and whitespace characters */
+		if (!isprint (*decoded) || isspace (*decoded))
+			ptr = url_encode_char (ptr, *decoded);
+		else
+		{
+			/* check for anything special */
+			switch (*decoded)
+			{
+			 case '?':
+			 case '@':
+			 case '+':
+			 case '%':
+			 case '&':
+			 case ':':
+			 case '=':
+			 case '(':
+			 case ')':
+			 case '[':
+			 case ']':
+			 case '\"':
+			 case '\'':
+				ptr = url_encode_char (ptr, *decoded);
+				break;
+			 default: /* regular character, just copy */
+				*ptr++ = *decoded;
+				break;
+			}
+		}
+
+		decoded++;
+	}
+
+	*ptr = 0;
+
+	return encoded;
+}
+
+/*****************************************************************************/

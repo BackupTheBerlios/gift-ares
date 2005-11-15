@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.21 2005/11/08 20:58:17 mkern Exp $
+ * $Id: as_upload.c,v 1.22 2005/11/15 21:49:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,6 +31,7 @@ static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply);
 static as_bool send_reply_success (ASUpload *up);
 static as_bool send_reply_queued (ASUpload *up, int queue_pos,
                                   int queue_length);
+static as_bool send_reply_metadata (ASUpload *up);
 static as_bool send_reply_error (ASUpload *up, as_bool our_fault);
 static as_bool send_reply_not_found (ASUpload *up);
 static void send_file (int fd, input_id input, ASUpload *up);
@@ -180,6 +181,7 @@ as_bool as_upload_start (ASUpload *up)
 {
 	ASHash *hash = NULL;
 	int queue_pos, queue_length;
+	as_bool reply_with_filesize = FALSE, reply_with_phash = FALSE;
 
 	if (up->state != UPLOAD_NEW)
 	{
@@ -189,7 +191,7 @@ as_bool as_upload_start (ASUpload *up)
 
 	if (upload_is_binary (up))
 	{
-		as_uint8 cmd, enc_branch = 0x01, reply_with_filesize = FALSE;
+		as_uint8 cmd, enc_branch = 0x01;
 		as_uint8 *stats_string = NULL;
 		char *user_agent = NULL;
 
@@ -229,8 +231,9 @@ as_bool as_upload_start (ASUpload *up)
 				up->username = as_packet_get_str (up->binary_request, len);
 				break;
 
-			case 0x05: /* whether to reply with file size */
-				reply_with_filesize = as_packet_get_8 (up->binary_request);
+			case 0x05: /* if present we are supposed to just reply with meta
+				        * data, spezifically with file size */
+				reply_with_filesize = (as_packet_get_8 (up->binary_request) == 0x01);
 				break;
 
 			case 0x06: /* stats string */
@@ -253,6 +256,11 @@ as_bool as_upload_start (ASUpload *up)
 
 			case 0x0b: /* 64 bit range fields */
 				up->binary_request->read_ptr += len;
+				break;
+
+			case 0x0c: /* if present we are supposed to just reply with a list
+					    * of partial hashes */
+				reply_with_phash = (as_packet_get_8 (up->binary_request) == 0x01);
 				break;
 
 			default:
@@ -281,10 +289,8 @@ as_bool as_upload_start (ASUpload *up)
 			send_reply_error (up, FALSE);
 			return FALSE;
 		}
-		
-		/* FIXME: handle reply_with_filesize somewhere */
 
-#if 1
+#if 0
 		AS_DBG_2 ("Binary user agent of %s is '%s'",
 		          net_ip_str (up->host), user_agent);
 #endif
@@ -360,6 +366,25 @@ as_bool as_upload_start (ASUpload *up)
 
 	as_hash_free (hash);
 
+	/* handle phash request by sending error since we do not support them */
+	if (reply_with_phash)
+	{
+		AS_ERR_1 ("PHash request from %s, replying with 500.",
+		          net_ip_str (up->host));
+		send_reply_error (up, TRUE);
+		return FALSE;
+	}
+
+	/* handle size request by sending meta data */
+	if (reply_with_filesize)
+	{
+		AS_DBG_1 ("Filesize request from %s, replying with metadata.",
+		          net_ip_str (up->host));
+		send_reply_metadata (up);
+		return FALSE;
+	}
+
+	/* sanity check requested range */
 	if (up->stop <= up->start ||
 		up->start >= up->share->size || up->stop > up->share->size)
 	{
@@ -596,6 +621,10 @@ static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply)
 
 	string_free (str);
 
+#ifdef LOG_HTTP_REPLIES
+	as_packet_dump (packet);
+#endif
+
 	if (upload_is_binary (up))
 	{
 		if (!as_encrypt_transfer_reply (packet, up->enc_key))
@@ -635,10 +664,6 @@ static as_bool send_reply_success (ASUpload *up)
 
 	reply_packet = as_compile_http_reply (up, reply);
 	assert (reply_packet);
-
-#ifdef LOG_HTTP_REPLIES
-	as_packet_dump (reply_packet);
-#endif
 
 	/* Immediately send reply since there might be a race condition between
 	 * the tcp write queue and our file send input. I think it is not defined
@@ -686,10 +711,6 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 	reply_packet = as_compile_http_reply (up, reply);
 	assert (reply_packet);
 
-#ifdef LOG_HTTP_REPLIES
-	as_packet_dump (reply_packet);
-#endif
-
 	/* Immediately send reply and close connection. */
 	tcp_send (up->c, reply_packet->data, reply_packet->used);
 	tcp_close_null (&up->c);
@@ -698,6 +719,57 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 	as_http_header_free (reply);
 
 	if (!upload_set_state (up, UPLOAD_QUEUED, TRUE))
+		return FALSE; /* Callback freed us */
+
+	return TRUE;
+}
+
+static as_bool send_reply_metadata (ASUpload *up)
+{
+	ASHttpHeader *reply;
+	ASPacket *reply_packet;
+	char buf[64];
+	char *val;
+
+	assert (up->share);
+
+	/* Yes, sadly this is 200 even though we don't send data. */
+	reply = as_http_header_reply (HTHD_VER_11, 200);
+	set_common_headers (up, reply);
+
+	/* Add meta data, specifically file size. */
+	if ((val = as_url_encode (as_meta_get_tag (up->share->meta, "title"))))
+	{
+		as_http_header_set_field (reply, "X-Title", val);
+		free (val);
+	}
+
+	if ((val = as_url_encode (as_meta_get_tag (up->share->meta, "artist"))))
+	{
+		as_http_header_set_field (reply, "X-Artist", val);
+		free (val);
+	}
+
+	if ((val = as_url_encode (as_meta_get_tag (up->share->meta, "album"))))
+	{
+		as_http_header_set_field (reply, "X-Album", val);
+		free (val);
+	}
+
+	snprintf (buf, sizeof (buf), "%u", up->share->size);
+	as_http_header_set_field (reply, "X-Size", buf);
+
+	reply_packet = as_compile_http_reply (up, reply);
+	assert (reply_packet);
+
+	/* Immediately send reply and close connection. */
+	tcp_send (up->c, reply_packet->data, reply_packet->used);
+	tcp_close_null (&up->c);
+
+	as_packet_free (reply_packet);
+	as_http_header_free (reply);
+
+	if (!upload_set_state (up, UPLOAD_COMPLETE, TRUE))
 		return FALSE; /* Callback freed us */
 
 	return TRUE;
@@ -713,10 +785,6 @@ static as_bool send_reply_error (ASUpload *up, as_bool our_fault)
 	
 	reply_packet = as_compile_http_reply (up, reply);
 	assert (reply_packet);
-
-#ifdef LOG_HTTP_REPLIES
-	as_packet_dump (reply_packet);
-#endif
 
 	/* Immediately send reply and close connection. */
 	tcp_send (up->c, reply_packet->data, reply_packet->used);
@@ -741,10 +809,6 @@ static as_bool send_reply_not_found (ASUpload *up)
 
 	reply_packet = as_compile_http_reply (up, reply);
 	assert (reply_packet);
-
-#ifdef LOG_HTTP_REPLIES
-	as_packet_dump (reply_packet);
-#endif
 
 	/* Immediately send reply and close connection. */
 	tcp_send (up->c, reply_packet->data, reply_packet->used);
