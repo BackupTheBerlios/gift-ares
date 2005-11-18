@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.h,v 1.10 2005/11/08 20:17:32 mkern Exp $
+ * $Id: as_upload_man.h,v 1.11 2005/11/18 15:36:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -42,7 +42,6 @@ struct as_upman_t
 	List *uploads;        /* list of uploads */
 	List *queue;          /* list of struct queues */
 	
-	int max_active;       /* max concurrent uploads */
 	int nuploads;         /* Number of _active_ downloads. Not the
 	                       * necessarily same as number of uploads in hash
 	                       * table! */

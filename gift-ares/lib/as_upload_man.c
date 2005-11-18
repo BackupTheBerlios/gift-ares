@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload_man.c,v 1.15 2005/11/08 20:17:32 mkern Exp $
+ * $Id: as_upload_man.c,v 1.16 2005/11/18 15:36:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -54,7 +54,6 @@ ASUpMan *as_upman_create ()
 	man->uploads = NULL;
 	man->queue   = NULL;
 
-	man->max_active = AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE);
 	man->nuploads = man->nqueued = 0;
 	man->bandwidth = 0;
 
@@ -443,10 +442,11 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 	/* Spare slots are available even after dealing with everyone
 	 * in the queue.
 	 */
-	if (man->nuploads + man->nqueued < man->max_active)
+	if (man->nuploads + man->nqueued < AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE))
 	{
 		AS_DBG_3 ("spare slots available (%d+%d < %d), allowing",
-		          man->nuploads, man->nqueued, man->max_active);
+		          man->nuploads, man->nqueued,
+		          AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
 		return 0;
 	}
 
@@ -482,11 +482,11 @@ static int upman_auth (ASUpMan *man, in_addr_t host)
 
 	assert (q);
 
-	if (i + man->nuploads < man->max_active)
+	if (i + man->nuploads < AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE))
 	{
 		/* sufficiently near the front of the queue: pop it */
 		AS_DBG_3 ("Reserved slot available (%d+%d < %d), allowing",
-		          i, man->nuploads, man->max_active);
+		          i, man->nuploads, AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
 
 		queue_remove (man, l);
 		return 0;
