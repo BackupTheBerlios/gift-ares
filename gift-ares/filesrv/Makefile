@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1 2005/11/08 21:12:06 mkern Exp $
+# $Id: Makefile,v 1.2 2005/11/19 14:26:47 mkern Exp $
 
 
 CFLAGS=-g -Wall -I../lib -DDEBUG #-DHEAVY_DEBUG
@@ -71,5 +71,5 @@ asfileserver: libares.a $(SERVER_OBJECTS)
 	$(CC) $+ -o $@ $(LDFLAGS) ./libares.a
 
 clean:
-	rm -f asfilehacher asfileserver libares.a
+	rm -f asfilehasher asfileserver libares.a
 	rm -f $(HASHER_OBJECTS) $(SERVER_OBJECTS) $(LIBARES_OBJECTS)
