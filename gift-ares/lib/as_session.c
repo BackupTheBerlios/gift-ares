@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.46 2005/11/08 14:39:09 mkern Exp $
+ * $Id: as_session.c,v 1.47 2005/11/19 14:23:50 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -444,7 +444,7 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 		/* FIXME: These values are not accurate if queuing is done by giFT */
 		as_packet_put_le16 (packet, 0); /* 'my_speed' */
 		as_packet_put_8 (packet, (as_uint8)AS->upman->nuploads);
-		as_packet_put_8 (packet, (as_uint8)AS->upman->max_active);
+		as_packet_put_8 (packet, (as_uint8)AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
 		as_packet_put_8 (packet, (as_uint8)0); /* 'proxy_count' */
 		as_packet_put_8 (packet, (as_uint8)AS->upman->nqueued);
 	}
@@ -646,7 +646,7 @@ static as_bool session_ping (ASSession *session)
 	{
 		/* FIXME: These values are not accurate if queuing is done by giFT */
 		as_packet_put_8 (p, (as_uint8)AS->upman->nuploads);
-		as_packet_put_8 (p, (as_uint8)AS->upman->max_active);
+		as_packet_put_8 (p, (as_uint8)AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
 		as_packet_put_8 (p, (as_uint8)0); /* unknown */
 		as_packet_put_8 (p, (as_uint8)AS->upman->nqueued);
 		as_packet_put_le16 (p, 0); /* unknown */
