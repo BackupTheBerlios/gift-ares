@@ -1,5 +1,5 @@
 /*
- * $Id: server.c,v 1.1 2005/11/08 21:12:06 mkern Exp $
+ * $Id: server.c,v 1.2 2005/11/19 13:53:23 mkern Exp $
  *
  * Copyright (C) 2005 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2005 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,11 +21,13 @@
 
 /*****************************************************************************/
 
-/* SIGHUP handler */
+/* signal handlers */
 static void sighup_handler (int sig_num);
+static void sigint_handler (int sig_num);
+static void sigterm_handler (int sig_num);
 
-/* Periodic timer which reloads shares file if SIGHUP happened */
-static as_bool sighup_timer_func (void *data);
+/* Periodic timer which handles signals in event loop */
+static as_bool signal_timer_func (void *data);
 
 /* loads shares from file into shares manager */
 static as_bool load_shares (char *shares_file);
@@ -33,8 +35,12 @@ static as_bool load_shares (char *shares_file);
 /*****************************************************************************/
 
 static char *shares_file = NULL;
-static as_bool sighup_reload_shares = FALSE; /* set to TRUE by SIGHUP and checked
-                                           * by timer in event loop. */
+static as_bool sighup_reload_shares = FALSE; /* set to TRUE by SIGHUP and
+                                              * checked by timer in event
+                                              * loop. */
+static as_bool signal_quit = FALSE;          /* set to TRUE by SIGINT or
+                                              * SITERM and checked yb timer
+                                              * in event loop. */
 
 /*****************************************************************************/
 
@@ -42,13 +48,15 @@ int main (int argc, char *argv[])
 {
 	ASLogger *logger;
 	in_port_t listen_port = 0;
-	timer_id sighup_timer;
+	timer_id signal_timer;
 	int max_uploads;
+	as_bool daemon = FALSE;
 	
-	if (argc != 4)
+	if (argc != 4 && argc != 5)
 	{
-		printf ("Usage: asfileserver <shares file> <listen port> <max uploads>\n");
+		printf ("Usage: asfileserver <shares file> <listen port> <max uploads> [-d]\n");
 		printf ("Reads shares file and provides shares to Ares clients on listen port.\n");
+		printf ("If -d is supplied we fork to background.\n");
 		printf ("The shares file is reloaded on HUP.\n");
 		exit (1);
 	}
@@ -66,6 +74,9 @@ int main (int argc, char *argv[])
 		printf ("Invalid number of max uploads '%s'\n", argv[3]);
 		exit (1);
 	}
+
+	if (argc == 5)
+		daemon = (strcmp (argv[4], "-d") == 0);
 
 	/* setup logging */
 	logger = as_logger_create ();
@@ -108,9 +119,37 @@ int main (int argc, char *argv[])
     if (signal (SIGHUP, sighup_handler) == SIG_ERR)
 		AS_WARN ("SERVER: Couldn't set SIGHUP handler");
 
-	/* add timer which checks for SIGHUP flag */
-	if ((sighup_timer = timer_add (5*SECONDS, sighup_timer_func, NULL)) == INVALID_TIMER)
-		AS_WARN ("SERVER: Couldn't install SIGHUP timer");
+	/* set handlers for SIGINT and SIGTERM */
+    if (signal (SIGINT, sigint_handler) == SIG_ERR)
+		AS_WARN ("SERVER: Couldn't set SIGINT handler");
+
+    if (signal (SIGTERM, sigterm_handler) == SIG_ERR)
+		AS_WARN ("SERVER: Couldn't set SIGTERM handler");
+
+	/* add timer which checks for signals */
+	if ((signal_timer = timer_add (5*SECONDS, signal_timer_func, NULL)) == INVALID_TIMER)
+		AS_WARN ("SERVER: Couldn't install signal timer");
+
+	/* fork to background if requested */
+	if (daemon)
+	{
+		pid_t pid;
+
+		if ((pid = fork ()) != 0)
+		{
+			AS_DBG_1 ("SERVER: Forked to background. pid: %u", pid);
+			exit (0);
+		}
+
+		/* don't log to stdout anymore */
+		as_logger_del_output (logger, "stdout");
+
+		setsid ();
+
+		close (STDIN_FILENO);
+		close (STDOUT_FILENO);
+		close (STDERR_FILENO);
+	}
 
 	/* run event loop */
 	AS_DBG ("SERVER: Entering event loop");
@@ -118,8 +157,10 @@ int main (int argc, char *argv[])
 	AS_DBG ("SERVER: Left event loop");
 
 	/* remove signal handler and timer */
-	timer_remove (sighup_timer);
+	timer_remove (signal_timer);
     signal (SIGHUP, SIG_DFL);
+    signal (SIGINT, SIG_DFL);
+    signal (SIGTERM, SIG_DFL);
 
 	/* cleanup  lib */
 	as_cleanup ();
@@ -142,8 +183,31 @@ static void sighup_handler (int sig_num)
 	sighup_reload_shares = TRUE;
 }
 
-/* Periodic timer which reloads shares file if SIGHUP happened */
-static as_bool sighup_timer_func (void *data)
+static void sigint_handler (int sig_num)
+{
+	assert (sig_num == SIGINT);
+
+    /* Re-set handler for next time. */
+    signal (SIGINT, sigint_handler);
+
+	/* Tell event loop about this signal */
+	signal_quit = TRUE;
+}
+
+static void sigterm_handler (int sig_num)
+{
+	assert (sig_num == SIGTERM);
+
+    /* Re-set handler for next time. */
+    signal (SIGTERM, sigterm_handler);
+
+	/* Tell event loop about this signal */
+	signal_quit = TRUE;
+}
+
+/* Periodic timer which reloads shares file if SIGHUP happened and quits on
+ * SIGTERM or SIGINT.  */
+static as_bool signal_timer_func (void *data)
 {
 	if (sighup_reload_shares)
 	{
@@ -156,6 +220,13 @@ static as_bool sighup_timer_func (void *data)
 		}
 		
 		sighup_reload_shares = FALSE;
+	}
+
+	if (signal_quit)
+	{
+		AS_DBG ("SERVER: Timer detected SIGINT or SIGTERM");
+		signal_quit = FALSE;
+		as_event_quit ();
 	}
 
 	return TRUE; /* trigger us again */

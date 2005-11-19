@@ -1,4 +1,4 @@
-$Id: README,v 1.1 2005/11/08 21:12:06 mkern Exp $
+$Id: README,v 1.2 2005/11/19 13:53:23 mkern Exp $
 
 This is a simple file server for the Ares network.
 
@@ -9,3 +9,6 @@ The file server itself (asfileserver) is a daemon which reads this shares file
 and simply serves up any of the files if it receives a request from an Ares
 client. The shares file is reloaded on HUP.
 
+To build both tools make sure you have libevent
+(http://www.monkey.org/~provos/libevent/) installed and then simply run
+'make' in this directory.
