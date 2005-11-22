@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.13 2004/12/04 01:31:17 mkern Exp $
+ * $Id: as_download_conn.h,v 1.14 2005/11/22 17:18:00 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -74,6 +74,8 @@ struct as_down_conn_t
 
 	unsigned int fail_count;       /* number of times a request has failed
 	                                * for this connection */
+
+	TCPC *tcpcon;
 
 	/* conection state */
 	ASDownConnState state;

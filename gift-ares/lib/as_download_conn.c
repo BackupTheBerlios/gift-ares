@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.20 2005/01/20 16:06:04 mkern Exp $
+ * $Id: as_download_conn.c,v 1.21 2005/11/22 17:18:00 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -12,11 +12,6 @@
 /*****************************************************************************/
 
 static as_bool downconn_request (ASDownConn *conn);
-
-static int downconn_http_callback (ASHttpClient *client,
-                                   ASHttpClientCbCode code);
-
-static void downconn_push_callback (ASPush *push, TCPC *c);
 
 /*****************************************************************************/
 
@@ -129,7 +124,6 @@ void as_downconn_free (ASDownConn *conn)
 	assert (conn->push == NULL);
 
 	as_source_free (conn->source);
-	as_http_client_free (conn->client);
 
 	free (conn);
 }
@@ -158,47 +152,9 @@ as_bool as_downconn_start (ASDownConn *conn, ASHash *hash, size_t start,
 	conn->curr_downloaded = 0;
 	conn->request_time = 0;
 	conn->data_time = 0;
+	conn->client = NULL;
 
-	if (!conn->client)
-	{
-		/* create http client for direct connection */
-		conn->client = as_http_client_create (net_ip_str (conn->source->host),
-		                                      conn->source->port,
-		                                      downconn_http_callback);
-
-		if (!conn->client)
-		{
-			AS_ERR_2 ("Failed to create http client for %s:%d",
-			          net_ip_str (conn->source->host), conn->source->port);
-
-			conn->fail_count++;
-			downconn_reset (conn);
-			downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
-
-			return FALSE;
-		}
-
-		conn->client->udata = conn;
-	}
-
-	/* make request */
-	if (!downconn_request (conn))
-	{
-		AS_ERR_2 ("Failed to send http request to %s:%d",
-		          net_ip_str (conn->source->host), conn->source->port);
-
-		conn->fail_count++;
-		downconn_reset (conn);
-		downconn_set_state (conn, DOWNCONN_UNUSED, FALSE);
-
-		return FALSE;
-	}
-
-	/* set state to connecting and raise callback */
-	if (!downconn_set_state (conn, DOWNCONN_CONNECTING, TRUE))
-		return FALSE; /* connection was freed by callback */
-
-	return TRUE;
+	return downconn_request (conn);
 }
 
 /* Stop current download. Does not raise callback. State is set to
@@ -352,333 +308,197 @@ static void set_header_b6st (ASHttpHeader *request)
 	as_packet_free (p);
 }
 
-static as_bool downconn_request (ASDownConn *conn)
+/*****************************************************************************/
+
+void append_with_header (ASPacket *req, ASPacket *p, int type)
 {
-	ASHttpHeader *request;
-	char buf[AS_HASH_BASE64_SIZE + 36];
-	char *encoded;
-	size_t start, end;
+	as_packet_header (p, (ASPacketType)type);
+	as_packet_append (req, p);
+	as_packet_free (p);
+}
 
-	assert (conn->hash);
+void append_raw_with_header (ASPacket *req, unsigned char *data, int type, int len)
+{
+	ASPacket *p = as_packet_create();
 
-	/* create uri and request */
-	encoded = as_hash_encode (conn->hash);
-	snprintf (buf, sizeof (buf), "sha1:%s", encoded);
-	free (encoded);
+	as_packet_put_ustr (p, data, len);
+	as_packet_header (p, (ASPacketType)type);
+	as_packet_append (req, p);
+	as_packet_free (p);
+}
 
-	if (!(request = as_http_header_request (HTHD_VER_11, HTHD_GET, buf)))
-		return FALSE;
+void put_b6st (ASPacket *req)
+{
+        ASPacket *p = as_packet_create ();
 
-	/* add range header (http range is inclusive) */
-	assert (conn->chunk_size > 0);
-	start = conn->chunk_start;
-	end   = conn->chunk_start + conn->chunk_size - 1;
-	assert (start <= end); /* start == end is valid since it gets one byte */
+        as_packet_put_8 (p, 0);    /* unknown */
+        as_packet_put_le16 (p, 0); /* unknown */
+        as_packet_put_le16 (p, 0); /* unknown */
+        as_packet_put_8 (p, 1);    /* unknown */
+        as_packet_put_8 (p, 0);    /* % complete? */
+        as_packet_put_le32 (p, 0); /* zero */
+        as_packet_put_le32 (p, 0); /* unknown */
+        as_packet_put_le16 (p, 0); /* unknown */
+        as_packet_put_8 (p, 0x11); /* hardcoded */
+        as_packet_put_le16 (p, 2); /* unknown */
+        as_packet_put_8 (p, 0);    /* unknown */
+        as_packet_put_8 (p, 0);    /* unknown */
+        as_packet_put_8 (p, 0x80); /* unknown */
+        
+        as_encrypt_b6st (p->data, p->used);
+        append_with_header (req, p, 0x06);
+}
 
-	snprintf(buf, sizeof (buf), "bytes=%u-%u", start, end);
-	as_http_header_set_field (request, "Range", buf);
-	AS_HEAVY_DBG_3 ("Requesting range %s from %s:%d", buf,
-	                net_ip_str (conn->source->host), conn->source->port);
+void put_0a (ASPacket *req)
+{
+        ASPacket *p = as_packet_create ();
 
-	/* add special ares headers */
-	set_header_b6mi (request, conn->source);
-	set_header_b6st (request);
+	as_packet_put_8 (p, 0x01); /* unknown */
+	as_packet_put_le16 (p, 0); /* unknown */
+	as_packet_put_le16 (p, 0xc0); /* unknown */
+	as_packet_put_8 (p, 0x0f); /* unknown */
+	as_packet_put_8 (p, 0); /* unknown */
+	as_packet_put_le32 (p, 0); /* unknown */
+	as_packet_put_le32 (p, 0); /* unknown */
+	as_packet_put_le16 (p, 0); /* unknown */
+	as_packet_put_8 (p, 0x11);
+	as_packet_put_le16 (p, 0x04); /* unknown */
+	as_packet_put_8 (p, 0); /* unknown */
+	as_packet_put_8 (p, 0); /* unknown */
+	as_packet_put_8 (p, 0xff); /* unknown */
 
-	/* Send off the request. This takes care of freeing it later. */
-	if (!as_http_client_request (conn->client, request, TRUE))
+	p = as_encrypt_transfer_0a (p);
+
+	append_with_header (req, p, 0x0a);
+}
+
+#define CLIENT_NAME "AresLite 2.0.0.2966"
+
+as_bool send_request (ASHash *hash, TCPC *c, int start, int stop)
+{
+	ASPacket *p = as_packet_create();
+	int ret;
+
+	as_packet_put_8 (p, 1); /* get */
+
+	as_packet_put_le16 (p, 3);
+	as_packet_put_8 (p, 0x32);
+	as_packet_put_8 (p, 1); /* enc type */
+	as_packet_put_le16 (p, 0x1234); /* reply key */
+
+	/* hash */
+	as_packet_put_le16 (p, 20);
+	as_packet_put_8 (p, 0x01);
+	as_packet_put_hash (p, hash);
+	
+	/* username */
+	as_packet_put_le16 (p, 0);
+	as_packet_put_8 (p, 2);
+
+	put_b6st (p);
+	
+	put_0a (p);
+	
+	/* range */
+	as_packet_put_le16 (p, 8);
+	as_packet_put_8 (p, 7);
+	as_packet_put_le32 (p, start);
+	as_packet_put_le32 (p, stop);
+
+	/* extended range */
+	as_packet_put_le16 (p, 16);
+	as_packet_put_8 (p, 0x0b);
+	as_packet_put_le32 (p, start);
+	as_packet_put_le32 (p, 0/*start>>32*/);
+	as_packet_put_le32 (p, stop);
+	as_packet_put_le32 (p, 0/*stop>>32*/);
+
+	/* client */
+	append_raw_with_header (p, CLIENT_NAME, 0x09, strlen(CLIENT_NAME));
+
+	/* node info */
+	as_packet_put_le16 (p, 16);
+	as_packet_put_8 (p, 0x03);
+	as_packet_put_ip (p, inet_addr ("0.0.0.0"));
+	as_packet_put_le16 (p, 80);
+	as_packet_put_ip (p, inet_addr ("0.0.0.0"));
+	as_packet_put_le16 (p, 59049);
+	as_packet_put_ip (p, inet_addr ("192.168..0.1"));
+
+	/* alt sources */
+	as_packet_put_le16 (p, 0);
+	as_packet_put_8 (p, 0x08);
+
+	/* tree hash? */
+#if 0
+	as_packet_put_le16 (p, 1);
+	as_packet_put_8 (p, 0x0c);
+	as_packet_put_8 (p, 0x01);
+#endif
+	
+	p = as_encrypt_transfer (p);
+
+	ret = as_packet_send (p, c);
+	
+	as_packet_free (p);
+
+	return ret;
+}
+
+static void do_send_request (int fd, input_id input, ASDownConn *conn)
+{
+	input_remove (input);
+
+	if (net_sock_error (fd))
 	{
-		as_http_header_free (request);
-		return FALSE;
+		/* connect failed */
+		AS_DBG_2 ("net_sock_error(fd) for %s:%d",
+						 net_ip_str(conn->source->host), conn->source->port);
+
+		return;
 	}
 
-	/* wait for http callback */
+	if (!send_request (conn->hash, conn->tcpcon, conn->chunk_start, conn->chunk_start+conn->chunk_size-1))
+	{
+		AS_ERR_2 ("error sending request to %s:%d",
+						 net_ip_str(conn->source->host), conn->source->port);
+		return;
+	}
+
+	/* FIXME */
+	return;
+}
+
+static as_bool downconn_request (ASDownConn *conn)
+{
+	ASSource *source = conn->source;
+
+	if (! (conn->tcpcon = tcp_open (source->host, source->port, FALSE)))
+	{
+		AS_ERR_2 ("ERROR: tcp_open() failed for %s:%d",
+				   net_ip_str(source->host), source->port);
+
+		return FALSE;
+	}
+	input_add (conn->tcpcon->fd, (void *)conn, INPUT_WRITE,
+			   (InputCallback)do_send_request, AS_SESSION_CONNECT_TIMEOUT);
+
 	return TRUE;
 }
 
 /*****************************************************************************/
 
+#if 0
 static as_bool handle_reply (ASHttpClient *client)
 {
-	ASDownConn *conn = client->udata;
-	char *p;
-
-	/* reset queue status */
-	conn->queue_pos = 0;
-	conn->queue_len = 0;
-	conn->queue_last_try = 0;
-	conn->queue_next_try = 0;
-
-	switch (client->reply->code)
-	{
-	case 200:
-	case 206:
-	{
-		unsigned int start, stop, size;
-
-		/* Check that range is ok. */
-		p = as_http_header_get_field (client->reply, "Content-Range");
-
-		if (p  && sscanf (p, "bytes=%u-%u/%u", &start, &stop, &size) == 3)
-		{
-			if (start != conn->chunk_start)
-			{
-				AS_WARN_4 ("Invalid range start from %s:%d. "
-				           "Got %d, expected %d. Aborting.",
-				           net_ip_str (conn->source->host),
-			               conn->source->port,
-						   start, conn->chunk_start);
-				break;
-			}
-
-			if (stop - start + 1 != conn->chunk_size)
-			{
-				AS_WARN_4 ("Got different range than request from %s:%d."
-				           "Requested size: %d, received: %d. Continuing anyway.",
-				           net_ip_str (conn->source->host),
-			               conn->source->port,
-						   conn->chunk_size, stop - start + 1);
-			}
-
-			/* Reset fail count */
-			conn->fail_count = 0;
-
-			conn->request_time = conn->data_time = time (NULL);
-
-			/* we are in business */
-			downconn_set_state (conn, DOWNCONN_TRANSFERRING, TRUE);
-
-			return TRUE; /* go on with request */
-		}
-
-		/* TODO: if missing range headers is common allow this case */
-		AS_WARN_2 ("No range header in response from %s:%d."
-		           "Aborting to prevent corruption.",
-		           net_ip_str (conn->source->host), conn->source->port);
-		break;
-	}
-
-	case 404:
-		/* file not found */
-		AS_DBG_2 ("Got 404 from %s:%d", net_ip_str (conn->source->host),
-		          conn->source->port);
-		break;
-
-	case 503:
-	{
-		unsigned int pos = 0, len = 0, limit, min, max;
-		unsigned int retry = 120; /* seconds */
-
-		p = as_http_header_get_field (client->reply, "X-Queued");
-
-		if (p && sscanf (p, "position=%u,length=%u,limit=%u,pollMin=%u,pollMax=%u",
-				         &pos, &len, &limit, &min, &max) == 5)
-		{
-			retry = (min + max) / 2;
-		}
-
-		AS_HEAVY_DBG_5 ("Queued on %s:%d: pos: %d, len: %d, retry: %d",
-		                net_ip_str (conn->source->host), conn->source->port,
-						pos, len, retry);
-
-		conn->queue_pos = pos;
-		conn->queue_len = len;
-		conn->queue_last_try = time (NULL);
-		conn->queue_next_try = conn->queue_last_try + retry * ESECONDS;
-
-		/* Reset fail count */
-		conn->fail_count = 0;
-
-		/* Reset connection since the next request might be for a different
-		 * chunk.
-		 */
-		downconn_reset (conn);
-		downconn_set_state (conn, DOWNCONN_QUEUED, TRUE);
-
-		return TRUE; /* this will keep the connection open, with any luck */
-	}
-
-	default:
-		AS_WARN_4 ("Unknown http response \"%s\" (%d) from %s:%d",
-		           client->reply->code_str, client->reply->code,
-		           net_ip_str (conn->source->host), conn->source->port);
-		break;
-	}
-
-	/* Do not continue with request */
-	conn->fail_count++;
-	downconn_reset (conn);
-
-	/* manually reset http client since the callback may reuse us. */
-	as_http_client_cancel (conn->client);
-
-	downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
-
-	return FALSE; /* abort request and close connection */
-}
-
-static int downconn_http_callback (ASHttpClient *client,
-                                   ASHttpClientCbCode code)
-{
-	ASDownConn *conn = client->udata;
-
-	switch (code)
-	{
-	case HTCL_CB_REQUESTING:
-		return TRUE;
-
-	case HTCL_CB_CONNECT_FAILED:
-		/* This will be called if the connection was _not_ pushed and connect
-		 * failed. Send a push request in this case. */
-		AS_HEAVY_DBG_2 ("Connect to %s:%d failed. Trying push.",
-		                net_ip_str (conn->source->host), conn->source->port);
-
-		/* Cancel and free failed connection */
-		as_http_client_cancel (conn->client);
-		as_http_client_free (conn->client);
-		conn->client = NULL;
-
-		/* Start push request. */
-		assert (conn->push == NULL);
-		if (!(conn->push = as_pushman_send (AS->pushman,
-		                                    downconn_push_callback,
-		                                    conn->source, conn->hash)))
-		{
-			conn->fail_count++;
-			downconn_reset (conn);
-			/* this may free us */
-			downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
-			return FALSE;
-		}
-
-		conn->push->udata = conn;
-
-		/* Now wait for push reply or timeout */
-		return FALSE;
-
-	case HTCL_CB_REQUEST_FAILED:
-		conn->fail_count++;
-		downconn_reset (conn);
-		/* this may free us */
-		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
-
-		return FALSE;
-
-	case HTCL_CB_REPLIED:
-		return handle_reply (client);
-
-	case HTCL_CB_DATA:
-		/* This may be called in the case of an non-empty queued reply,
-		 * ignore it.
-		 */
-		if (conn->state == DOWNCONN_QUEUED)
-			return TRUE;
-
-		assert (conn->state == DOWNCONN_TRANSFERRING);
-
-		conn->data_time = time (NULL);
-		conn->curr_downloaded += client->data_len;
-
-		if (conn->data_cb)
-			conn->data_cb (conn, client->data, client->data_len);
-
-		return TRUE;
-
-	case HTCL_CB_DATA_LAST:
-		/* This is also called for the empty queued reply, ignore it */
-		if (conn->state == DOWNCONN_QUEUED)
-			return TRUE;
-
-		assert (conn->state == DOWNCONN_TRANSFERRING);
-		
-		AS_HEAVY_DBG_4 ("HTCL_CB_DATA_LAST (%d/%d) from %s:%d",
-		                conn->client->content_received,
-		                conn->client->content_length,
-		                net_ip_str (conn->source->host), conn->source->port);
-
-		conn->data_time = time (NULL);
-		conn->curr_downloaded += client->data_len;
-
-		if (client->data_len > 0 && conn->data_cb)
-		{
-			if (!conn->data_cb (conn, client->data, client->data_len))
-				return FALSE; /* connection was freed / reused  by callback */
-		}
-
-		/* update stats */
-		downconn_update_stats (conn);
-
-		downconn_reset (conn);
-		/* this may free or reuse us */
-		downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE);
-
-		return TRUE; /* return value is ignored by http client */
-	}
-
-	return TRUE;
+	return FALSE;
 }
 
 /*****************************************************************************/
 
 static void downconn_push_callback (ASPush *push, TCPC *c)
 {
-	ASDownConn *conn = (ASDownConn *) push->udata;
-
-	assert (conn->push == push);
-	assert (as_source_equal (push->source, conn->source));
-
-	if (!c || push->state != PUSH_OK)
-	{
-		/* Fail the download. */
-		tcp_close (c);
-
-		conn->fail_count++;
-		downconn_reset (conn); /* frees and removes push */
-		/* this may free us */
-		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
-		return;
-	}
-
-	/* Create new http client with pushed connection */
-	assert (conn->client == NULL);
-	conn->client = as_http_client_create_tcpc (c, downconn_http_callback);
-
-	if (!conn->client)
-	{
-		AS_ERR_3 ("Failed to create http client for push %d from %s:%d",
-		          push->id, net_ip_str (conn->source->host),
-		          conn->source->port);
-
-		/* Fail the download. */
-		tcp_close (c);
-
-		conn->fail_count++;
-		downconn_reset (conn); /* frees and removes push */
-		/* this may free us */
-		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
-		return;
-	}
-
-	conn->client->udata = conn;
-
-	AS_HEAVY_DBG_3 ("Created http client from push %u by %s:%d", push->id,
-	                net_ip_str (conn->source->host), conn->source->port);
-
-	/* Send http request. */
-	if (!downconn_request (conn))
-	{
-		AS_ERR_3 ("Failed to send http request to push %d connection from %s:%d",
-		          push->id, net_ip_str (conn->source->host),
-		          conn->source->port);
-
-		conn->fail_count++;
-		downconn_reset (conn); /* frees and removes push */
-		downconn_set_state (conn, DOWNCONN_FAILED, TRUE);
-		return;
-	}
-
-	/* We no longer need the push */
-	as_pushman_remove (AS->pushman, push);
-	conn->push = NULL;
 }
+#endif
 
 /*****************************************************************************/
