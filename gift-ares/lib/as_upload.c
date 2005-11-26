@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.25 2005/11/26 13:44:55 mkern Exp $
+ * $Id: as_upload.c,v 1.26 2005/11/26 17:17:15 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -357,6 +357,14 @@ as_bool as_upload_start (ASUpload *up)
 
 	as_hash_free (hash);
 
+	/* Make copy of share object in case share list changes during upload. */
+	if (!(up->share = as_share_copy (up->share)))
+	{
+		AS_ERR ("Insufficient memory.");
+		send_reply_error (up, TRUE);
+		return FALSE;
+	}
+
 	/* handle phash request by sending error since we do not support them */
 	if (reply_with_phash)
 	{
@@ -382,14 +390,6 @@ as_bool as_upload_start (ASUpload *up)
 		AS_ERR_3 ("Invalid range [%u,%u) from %s",
 		          up->start, up->stop, net_ip_str (up->host));
 		send_reply_error (up, FALSE);
-		return FALSE;
-	}
-
-	/* Make copy of share object in case share list changes during upload. */
-	if (!(up->share = as_share_copy (up->share)))
-	{
-		AS_ERR ("Insufficient memory.");
-		send_reply_error (up, TRUE);
 		return FALSE;
 	}
 
