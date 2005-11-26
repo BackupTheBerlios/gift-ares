@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.11 2005/11/26 13:44:55 mkern Exp $
+ * $Id: as_http_server.c,v 1.12 2005/11/26 13:55:06 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -207,13 +207,23 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		return;
 	}
 
-	/* we use the first 4 bytes to detrmine the type of connection.
-	 * for simplicity we assume that those 4 bytes are available at once.
+	if ((len = tcp_peek (servcon->tcpcon, buf, 4)) == 0)
+	{
+		AS_DBG_1 ("Connection from %s closed remotely.",
+		          net_ip_str (servcon->remote_ip));
+
+		servcon_free (servcon, TRUE);
+		return;
+	}
+
+	/* We use the first 4 bytes to determine the type of connection.
+	 * FIXME: For simplicity we assume that those 4 bytes are available at
+	 * once.
 	 */
-	if ((len = tcp_peek (servcon->tcpcon, buf, 4)) != 4)
+	if (len != 4)
 	{
 		AS_DBG_2 ("Received less than 4 (%d) bytes from %s, closing connection",
-				  len, net_ip_str (servcon->remote_ip));
+		          len, net_ip_str (servcon->remote_ip));
 
 		servcon_free (servcon, TRUE);
 		return;
@@ -228,8 +238,6 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
 				   (InputCallback)server_request, HTSV_REQUEST_TIMEOUT);
 	}
-
-/* FIXME: Ares push support */
 	else if (!strcmp (buf, "PUSH"))
 	{
 		AS_HEAVY_DBG_2 ("connection from %s is a push reply [%s]",
@@ -238,7 +246,6 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
 				   (InputCallback)server_push, HTSV_REQUEST_TIMEOUT);
 	}
-
 	else if (!strcmp (buf, "CHAT"))
 	{
 		/* drop all ares chat requests */
@@ -250,9 +257,9 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 	}
 	else 
 	{
-		AS_DBG_5 ("connection from %s is binary [%02X%02X%02X%02X]",
-				   net_ip_str (servcon->remote_ip), buf[0], buf[1],
-				   buf[2], buf[3]);
+		AS_HEAVY_DBG_5 ("connection from %s is binary [%02X%02X%02X%02X]",
+		                net_ip_str (servcon->remote_ip), buf[0], buf[1],
+		                buf[2], buf[3]);
 		input_add (servcon->tcpcon->fd, (void *)servcon, INPUT_READ,
 				   (InputCallback)server_binary, HTSV_REQUEST_TIMEOUT);
 	}
@@ -465,7 +472,7 @@ static void server_binary (int fd, input_id input, ServCon *servcon)
 	/* read a chunk */
 	if ((len = tcp_recv (servcon->tcpcon, buf, sizeof (buf))) <= 0)
 	{
-		AS_DBG_1 ("tcp_recv() < 0 for connection from %s",
+		AS_DBG_1 ("tcp_recv() <= 0 for connection from %s",
 				   net_ip_str (servcon->remote_ip));
 
 		servcon_free (servcon, TRUE);
