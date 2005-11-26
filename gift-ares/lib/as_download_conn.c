@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.23 2005/11/26 14:17:41 mkern Exp $
+ * $Id: as_download_conn.c,v 1.24 2005/11/26 14:35:01 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -921,6 +921,9 @@ static void downconn_read_body (int fd, input_id input, ASDownConn *conn)
 
 	conn->data_time = time (NULL);
 	conn->curr_downloaded += len;
+
+	/* reset data timeout */
+	timer_reset (conn->tcpcon_timer);
 
 	/* decrypt data */
 	as_decrypt_transfer_body (buf, len, &conn->reply_key);
