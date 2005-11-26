@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.22 2005/11/26 01:42:36 mkern Exp $
+ * $Id: as_download_conn.c,v 1.23 2005/11/26 14:17:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -63,6 +63,7 @@ static ASDownConn *downconn_new (void)
 	conn->tcpcon_timer = INVALID_TIMER;
 	conn->recv_buf     = NULL;
 	conn->reply_key    = 0x00; /* anything will do since it's stupid anyway */
+	conn->keep_alive   = FALSE;
 	conn->push         = NULL;
 
 	conn->queue_pos      = 0;
@@ -95,6 +96,8 @@ static void downconn_reset (ASDownConn *conn)
 	timer_remove_zero (&conn->tcpcon_timer);
 	as_packet_free (conn->recv_buf);
 	conn->recv_buf = NULL;
+	conn->reply_key = 0x00; /* anything will do since it's stupid anyway */
+	conn->keep_alive = FALSE;
 	as_pushman_remove (AS->pushman, conn->push);
 	conn->push = NULL;
 	as_hash_free (conn->hash);
@@ -585,6 +588,7 @@ static void downconn_read_header (int fd, input_id input, ASDownConn *conn)
 	ASPacket *reply;
 	ASHttpHeader *header;
 	as_uint16 key;
+	char *p;
 
 	input_remove (input);
 
@@ -676,11 +680,19 @@ static void downconn_read_header (int fd, input_id input, ASDownConn *conn)
 	}
 #endif
 
+	/* Check if we can keep connection alive. HTTP 1.1 specifies that all
+	 * connections are keep-alive unless 'Connection: Close' is present.
+	 * The Ares author is not aware of this thus the assumption here is that
+	 * connections are closed unless 'Connection: Keep-Alive' is specified.
+	 */
+	p = as_http_header_get_field (header, "Connection");
+	conn->keep_alive = (gift_strcasecmp (p, "Keep-Alive") == 0);
+
 	/* update key so it is correct for decrypting body later */
 	conn->reply_key = key;
 
 	/* remove both encryption and http header from data */
-	assert (as_packet_size (reply) >= http_header_len);
+	assert (as_packet_size (reply) >= (unsigned int) http_header_len);
 	reply->read_ptr = reply->data + http_header_len;
 	as_packet_truncate (reply);
 
@@ -783,7 +795,7 @@ static void downconn_handle_reply (ASDownConn *conn, ASHttpHeader *reply)
 			as_packet_free (conn->recv_buf);
 			conn->recv_buf = NULL;
 
-			return;
+			return; /* wait for file data */
 		}
 
 		/* TODO: if missing range headers is common allow this case */
@@ -829,9 +841,11 @@ static void downconn_handle_reply (ASDownConn *conn, ASHttpHeader *reply)
 		 */
 		as_http_header_free (reply);
 		downconn_reset (conn);
+		if (!conn->keep_alive)
+			tcp_close_null (&conn->tcpcon);
 		downconn_set_state (conn, DOWNCONN_QUEUED, TRUE);
 
-		return; /* keep connection open and wait for new request */
+		return; /* maybe keep connection open and wait for new request */
 	}
 
 	default:
@@ -926,6 +940,9 @@ static void downconn_read_body (int fd, input_id input, ASDownConn *conn)
 		downconn_update_stats (conn);
 
 		downconn_reset (conn);
+		if (!conn->keep_alive)
+			tcp_close_null (&conn->tcpcon);
+
 		/* this may free or reuse us */
 		downconn_set_state (conn, DOWNCONN_COMPLETE, TRUE);
 		return;

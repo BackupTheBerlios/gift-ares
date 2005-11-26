@@ -1,7 +1,5 @@
 
 
-- Only keep download connections open if remote actually signaled this in reply header
-
 - Send proper 0x0a field in download request so we get a good position in the queue
 
 
@@ -10,9 +8,7 @@
 
 - Do we have to 'switch off' hash searches when we don't want any more results?
 
-- Is there a general limit on the number of shares we should upload like in fasttrac?
-
-- Does HTTP downloading work from Ares 2962 nodes?
+- Is there a general limit on the number of shares we should upload like in fasttrack?
 
 - Why do so many source go into 'timed out' state and are not removed? should they be?
   Update: I think it is giFT which times out the sources. Not sure what to do about it.
@@ -22,9 +18,6 @@
 - Don't send shares if shares are hidden
 
 - A lot of successfuly pushes hit the 'first packet needs 4 byte' limit in http server
-
-- Recheck if download queueing works correctly (if we advance in the queue).
-  Better yet move from HTTP to binary protocol.
 
 - Source searching
 

@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.11 2005/11/26 01:42:35 mkern Exp $
+ * $Id: asp_download.c,v 1.12 2005/11/26 14:17:41 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -181,7 +181,10 @@ void asp_giftcb_download_stop (Protocol *p, Transfer *transfer, Chunk *chunk,
 	 */
 	if (!(dc = chunk->source->udata))
 		return;
-	
+
+	/* This will always close the underlying tcp connection which means that
+	 * even if the chunk was complete we will not reuse the connection.
+	 */
 	as_downconn_cancel (dc);
 }
 

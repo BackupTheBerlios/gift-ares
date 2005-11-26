@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.15 2005/11/26 01:42:36 mkern Exp $
+ * $Id: as_download_conn.h,v 1.16 2005/11/26 14:17:41 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -59,6 +59,7 @@ struct as_down_conn_t
 	timer_id      tcpcon_timer;
 	ASPacket     *recv_buf;
 	as_uint16     reply_key; /* encryption key for reply */
+	as_bool       keep_alive; /* whether server supports keep-alive */
 	ASPush       *push;   /* push if one is in progress */
 
 	/* remote queue handling */
