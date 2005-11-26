@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.10 2005/11/08 20:17:32 mkern Exp $
+ * $Id: as_http_server.c,v 1.11 2005/11/26 13:44:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -212,8 +212,8 @@ static void server_peek (int fd, input_id input, ServCon *servcon)
 	 */
 	if ((len = tcp_peek (servcon->tcpcon, buf, 4)) != 4)
 	{
-		AS_DBG_1 ("received less than 4 bytes from %s, closing connection",
-				   net_ip_str (servcon->remote_ip));
+		AS_DBG_2 ("Received less than 4 (%d) bytes from %s, closing connection",
+				  len, net_ip_str (servcon->remote_ip));
 
 		servcon_free (servcon, TRUE);
 		return;

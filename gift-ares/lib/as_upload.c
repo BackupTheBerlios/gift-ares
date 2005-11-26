@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.24 2005/11/26 13:34:05 mkern Exp $
+ * $Id: as_upload.c,v 1.25 2005/11/26 13:44:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -544,7 +544,6 @@ static as_bool set_header_encoded (ASHttpHeader *header, char *name,
 static void set_header_b6mi (ASHttpHeader *request)
 {
 	ASPacket *p;
-	ASSession *super = NULL;
 	in_addr_t sip;
 	in_port_t sport;
 
