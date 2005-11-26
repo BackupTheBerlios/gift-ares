@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.22 2005/11/15 21:49:23 mkern Exp $
+ * $Id: as_upload.c,v 1.23 2005/11/26 01:42:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -627,7 +627,7 @@ static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply)
 
 	if (upload_is_binary (up))
 	{
-		if (!as_encrypt_transfer_reply (packet, up->enc_key))
+		if (!as_encrypt_transfer_reply (packet, &up->enc_key))
 		{
 			as_packet_free (packet);
 			return NULL;
@@ -883,6 +883,13 @@ static void send_file (int fd, input_id input, ASUpload *up)
 		return;
 	}
 
+	/* encrypt data */
+	if (upload_is_binary (up))
+	{
+		as_encrypt_transfer_body (buf, in, &up->enc_key);
+	}
+
+	/* send data */
 	out = tcp_send (up->c, buf, in);
 	
 	if (out < 0)

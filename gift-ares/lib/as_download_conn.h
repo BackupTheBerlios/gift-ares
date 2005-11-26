@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.h,v 1.14 2005/11/22 17:18:00 hex Exp $
+ * $Id: as_download_conn.h,v 1.15 2005/11/26 01:42:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -55,7 +55,10 @@ struct as_down_conn_t
 	size_t chunk_start;
 	size_t chunk_size;
 
-	ASHttpClient *client; /* the actuall http client for downloading */
+	TCPC         *tcpcon; /* tcp connection to source */
+	timer_id      tcpcon_timer;
+	ASPacket     *recv_buf;
+	as_uint16     reply_key; /* encryption key for reply */
 	ASPush       *push;   /* push if one is in progress */
 
 	/* remote queue handling */
@@ -74,8 +77,6 @@ struct as_down_conn_t
 
 	unsigned int fail_count;       /* number of times a request has failed
 	                                * for this connection */
-
-	TCPC *tcpcon;
 
 	/* conection state */
 	ASDownConnState state;

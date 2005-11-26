@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.29 2005/10/06 14:28:24 mkern Exp $
+# $Id: Makefile.msvc,v 1.30 2005/11/26 01:42:36 mkern Exp $
 
 
 !include ../Make.msvc
@@ -61,7 +61,7 @@ OBJECTS = \
 
 
 # this breaks the non-plugin build
-#DEFS = $(DEFS) -DGIFT_PLUGIN
+DEFS = $(DEFS) -DGIFT_PLUGIN
 
 
 aslib: $(OBJECTS) $(HEX_OPTIMIZATION_OBJECTS) $(LIBGIFT_OBJECTS)

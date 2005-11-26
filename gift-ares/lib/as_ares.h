@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.67 2005/11/08 14:39:09 mkern Exp $
+ * $Id: as_ares.h,v 1.68 2005/11/26 01:42:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -203,6 +203,12 @@ extern Protocol *gift_proto;
 #if 0
 # define AS_LOGIN_STRING "Ares 1.8.1.2951"
 #endif
+
+/* The user agent string we send with encrypted download requests. Ignored in
+ * Open Source Ares but the build number may habe been used to discriminate
+ * against us in older versions.
+ */
+#define AS_DOWNLOAD_AGENT "Ares 1.8.1.2958"
 
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)

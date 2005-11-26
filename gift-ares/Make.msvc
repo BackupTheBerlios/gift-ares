@@ -1,8 +1,8 @@
-# $Id: Make.msvc,v 1.16 2005/09/15 21:13:52 mkern Exp $
+# $Id: Make.msvc,v 1.17 2005/11/26 01:42:30 mkern Exp $
 
 
 VERSION = 0.2.2
-#HEAVY_DEBUG = 1
+HEAVY_DEBUG = 1
 
 ASLIB_ROOT   = $(ARES_ROOT)\lib
 TEST_ROOT    = $(ARES_ROOT)\test

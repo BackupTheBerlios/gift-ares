@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.c,v 1.20 2005/11/15 21:49:23 mkern Exp $
+ * $Id: as_crypt.c,v 1.21 2005/11/26 01:42:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -216,8 +216,8 @@ unsigned char table_7[256] =
 
 /*****************************************************************************/
 
-static void munge (as_uint8 *data, int len, as_uint16 key,
-                   as_uint16 mul, as_uint16 add)
+static as_uint16 munge (as_uint8 *data, int len, as_uint16 key,
+                        as_uint16 mul, as_uint16 add)
 {
 	int i;
 
@@ -226,10 +226,12 @@ static void munge (as_uint8 *data, int len, as_uint16 key,
 		data[i] = data[i] ^ (key >> 8);
 		key = (key + data[i]) * mul + add;
 	}
+
+	return key;
 }
 
-static void unmunge (as_uint8 *data, int len, as_uint16 key,
-                     as_uint16 mul, as_uint16 add)
+static as_uint16 unmunge (as_uint8 *data, int len, as_uint16 key,
+                          as_uint16 mul, as_uint16 add)
 {
 	as_uint8 c;
 	int i;
@@ -240,6 +242,8 @@ static void unmunge (as_uint8 *data, int len, as_uint16 key,
 		key = (key + data[i]) * mul + add;
 		data[i] = c;
 	}
+
+	return key;
 }
 
 /*****************************************************************************/
@@ -816,8 +820,8 @@ as_bool as_encrypt_transfer_request (ASPacket *packet)
 	for (i = 0; i < skip; i++)
 		packet->data[3 + i] = rand () % 0x100;
 
-	packet->data[2 + skip + 0] = payload_len & 0xFF; /* little endian */
-	packet->data[2 + skip + 1] = payload_len >> 8;
+	packet->data[3 + skip + 0] = payload_len & 0xFF; /* little endian */
+	packet->data[3 + skip + 1] = payload_len >> 8;
 
 	/* munge payload */
 	munge (packet->data + 5 + skip, payload_len, 0x3faa, 0xd7fb, 0x3efd);
@@ -866,8 +870,8 @@ as_bool as_decrypt_transfer_request (ASPacket *packet)
 	return TRUE;
 }
 
-/* encrypt/decrypt transfer replies */
-as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 key)
+/* encrypt/decrypt transfer replies. Updates key. */
+as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 *key)
 {
 	as_uint8 i;
 	as_uint8 skip = 1 + (rand () % 16); /* Ares does 1 + (rand() % 16) */
@@ -889,12 +893,12 @@ as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 key)
 		packet->data[3 + i] = rand () % 0x100;
 
 	/* munge entire packet */
-	munge (packet->data, packet->used, key, 0xCB6F, 0x41BA);
+	*key = munge (packet->data, packet->used, *key, 0xCB6F, 0x41BA);
 
 	return TRUE;
 }
 
-as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 key)
+as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 *key)
 {
 	int i;
 	int skip;
@@ -903,7 +907,7 @@ as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 key)
 	as_packet_truncate (packet);
 
 	/* unmunge entire packet */
-	unmunge (packet->data, packet->used, key, 0xCB6F, 0x41BA);
+	*key = unmunge (packet->data, packet->used, *key, 0xCB6F, 0x41BA);
 
 	if (as_packet_remaining (packet) < 3)
 		return FALSE;
@@ -922,6 +926,17 @@ as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 key)
 	as_packet_truncate (packet);
 
 	return TRUE;
+}
+
+/* encrypt/decrypt transfer body. Updates key. */
+void as_encrypt_transfer_body (as_uint8 *data, int len, as_uint16 *key)
+{
+	*key = munge (data, len, *key, 0xCB6F, 0x41BA);
+}
+
+void as_decrypt_transfer_body (as_uint8 *data, int len, as_uint16 *key)
+{
+	*key = unmunge (data, len, *key, 0xCB6F, 0x41BA);
 }
 
 /*****************************************************************************/

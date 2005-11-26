@@ -1,5 +1,5 @@
 /*
- * $Id: asp_download.c,v 1.10 2005/01/08 13:36:59 mkern Exp $
+ * $Id: asp_download.c,v 1.11 2005/11/26 01:42:35 mkern Exp $
  *
  * Copyright (C) 2003 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -39,7 +39,6 @@ static as_bool dl_state_callback (ASDownConn *conn, ASDownConnState state)
 	case DOWNCONN_COMPLETE:
 		/* This can happen only if we have received zero bytes.  See 
 		 * dl_data_callback. */
-		assert (!conn->client || !conn->client->data_len);
 
 		/* fall-through */
 	case DOWNCONN_FAILED:

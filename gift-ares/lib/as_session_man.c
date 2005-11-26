@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.36 2005/10/19 01:32:51 hex Exp $
+ * $Id: as_session_man.c,v 1.37 2005/11/26 01:42:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -61,6 +61,25 @@ void as_sessman_free (ASSessMan *man)
 unsigned int as_sessman_established (ASSessMan *man)
 {
 	return list_length (man->connected);
+}
+
+/* Returns ip and port of any one of the supernodes we are connected to */
+in_addr_t as_sessman_get_supernode (ASSessMan *man, in_port_t *port)
+{
+	in_addr_t ip = 0;
+	in_port_t p = 0;
+
+	if (man->connected)
+	{
+		ASSession *sess = man->connected->data;
+		ip = sess->host;
+		p = sess->port;
+	}
+
+	if (port)
+		*port = p;
+	
+	return ip;
 }
 
 /*****************************************************************************/

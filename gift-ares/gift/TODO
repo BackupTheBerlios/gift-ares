@@ -1,4 +1,13 @@
 
+- Don't close connection on complete uploads but return it to the listening server
+  and keep it with a timeout. we may get another request.
+
+- Only keep download connections open if remote actually signaled this in reply header
+
+- Send proper 0x0a field in download request so we get a good position in the queue
+
+
+
 - Don't add unroutable ips to node cache and remove them on connect if they are there.
 
 - Do we have to 'switch off' hash searches when we don't want any more results?

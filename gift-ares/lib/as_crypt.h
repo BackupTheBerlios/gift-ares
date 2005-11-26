@@ -1,5 +1,5 @@
 /*
- * $Id: as_crypt.h,v 1.13 2005/11/08 14:39:09 mkern Exp $
+ * $Id: as_crypt.h,v 1.14 2005/11/26 01:42:36 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -113,9 +113,14 @@ as_bool as_decrypt_transfer_0a (ASPacket *packet);
 as_bool as_encrypt_transfer_request (ASPacket *packet);
 as_bool as_decrypt_transfer_request (ASPacket *packet);
 
-/* encrypt/decrypt transfer replies */
-as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 key);
-as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 key);
+/* encrypt/decrypt transfer replies. Updates key. */
+as_bool as_encrypt_transfer_reply (ASPacket *packet, as_uint16 *key);
+as_bool as_decrypt_transfer_reply (ASPacket *packet, as_uint16 *key);
+
+/* encrypt/decrypt transfer body. Updates key. */
+void as_encrypt_transfer_body (as_uint8 *data, int len, as_uint16 *key);
+void as_decrypt_transfer_body (as_uint8 *data, int len, as_uint16 *key);
+
 
 /*****************************************************************************/
 
