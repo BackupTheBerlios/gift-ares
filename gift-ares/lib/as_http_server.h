@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.h,v 1.4 2005/11/08 20:17:32 mkern Exp $
+ * $Id: as_http_server.h,v 1.5 2005/11/26 13:34:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -74,7 +74,9 @@ ASHttpServer *as_http_server_create (in_port_t port,
 /* free server, close listening port */
 void as_http_server_free (ASHttpServer *server);
 
-/* fake an incoming connection (for push replies) */
+/* Fake an incoming connection. Used for push replies and kept open upload
+ * connections.
+ */
 void as_http_server_pushed (ASHttpServer *server, TCPC *c);
 
 /*****************************************************************************/

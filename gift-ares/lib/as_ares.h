@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.68 2005/11/26 01:42:36 mkern Exp $
+ * $Id: as_ares.h,v 1.69 2005/11/26 13:34:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -210,6 +210,16 @@ extern Protocol *gift_proto;
  */
 #define AS_DOWNLOAD_AGENT "Ares 1.8.1.2958"
 
+/* The server name returned in upload replies. Ares displays this (up to the
+ * first slash or space) as the network name, so we should be consistent with
+ * what we tell supernodes.
+ */
+#ifdef GIFT_PLUGIN
+#  define AS_UPLOAD_AGENT AS_CLIENT_NAME " (libares; " PACKAGE "/" VERSION ")"
+#else
+#  define AS_UPLOAD_AGENT AS_CLIENT_NAME " (libares)"
+#endif
+
 /* Timeout for supernode tcp connections. */
 #define AS_SESSION_CONNECT_TIMEOUT (20 * SECONDS)
 
@@ -255,6 +265,11 @@ extern Protocol *gift_proto;
 
 /* Time between upload manager's progress callbacks */
 #define AS_UPLOAD_PROGRESS_INTERVAL (1 * SECONDS)
+
+/* If AS_UPLOAD_KEEP_ALIVE is defined we do not close connections after
+ * upload but return them to the http server so a new request can be received.
+ */
+#define AS_UPLOAD_KEEP_ALIVE
 
 /* Timeout for tcp connect to firewalled source's supernode. */
 #define AS_PUSH_CONNECT_TIMEOUT (20 * SECONDS)

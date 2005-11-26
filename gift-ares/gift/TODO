@@ -1,6 +1,4 @@
 
-- Don't close connection on complete uploads but return it to the listening server
-  and keep it with a timeout. we may get another request.
 
 - Only keep download connections open if remote actually signaled this in reply header
 

@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.23 2005/11/26 01:42:36 mkern Exp $
+ * $Id: as_upload.c,v 1.24 2005/11/26 13:34:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -13,21 +13,12 @@
 
 #define BLOCKSIZE 4096
 
-/* ares displays this (up to the first slash or space) as the network name,
-   so we should be consistent with what we tell supernodes */
-
-#ifdef GIFT_PLUGIN
-#  define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares; " PACKAGE "/" VERSION ")"
-#else
-#  define AS_HTTP_SERVER_NAME  AS_CLIENT_NAME " (libares)"
-#endif
-
 /* Log http reply headers. */
 /* #define LOG_HTTP_REPLIES */
 
 /*****************************************************************************/
 
-static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply);
+static ASPacket *compile_http_reply (ASUpload *up, ASHttpHeader *reply);
 static as_bool send_reply_success (ASUpload *up);
 static as_bool send_reply_queued (ASUpload *up, int queue_pos,
                                   int queue_length);
@@ -554,23 +545,15 @@ static void set_header_b6mi (ASHttpHeader *request)
 {
 	ASPacket *p;
 	ASSession *super = NULL;
+	in_addr_t sip;
+	in_port_t sport;
 
 	p = as_packet_create ();
 
-	/* our supernode's IP and port (choose the first one in the list) */
-	if (AS && AS->sessman && AS->sessman->connected)
-		super = AS->sessman->connected->data;
-
-	if (super)
-	{
-		as_packet_put_ip (p, super->host);
-		as_packet_put_le16 (p, super->port);
-	}
-	else
-	{
-		as_packet_put_ip (p, INADDR_NONE);
-		as_packet_put_le16 (p, 0);
-	}
+	/* our supernode's IP and port */
+	sip = as_sessman_get_supernode (AS->sessman, &sport);
+	as_packet_put_ip (p, sip);
+	as_packet_put_le16 (p, sport);
 
 	/* our IP and port */
 	as_packet_put_ip (p, AS->netinfo->outside_ip);
@@ -586,7 +569,7 @@ static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
 {
 	char buf[32];
 
-	as_http_header_set_field (reply, "Server", AS_HTTP_SERVER_NAME);
+	as_http_header_set_field (reply, "Server", AS_UPLOAD_AGENT);
 	set_header_b6mi (reply);
 
 	snprintf (buf, sizeof (buf), "%08X",
@@ -594,11 +577,17 @@ static void set_common_headers (ASUpload *up, ASHttpHeader *reply)
 	as_http_header_set_field (reply, "X-MyLIP", buf);
 	if (AS->netinfo->nick)
 		as_http_header_set_field (reply, "X-My-Nick", AS->netinfo->nick);
+
+#ifdef AS_UPLOAD_KEEP_ALIVE
+	as_http_header_set_field (reply, "Connection", "Keep-Alive");
+#else
+	as_http_header_set_field (reply, "Connection", "Close");
+#endif
 }
 
 /*****************************************************************************/
 
-static ASPacket *as_compile_http_reply (ASUpload *up, ASHttpHeader *reply)
+static ASPacket *compile_http_reply (ASUpload *up, ASHttpHeader *reply)
 {
 	String *str;
 	ASPacket *packet;
@@ -662,7 +651,7 @@ static as_bool send_reply_success (ASUpload *up)
 
 	set_common_headers (up, reply);
 
-	reply_packet = as_compile_http_reply (up, reply);
+	reply_packet = compile_http_reply (up, reply);
 	assert (reply_packet);
 
 	/* Immediately send reply since there might be a race condition between
@@ -708,7 +697,7 @@ static as_bool send_reply_queued (ASUpload *up, int queue_pos,
 		as_http_header_set_field (reply, "X-Queued", buf);
 	}
 
-	reply_packet = as_compile_http_reply (up, reply);
+	reply_packet = compile_http_reply (up, reply);
 	assert (reply_packet);
 
 	/* Immediately send reply and close connection. */
@@ -733,7 +722,6 @@ static as_bool send_reply_metadata (ASUpload *up)
 
 	assert (up->share);
 
-	/* Yes, sadly this is 200 even though we don't send data. */
 	reply = as_http_header_reply (HTHD_VER_11, 200);
 	set_common_headers (up, reply);
 
@@ -759,7 +747,7 @@ static as_bool send_reply_metadata (ASUpload *up)
 	snprintf (buf, sizeof (buf), "%u", up->share->size);
 	as_http_header_set_field (reply, "X-Size", buf);
 
-	reply_packet = as_compile_http_reply (up, reply);
+	reply_packet = compile_http_reply (up, reply);
 	assert (reply_packet);
 
 	/* Immediately send reply and close connection. */
@@ -783,7 +771,7 @@ static as_bool send_reply_error (ASUpload *up, as_bool our_fault)
 	reply = as_http_header_reply (HTHD_VER_11, our_fault ? 500 : 400);
 	set_common_headers (up, reply);
 	
-	reply_packet = as_compile_http_reply (up, reply);
+	reply_packet = compile_http_reply (up, reply);
 	assert (reply_packet);
 
 	/* Immediately send reply and close connection. */
@@ -807,7 +795,7 @@ static as_bool send_reply_not_found (ASUpload *up)
 	reply = as_http_header_reply (HTHD_VER_11, 404);
 	set_common_headers (up, reply);
 
-	reply_packet = as_compile_http_reply (up, reply);
+	reply_packet = compile_http_reply (up, reply);
 	assert (reply_packet);
 
 	/* Immediately send reply and close connection. */
@@ -930,13 +918,23 @@ static void send_file (int fd, input_id input, ASUpload *up)
 	if (up->sent == up->stop - up->start)
 	{
 		AS_DBG_3 ("Finished uploading %d bytes of '%s' to %s",
-		           up->sent, up->share->path, net_ip_str (up->host));
+		          up->sent, up->share->path, net_ip_str (up->host));
 
 		input_remove (up->input);
 		up->input = INVALID_INPUT;
-		tcp_close_null (&up->c);
 		fclose (up->file);
 		up->file = NULL;
+
+#ifdef AS_UPLOAD_KEEP_ALIVE
+		/* Treat tcp connection as new connection to server. */
+		AS_HEAVY_DBG_1 ("Handing off keep-alive connection to %s to http server.",
+		                net_ip_str (up->host));
+
+		as_http_server_pushed (AS->server, up->c);
+		up->c = NULL;
+#else
+		tcp_close_null (&up->c);
+#endif
 
 		upload_set_state (up, UPLOAD_COMPLETE, TRUE); /* may free us */
 		return;
