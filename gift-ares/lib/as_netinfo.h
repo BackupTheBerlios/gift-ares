@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.h,v 1.8 2005/11/26 01:42:36 mkern Exp $
+ * $Id: as_netinfo.h,v 1.9 2005/12/02 18:17:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -31,9 +31,10 @@ struct as_net_info_t
 
 	ASNetInfoStatsCb stats_cb;
 
-	in_addr_t outside_ip; /* our ip from the outside */
-	in_port_t port; /* port we're listening on */
+	in_addr_t outside_ip;  /* our ip from the outside */
+	in_port_t port;        /* port we're listening on */
 
+	as_bool firewalled;    /* TRUE if we are firewalled (default is FALSE) */
 };
 
 /*****************************************************************************/
@@ -62,6 +63,10 @@ as_bool as_netinfo_handle_stats (ASNetInfo *info, ASSession *session,
 /* handle outside ip packet */
 as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
                               ASPacket *packet);
+
+/* handle firewall status packet */
+as_bool as_netinfo_handle_fwstatus (ASNetInfo *info, ASSession *session,
+                                    ASPacket *packet);
 
 /* handle nickname packet */
 as_bool as_netinfo_handle_nick (ASNetInfo *info, ASSession *session,

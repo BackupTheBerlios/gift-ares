@@ -1,5 +1,5 @@
 /*
- * $Id: as_session_man.c,v 1.38 2005/12/02 14:25:44 mkern Exp $
+ * $Id: as_session_man.c,v 1.39 2005/12/02 18:17:21 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -398,7 +398,7 @@ static as_bool session_packet_cb (ASSession *session, ASPacketType type,
 		 */
 		break;
 	case PACKET_FIREWALL_STATUS:
-		/* FIXME: Supernode sent one byte firewall status, handle it. */
+		as_netinfo_handle_fwstatus (AS->netinfo, session, packet);
 		break;
 	default:
 		AS_WARN_2 ("Got unknown packet 0x%02x from %s:",

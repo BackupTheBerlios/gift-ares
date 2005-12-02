@@ -1,5 +1,5 @@
 /*
- * $Id: as_http_server.c,v 1.12 2005/11/26 13:55:06 mkern Exp $
+ * $Id: as_http_server.c,v 1.13 2005/12/02 18:17:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -519,8 +519,7 @@ static void server_binary (int fd, input_id input, ServCon *servcon)
 	}
 
 	/* FIXME: Handle binary pushes (type == 0x02)? */
-	if (as_packet_remaining (request) < 1 ||
-		(type = as_packet_get_8 (request)) != 0x01)
+	if ((type = as_packet_get_8 (request)) != 0x01)
 	{
 		/* invalid data, close connection */
 		AS_DBG_2 ("Binary request from %s not GET but 0x%02x, closing connection",
