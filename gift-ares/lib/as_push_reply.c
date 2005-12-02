@@ -1,5 +1,5 @@
 /*
- * $Id: as_push_reply.c,v 1.5 2004/12/21 03:51:28 hex Exp $
+ * $Id: as_push_reply.c,v 1.6 2005/12/02 14:39:50 mkern Exp $
  *
  * Copyright (C) 2004 giFT-Ares project
  * http://developer.berlios.de/projects/gift-ares
@@ -163,7 +163,7 @@ void as_pushreplyman_handle (ASPushReplyMan *man, ASPacket *packet)
 	ASPushReply *reply;
 	int c;
 
-#ifdef HEAVY_DEBUG
+#if 0
 	as_packet_dump (packet);
 #endif
 
