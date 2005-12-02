@@ -1,8 +1,16 @@
- $Id: ChangeLog,v 1.7 2005/03/07 01:10:15 hex Exp $
+ $Id: ChangeLog,v 1.8 2005/12/02 19:08:18 mkern Exp $
+
+gift-ares 0.3.0:
+
+    * Added support for new handshake used with open source Ares.
+
+	* Added support for binary downloads.
+
+	* Added support for binary uploads.
 
 gift-ares 0.2.2:
 
-	* Fixed missing album meta data in search results
+	* Fixed missing album meta data in search results.
 
 	* Fixed crash on duplicate hash search.
 

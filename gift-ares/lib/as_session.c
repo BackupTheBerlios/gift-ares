@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.48 2005/12/02 16:24:54 mkern Exp $
+ * $Id: as_session.c,v 1.49 2005/12/02 19:08:19 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -610,7 +610,7 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		as_nodeman_update_reported (AS->nodeman, host, port);
 	}
 
-#if 1
+#if 0
 	/* Don't connect to older nodes for testing (but still use them to
 	 * get new IPs).
 	 */
