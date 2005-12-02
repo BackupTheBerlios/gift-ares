@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.27 2005/12/02 14:25:44 mkern Exp $
+ * $Id: as_upload.c,v 1.28 2005/12/02 16:36:59 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -222,6 +222,14 @@ as_bool as_upload_start (ASUpload *up)
 				up->username = as_packet_get_str (up->binary_request, len);
 				break;
 
+			case 0x03: /* ips and ports */
+				as_packet_get_ip (up->binary_request);   /* supernode ip */
+				as_packet_get_le16 (up->binary_request); /* supernode port */
+				as_packet_get_ip (up->binary_request);   /* client ip */
+				as_packet_get_le16 (up->binary_request); /* client port */
+				as_packet_get_ip (up->binary_request);   /* client local ip */
+				break;
+
 			case 0x05: /* if present we are supposed to just reply with meta
 				        * data, spezifically with file size */
 				reply_with_filesize = (as_packet_get_8 (up->binary_request) == 0x01);
@@ -235,6 +243,10 @@ as_bool as_upload_start (ASUpload *up)
 				up->start = as_packet_get_le32 (up->binary_request);
 				up->stop = as_packet_get_le32 (up->binary_request);
 				up->stop++; /* make range exclusive end ??? */
+				break;
+
+			case 0x08: /* additional sources */
+				up->binary_request->read_ptr += len;
 				break;
 
 			case 0x09: /* client name and version */
