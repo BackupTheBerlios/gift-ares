@@ -1,5 +1,5 @@
 /*
- * $Id: cmd.c,v 1.39 2004/10/30 22:27:36 mkern Exp $
+ * $Id: cmd.c,v 1.40 2005/12/02 18:57:24 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -785,7 +785,8 @@ COMMAND_FUNC (network_stats)
 COMMAND_FUNC (upload_stats)
 {
 	printf ("%u uploads (%u max), %u queued\n",
-	        AS->upman->nuploads, AS->upman->max_active, AS->upman->nqueued);
+	        AS->upman->nuploads, AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE),
+	        AS->upman->nqueued);
 
 	return TRUE;
 }
