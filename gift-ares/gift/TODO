@@ -1,7 +1,7 @@
 
 - Send proper 0x0a field in download request so we get a good position in the queue
 
-- Handle binary pushes
+- Handle binary push replies
 
 
 

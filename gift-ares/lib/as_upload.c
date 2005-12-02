@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.26 2005/11/26 17:17:15 mkern Exp $
+ * $Id: as_upload.c,v 1.27 2005/12/02 14:25:44 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -256,8 +256,9 @@ as_bool as_upload_start (ASUpload *up)
 
 			default:
 				/* skip unknown fields */
-				up->binary_request->read_ptr += len;
-				
+				AS_DBG_3 ("Binary request from %s contains unknown field 0x%02x with length %d",
+				          net_ip_str (up->host), type, len);
+				up->binary_request->read_ptr += len;			
 			}
 		}
 

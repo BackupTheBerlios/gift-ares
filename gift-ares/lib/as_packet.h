@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.21 2005/11/08 14:39:09 mkern Exp $
+ * $Id: as_packet.h,v 1.22 2005/12/02 14:25:44 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -44,7 +44,7 @@ typedef enum
 	PACKET_SHARE       = 28, /* 0x1C, used to send shares to supernode */
 	PACKET_SEARCH      = 9,  /* 0x09, token search */
 	PACKET_LOCATE      = 80, /* 0x50, hash search */
-	PACKET_LOCALT_STOP = 81, /* 0x51, seems to be sent when download is
+	PACKET_LOCATE_STOP = 81, /* 0x51, seems to be sent when download is
 	                          *       cancelled to stop supernode from sending
 							  *       more locate results */
 	PACKET_RESULT      = 18, /* 0x12, search result */
@@ -52,6 +52,13 @@ typedef enum
 	PACKET_NODELIST2   = 55, /* 0x37, replaces PACKET_NODELIST in Ares 2962 */
 	PACKET_PUSH        = 8,  /* 0x08, push request */
 	PACKET_SUPERINFO   = 58, /* 0x3a, info about this supernode? */
+	
+	PACKET_FIREWALL_TEST   = 82, /* 0x52, this is sent to us by the supernode
+	                              *       when it wants us to connect to the
+	                              *       supplied ip and report back the
+	                              *       result using the same packet */
+	PACKET_FIREWALL_STATUS = 83, /* 0x53, sent to us by supernode to inform
+	                              *       us about our firewall status */
 } ASPacketType;
 
 typedef enum
