@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.24 2005/11/26 14:35:01 mkern Exp $
+ * $Id: as_download_conn.c,v 1.25 2005/12/02 16:24:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -18,7 +18,9 @@
 
 #define DOWNCONN_MAX_HEADER_SIZE 4096
 
+/*
 #define LOG_HTTP_REPLY
+*/
 
 /*****************************************************************************/
 

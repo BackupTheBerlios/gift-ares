@@ -1,5 +1,5 @@
 /*
- * $Id: as_packet.h,v 1.22 2005/12/02 14:25:44 mkern Exp $
+ * $Id: as_packet.h,v 1.23 2005/12/02 16:24:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -33,6 +33,8 @@ typedef enum
 	PACKET_COMPRESSED  = 50, /* 0x32, zlib compression encapsulation layer */
 	PACKET_ACK         = 51, /* 0x33, first packet sent back by supernode */
 	PACKET_ACK2        = 56, /* 0x38, new ACK packet in Ares 2962 */
+	PACKET_ACK_BUSY    = 59, /* 0x3B, Supernode is full */
+	PACKET_ACK_NOCRYPT = 60, /* 0x3C, ACK for new Ares with no encryption */
 	PACKET_PUSH2       = 7,  /* 0x07, push request */
 
 	/* encrypted */

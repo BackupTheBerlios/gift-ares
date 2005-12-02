@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.47 2005/11/19 14:23:50 mkern Exp $
+ * $Id: as_session.c,v 1.48 2005/12/02 16:24:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -165,10 +165,14 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		else
 #endif
 		{
-			if (!as_cipher_encrypt_packet (session->cipher, body))
+			/* If cipher is NULL this is an unencrypted connection. */
+			if (session->cipher)
 			{
-				AS_ERR ("Encrypt failed");
-				return FALSE;
+				if (!as_cipher_encrypt_packet (session->cipher, body))
+				{
+					AS_ERR ("Encrypt failed");
+					return FALSE;
+				}
 			}
 			break;
 		}
@@ -238,10 +242,14 @@ static void session_connected (int fd, input_id input, ASSession *session)
 		return;
 	}
 
-	/* packet body */
-	as_packet_put_8 (packet, 0x04); /* randomized by ares */
-	as_packet_put_8 (packet, 0x03); /* randomized by ares */
-	as_packet_put_8 (packet, 0x05); /* hardcoded to 0x05 by ares */
+	/* Packet body. The first two bytes were originally random. Setting them
+	 * to 0x06 will make the supernode use an encryptionless session if
+	 * supported. The last byte is a marker for the current protocol as
+	 * opposed to some old one which has never been supported by this library.
+	 */
+	as_packet_put_8 (packet, 0x06);
+	as_packet_put_8 (packet, 0x06);
+	as_packet_put_8 (packet, 0x05);
 
 	if (!as_session_send (session, PACKET_SYN, packet, PACKET_PLAIN))
 	{
@@ -342,9 +350,10 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 {
 	if (as_session_state (session) == SESSION_HANDSHAKING)
 	{
-		if (type != PACKET_ACK && type != PACKET_ACK2)
+		if (type != PACKET_ACK && type != PACKET_ACK2 &&
+		    type != PACKET_ACK_BUSY && type != PACKET_ACK_NOCRYPT)
 		{
-			AS_ERR_3 ("Handshake with %s:%d failed. Got 0x%02x instead of ACK/ACK2.",
+			AS_ERR_3 ("Handshake with %s:%d failed. Got 0x%02x instead of known ACK.",
 			          net_ip_str (session->host), session->port, (int)type);
 			session_error (session);
 			return FALSE;
@@ -366,14 +375,17 @@ static as_bool session_dispatch_packet (ASSession *session, ASPacketType type,
 		}
 		else
 		{
-			/* encrypted packet */
-			if (!as_cipher_decrypt_packet (session->cipher, packet))
+			/* Decrypted packet if this is an encrypted session. */
+			if (session->cipher)
 			{
-				AS_ERR_3 ("Packet decrypt failed for type 0x%02X from %s:%d",
-				          (int)type, net_ip_str (session->host),
-				          session->port);
-				session_error (session);
-				return FALSE;
+				if (!as_cipher_decrypt_packet (session->cipher, packet))
+				{
+					AS_ERR_3 ("Packet decrypt failed for type 0x%02X from %s:%d",
+					          (int)type, net_ip_str (session->host),
+					          session->port);
+					session_error (session);
+					return FALSE;
+				}
 			}
 		}
 
@@ -414,6 +426,7 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 		as_packet_put_8 (packet, 0x00);
 
 		/* 22 byte nonce created from supernode guid */
+		assert (session->cipher);
 		nonce = as_cipher_nonce (session->cipher, supernode_guid);
 		if (!nonce)
 		{
@@ -424,7 +437,7 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 	
 		as_packet_put_ustr (packet, nonce, 22);
 	}
-	else if (type == PACKET_ACK2)
+	else if (type == PACKET_ACK2 || type == PACKET_ACK_NOCRYPT)
 	{
 		/* 20 byte nonce2 created from supernode guid */
 		if (!(nonce = as_cipher_nonce2 (supernode_guid)))
@@ -477,8 +490,10 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 
 #ifdef AS_LOGIN_STRING
 	/* Append encrypted login string added in Ares 2951. Removed again in
-	 * Ares 2955. See as_ares.h.
+	 * Ares 2955. See as_ares.h. If the session is unencrypted we don't have a
+	 * cipher and cannot calculate the login string.
 	 */
+	if (session->cipher)
 	{
 		as_uint8 *login_str, *login_hex;
 
@@ -524,10 +539,23 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 	as_uint8 seed_8;
 	as_uint8 *supernode_guid;
 
-	/* PACKET_ACK and PACKET_ACK2 have exactly the same payload. The later was
-	 * only added in Ares 2962 to keep off old nodes.
+	/* PACKET_ACK and PACKET_ACK2 only differ in how the nonce is calculated.
+	 * The later once required elaborate calculations but this was removed in
+	 * open source Ares. New Ares supernodes accept any nonce.
+	 * PACKET_ACK_NOCRYPT is the same as PACKET_ACK2 but the connection is no
+	 * longer encrypted.
 	 */
-	assert (type == PACKET_ACK || type == PACKET_ACK2);
+	assert (type == PACKET_ACK || type == PACKET_ACK2 ||
+	        type == PACKET_ACK_BUSY || type == PACKET_ACK_NOCRYPT);
+
+	/* If supernode is full drop connection */
+	if (type == PACKET_ACK_BUSY)
+	{
+		AS_DBG_2 ("Handshake with %s:%d aborted. Supernode is busy.",
+		          net_ip_str (session->host), session->port);
+		session_error (session);
+		return FALSE;
+	}
 
 	if (as_packet_remaining (packet) < 0x15)
 	{
@@ -537,23 +565,30 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		return FALSE;
 	}
 
-	/* create cipher with port as handshake key */
-	if (!(session->cipher = as_cipher_create (session->c->port)))
+	/* Create cipher with port as handshake key if necessary. */
+	if (type == PACKET_ACK_NOCRYPT)
 	{
-		AS_ERR ("Insufficient memory");
-		session_error (session);
-		return FALSE;
+		session->cipher = NULL;
 	}
+	else
+	{
+		if (!(session->cipher = as_cipher_create (session->c->port)))
+		{
+			AS_ERR ("Insufficient memory");
+			session_error (session);
+			return FALSE;
+		}
 
-	/* decrypt packet */
-	as_cipher_decrypt_handshake (session->cipher, packet->read_ptr,
-	                             as_packet_remaining (packet));
+		/* decrypt packet */
+		as_cipher_decrypt_handshake (session->cipher, packet->read_ptr,
+		                             as_packet_remaining (packet));
+	}
 
 #if 0
 	as_packet_dump (packet);
 #endif
 
-	/* we think this is the child count of the supernode */
+	/* This is the child count of the supernode. */
 	children = as_packet_get_le16 (packet);
 
 	/* Get supernode GUID used in our reply below. */
@@ -602,7 +637,8 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 #endif	
 
 	/* Set up cipher. */
-	as_cipher_set_seeds (session->cipher, seed_16, seed_8);
+	if (session->cipher)
+		as_cipher_set_seeds (session->cipher, seed_16, seed_8);
 
 	/* Send our part of the handshake. */
 	if (!session_send_handshake (session, type, supernode_guid))
