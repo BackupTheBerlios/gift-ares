@@ -11,7 +11,7 @@
 ; Compile time options
 ;------------------------------------------------------------------------------------------
 
-!define VERSION "0.2.2"
+!define VERSION "0.3.0"
 
 !define OUTFILE "gift-ares-${VERSION}.exe"
 
