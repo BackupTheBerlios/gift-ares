@@ -1,28 +1,10 @@
 
-- Send proper 0x0a field in download request so we get a good position in the queue
-
-- Handle binary push replies
-
-
-
-- Don't add unroutable ips to node cache and remove them on connect if they are there.
-
-- Do we have to 'switch off' hash searches when we don't want any more results?
-
-- Is there a general limit on the number of shares we should upload like in fasttrack?
-
 - Why do so many source go into 'timed out' state and are not removed? should they be?
   Update: I think it is giFT which times out the sources. Not sure what to do about it.
 
 - Disabled sharing makes other nodes ask us for pushes
 
 - Don't send shares if shares are hidden
-
-- A lot of successfuly pushes hit the 'first packet needs 4 byte' limit in http server
-
-- Source searching
-
-- arlnk (Why do we need support for that in the plugin?)
 
 - Add download throttling. Difficult due to multiple indirections through downconn
   and http server. Not very effective in general.
