@@ -1,5 +1,5 @@
 /*
- * $Id: ar_search.c,v 1.1 2005/12/18 16:43:38 mkern Exp $
+ * $Id: ar_search.c,v 1.2 2005/12/18 17:34:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -19,6 +19,13 @@ static void result_callback (ASSearch *search, ASResult *result,
                              as_bool duplicate)
 {
 	ARSearchResult r;
+
+	/* if the search terminated just tell the user app */
+	if (!result)
+	{
+		ar_raise_callback (AR_CB_RESULT, (ARSearchHandle)search, NULL);
+		return;
+	}
 
 	/* use strings from our internal result object */
 	r.duplicate = duplicate;
