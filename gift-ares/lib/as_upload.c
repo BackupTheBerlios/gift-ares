@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.28 2005/12/02 16:36:59 mkern Exp $
+ * $Id: as_upload.c,v 1.29 2005/12/18 14:07:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -381,8 +381,8 @@ as_bool as_upload_start (ASUpload *up)
 	/* handle phash request by sending error since we do not support them */
 	if (reply_with_phash)
 	{
-		AS_ERR_1 ("PHash request from %s, replying with 500.",
-		          net_ip_str (up->host));
+		AS_WARN_1 ("PHash request from %s, replying with 500.",
+		           net_ip_str (up->host));
 		send_reply_error (up, TRUE);
 		return FALSE;
 	}
