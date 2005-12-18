@@ -114,12 +114,12 @@ var
     MetaStrings: TStringList;
     RealmStr: string;
 begin
-    BinToHex(PChar(Result.filehash), Hex, AR_HASH_SIZE);
-    Hex[40] := Char(0);
-
     { search complete? }
     if Result = nil then
         Exit;
+
+    BinToHex(PChar(Result.filehash), Hex, AR_HASH_SIZE);
+    Hex[40] := Char(0);
 
     if Result.duplicate = ASTRUE then
     begin
