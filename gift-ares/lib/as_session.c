@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.49 2005/12/02 19:08:19 mkern Exp $
+ * $Id: as_session.c,v 1.50 2005/12/18 13:45:40 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -722,7 +722,7 @@ static as_bool session_ping_timeout (ASSession *session)
 /* we connected but didn't get a full handshake: disconnect */
 static as_bool session_handshake_timeout (ASSession *session)
 {
-	AS_ERR_2 ("Handshake timeout for %s:%d",
+	AS_DBG_2 ("Handshake timeout for %s:%d",
 	          net_ip_str (session->host), session->port);
 
 	session_error (session); /* callback may free us */
