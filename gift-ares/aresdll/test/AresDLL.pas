@@ -1,5 +1,5 @@
 {*
- * $Id: AresDLL.pas,v 1.1 2005/12/18 17:09:30 mkern Exp $
+ * $Id: AresDLL.pas,v 1.2 2005/12/18 17:41:39 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -165,7 +165,7 @@ PARStatusData = ^ARStatusData;
 {*
  * AR_CB_RESULT
  * param1: ASSearchHandle
- * param2: PASSearchResult
+ * param2: PASSearchResult (NULL when search is complete)
  *}
 type ARSearchResult = record
     duplicate: AS_BOOL; { ASTRUE if result with same hash was reported before }

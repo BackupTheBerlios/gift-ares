@@ -1,5 +1,5 @@
 /*
- * $Id: aresdll.h,v 1.1 2005/12/18 16:43:38 mkern Exp $
+ * $Id: aresdll.h,v 1.2 2005/12/18 17:41:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -174,7 +174,7 @@ typedef struct
 /*
  * AR_CB_RESULT
  *   param1: ARSearchHandle
- *   param2: ARSearchResult
+ *   param2: ARSearchResult (NULL when search is complete)
  */
 typedef struct
 {

@@ -117,6 +117,10 @@ begin
     BinToHex(PChar(Result.filehash), Hex, AR_HASH_SIZE);
     Hex[40] := Char(0);
 
+    { search complete? }
+    if Result = nil then
+        Exit;
+
     if Result.duplicate = ASTRUE then
     begin
         { Got same result before, find it and increase source count }
