@@ -1,4 +1,4 @@
-# $Id: zlib.msvc,v 1.1 2005/12/18 16:45:38 mkern Exp $
+# $Id: zlib.msvc,v 1.2 2005/12/18 17:17:23 mkern Exp $
 
 #
 # This makefile is for zlib 1.2.3!
@@ -11,7 +11,7 @@ RELEASE=1
 !endif
 
 # make static library by default
-DYNAMIC = 0
+#DYNAMIC = 1
 
 !if !defined(dynamic) && !defined(DYNAMIC)
 STATIC=1
