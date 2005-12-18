@@ -22,9 +22,9 @@ Custom License
 --------------
 
 The code of the library which facilitates participation in the Ares P2P
-network and is contained in the subdirectories /lib and /test of this
-repository may be used independently of the above GPL license in source
-and binary forms, with or without modification provided the following
+network and is contained in the subdirectories /lib, /aresdll and /test
+of this repository may be used independently of the above GPL license in
+source and binary forms, with or without modification provided the following
 conditions are met:
 
 1. Redistributions of source code must retain the above copyright

@@ -1,4 +1,4 @@
-# $Id: Make.msvc,v 1.18 2005/12/02 19:08:18 mkern Exp $
+# $Id: Make.msvc,v 1.19 2005/12/18 16:45:38 mkern Exp $
 
 
 VERSION = 0.3.0
@@ -93,7 +93,8 @@ PLUGIN_DLL          = Ares$(DEXT).dll
 CFLAGS   = $(CFLAGS) -MD$(D)
 CFLAGS   = $(CFLAGS) -nologo
 
-DEFS     = $(DEFS) -DHAVE_CONFIG_H -DWIN32 -DNO_STRICT -DVERSION=\"$(VERSION)\"
+#DEFS     = $(DEFS) -DHAVE_CONFIG_H
+DEFS     = $(DEFS) -DWIN32 -DNO_STRICT -DVERSION=\"$(VERSION)\"
 INCLUDES = -I$(ASLIB_ROOT) $(INCLUDES)
 INCLUDES = -I$(BUILD_ROOT) -I$(BUILD_ROOT)\libgift\win32 $(INCLUDES)
 

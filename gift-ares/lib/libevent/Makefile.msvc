@@ -1,9 +1,12 @@
-# $Id: Makefile.msvc,v 1.2 2004/08/24 20:56:26 mkern Exp $
+# $Id: Makefile.msvc,v 1.3 2005/12/18 16:45:38 mkern Exp $
 
 
 !include ../../Make.msvc
 
 INCLUDES = -I. -Iwin32 -Icompat -Icompat\sys $(INCLUDES)
+
+# use win32\config.h
+DEFS = $(DEFS) -DHAVE_CONFIG_H
 
 CFLAGS = $(CFLAGS) -DWIN32_SELECT
 

@@ -1,6 +1,6 @@
-# $Id: Makefile.msvc,v 1.6 2005/09/15 21:13:52 mkern Exp $
+# $Id: Makefile.msvc,v 1.7 2005/12/18 16:45:38 mkern Exp $
 # Microsoft Visual C++ 6.0 makefile
-# see README.msvc for usage
+# see README.win32 for usage
 
 !if !defined(BUILD_ROOT)
 BUILD_ROOT=$(MAKEDIR)\..
@@ -33,7 +33,7 @@ aresdll: aslib
 
 plugin: aslibgift
 	cd gift
-	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc
+	@$(MAKE) $(MAKEOPTS) GIFT_BUILD=1 -f Makefile.msvc
 	cd ..
 
 aslib:
@@ -43,7 +43,7 @@ aslib:
 
 aslibgift:
 	cd lib
-	@$(MAKE) $(MAKEOPTS) -f Makefile.msvc aslibgift
+	@$(MAKE) $(MAKEOPTS) GIFT_BUILD=1 -f Makefile.msvc aslibgift
 	cd ..
 
 clean: 

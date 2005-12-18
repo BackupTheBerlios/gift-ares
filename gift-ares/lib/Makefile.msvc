@@ -1,4 +1,4 @@
-# $Id: Makefile.msvc,v 1.30 2005/11/26 01:42:36 mkern Exp $
+# $Id: Makefile.msvc,v 1.31 2005/12/18 16:45:38 mkern Exp $
 
 
 !include ../Make.msvc
@@ -9,6 +9,9 @@ INCLUDES = -I. -Ilibevent $(INCLUDES)
 
 LIBS = $(LIBS) $(LIBGIFT_LIB) $(LIBGIFTPROTO_LIB) $(GIFT_LIB)
 
+!if defined(GIFT_BUILD)
+DEFS = $(DEFS) -DHAVE_CONFIG -DGIFT_PLUGIN
+!endif
 
 LIBGIFT_OBJECTS = \
 	as_log$(O) \
@@ -58,10 +61,6 @@ OBJECTS = \
 	as_push_reply$(O) \
 	as_upload$(O) \
 	as_upload_man$(O)
-
-
-# this breaks the non-plugin build
-DEFS = $(DEFS) -DGIFT_PLUGIN
 
 
 aslib: $(OBJECTS) $(HEX_OPTIMIZATION_OBJECTS) $(LIBGIFT_OBJECTS)
