@@ -1,6 +1,6 @@
-$Id: README,v 1.1 2005/12/18 16:43:38 mkern Exp $
+$Id: README,v 1.2 2005/12/18 16:44:50 mkern Exp $
 
-This is a windows DLL wrapper around the platform independant ares library.
+This is a windows DLL wrapper around the platform independent ares library.
 
 For the DLL interface and theory of operation please see aresdll.h.
 
