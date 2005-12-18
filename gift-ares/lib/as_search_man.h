@@ -1,5 +1,5 @@
 /*
- * $Id: as_search_man.h,v 1.5 2004/10/21 17:11:26 mkern Exp $
+ * $Id: as_search_man.h,v 1.6 2005/12/18 17:32:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,10 +11,6 @@
 #define __AS_SEARCH_MAN_H_
 
 /*****************************************************************************/
-
-/* TODO:
- *   - timeout searches (use periodic timer and start date for each search)
- */
 
 typedef struct
 {
