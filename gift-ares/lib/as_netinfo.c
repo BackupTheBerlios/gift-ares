@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.11 2005/12/02 18:19:01 mkern Exp $
+ * $Id: as_netinfo.c,v 1.12 2005/12/18 13:34:23 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -83,6 +83,14 @@ void as_netinfo_handle_connect (ASNetInfo *info, unsigned int conn_want,
 	{
 		info->conn_want = conn_want;
 		info->conn_have = conn_have;
+
+		/* if we got disconnected from all supernodes zero stats */
+		if (info->conn_have == 0)
+		{
+			info->users = 0;
+			info->files = 0;
+			info->size  = 0;
+		}
 
 		/* Raise callback */
 		if (info->stats_cb)
