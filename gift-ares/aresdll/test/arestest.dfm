@@ -180,7 +180,7 @@ object MainForm: TMainForm
       Width = 91
       Height = 21
       Style = csDropDownList
-      Anchors = [akTop, akBottom]
+      Anchors = [akTop, akRight]
       ItemHeight = 13
       ItemIndex = 0
       TabOrder = 5
