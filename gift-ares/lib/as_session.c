@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.50 2005/12/18 13:45:40 mkern Exp $
+ * $Id: as_session.c,v 1.51 2006/01/05 16:37:38 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -565,23 +565,23 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		return FALSE;
 	}
 
-	/* Create cipher with port as handshake key if necessary. */
+	/* Create cipher with port as handshake key. */
+	if (!(session->cipher = as_cipher_create (session->c->port)))
+	{
+		AS_ERR ("Insufficient memory");
+		session_error (session);
+		return FALSE;
+	}
+
+	/* decrypt handshake packet */
+	as_cipher_decrypt_handshake (session->cipher, packet->read_ptr,
+	                             as_packet_remaining (packet));
+
+	/* If this is a encryptionless session we no longer need the cipher */
 	if (type == PACKET_ACK_NOCRYPT)
 	{
+		as_cipher_free (session->cipher);
 		session->cipher = NULL;
-	}
-	else
-	{
-		if (!(session->cipher = as_cipher_create (session->c->port)))
-		{
-			AS_ERR ("Insufficient memory");
-			session_error (session);
-			return FALSE;
-		}
-
-		/* decrypt packet */
-		as_cipher_decrypt_handshake (session->cipher, packet->read_ptr,
-		                             as_packet_remaining (packet));
 	}
 
 #if 0
