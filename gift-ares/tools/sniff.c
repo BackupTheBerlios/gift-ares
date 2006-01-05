@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.9 2005/11/08 21:12:16 hex Exp $
+ * $Id: sniff.c,v 1.10 2006/01/05 16:34:16 mkern Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -46,6 +46,7 @@ struct session {
 	int state;
 	int id;
 	int push;
+	int encrypted;
 };
 
 #define INT(x) ntohl(*((unsigned long*)(data+x)));
@@ -282,13 +283,6 @@ void decrypt_handshake_packet (unsigned char *data, int len, unsigned short key)
 
 
 
-
-
-
-
-
-
-
 int verify_port (int p)
 {
 	return !(p==1217 ||
@@ -332,6 +326,7 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 		c->state=STATE_CLIENT_KEY;
 		c->id=0;
 		c->push=0;
+		c->encrypted=0;
 		c->enc_state_16=0;
 		c->enc_state_8=0;
 		
@@ -439,7 +434,26 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 				plen=data[0]+(data[1]<<8);
 				type=data[2];
 				if (len >= plen+2) {
-					if ((type==0x33 || type == 0x38) && plen >= 0x15) {
+					if (type==0x3B) {
+						/* supernode is busy */
+						fprintf(stderr, "%s got 0x3B (PACKET_ACK_BUSY), len %d, port %d\n",
+							buf, plen, tcp->addr.dest);
+
+						c->state=STATE_UNSUPPORTED;
+						done=1;
+
+					} else if (type==0x3C && plen >= 0x15) {
+						decrypt_handshake_packet (data+3, plen, tcp->addr.dest);
+						c->encrypted = 0;
+						read=plen+3;
+						c->state++;
+
+						fprintf(stderr, "%s got 0x3C (PACKET_ACK_NOCRYPT), len %d, port %d\n",
+							buf, plen, tcp->addr.dest);
+						print_bin_data (data+3, plen);
+
+
+					} else if ((type==0x33 || type == 0x38) && plen >= 0x15) {
 						unsigned short tmp;
 						unsigned char *packet_body;
 						decrypt_handshake_packet (data+3, plen, tcp->addr.dest);
@@ -452,14 +466,15 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 						
 						c->enc_state_16 = packet_body[0x12] + (packet_body[0x13] << 8);
 						c->enc_state_8 = packet_body[0x14];
+						c->encrypted = 1;
 						read=plen+3;
 						c->state++;
 
 						if(type == 0x33) {
-							fprintf(stderr, "%s got 0x33, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
+							fprintf(stderr, "%s got 0x33 (PACKET_ACK), len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
 								buf, plen, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
 						} else if (type == 0x38) {
-							fprintf(stderr, "%s got NEW 0x38, len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
+							fprintf(stderr, "%s got 0x38 (PACKET_ACK2), len %d, port %d, _16=0x%x, _8=0x%x, tmp=%d\n",
 								buf, plen, tcp->addr.dest, c->enc_state_16, c->enc_state_8, tmp);
 
 						} else {
@@ -511,8 +526,10 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 							 * which is sent before the encryption key is known and has a different
 							 * format. No idea how to distinguish this case here. */
 							
-							key = calc_packet_key (data[3], c->enc_state_16, c->enc_state_8);
-							decrypt_packet (data+5, plen-2, key);
+							if (c->encrypted) {
+								key = calc_packet_key (data[3], c->enc_state_16, c->enc_state_8);
+								decrypt_packet (data+5, plen-2, key);
+							}
 							
 							fprintf(stderr, "%s message type %02x, len %d [%02x %02x]\n", buf, type, plen-2, data[3], data[4]);
 							print_bin_data(data+5,plen-2);
@@ -647,78 +664,7 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 
 void udp_callback(struct tuple4 *addr, char *buf, int len, void* iph)
 {
-#if 0
-<<<<<<< sniff.c
-	if (verify_port (addr->dest)) {
-		fprintf(stderr, "%s [UDP] (len %d)\n", adres (addr, 0), len);
-=======
-	unsigned char type;
-	
-	if (!verify_port (addr->dest) && !verify_port (addr->source))
-		return;
 
-	if (!verify_ip (addr))
-		return;
-
-	/* ignore dns */
-	if (addr->dest == 53 || addr->source == 53)
-		return;
-
-	type = ((unsigned char*)buf)[0];
-
-	switch (type)
-	{
-	case 0x27: /* ping */
-	{
-		unsigned int enc_type = ntohl(*((unsigned int*)(buf+1)));
-		unsigned char unknown1 = *((unsigned char*)(buf+5));
-		char netname[64];
-		strncpy (netname, buf+6, 64);
-		netname[63] = 0;
-
-		fprintf(stderr, "%s [UDP] (PING, len %d)\n", adres (addr, 0), len);
-		fprintf(stderr, "    enc_type: 0x%02X, unk1: 0x%02X, netname: %s\n",
-		        enc_type, unknown1, netname);
-		break;
-	}
-
-	case 0x28: /* supernode pong */
-	{
-		unsigned int enc_type = ntohl(*((unsigned int*)(buf+1)));
-		unsigned char unknown1 = *((unsigned char*)(buf+5));
-		unsigned char unknown2 = *((unsigned char*)(buf+6));
-		unsigned char unknown3 = *((unsigned char*)(buf+7));
-		unsigned char unknown4 = *((unsigned char*)(buf+8));
-		unsigned char load = *((unsigned char*)(buf+9));
-		unsigned char unknown5 = *((unsigned char*)(buf+10));
-
-		fprintf(stderr, "%s [UDP] (PONG, len %d)\n", adres (addr, 0), len);
-		fprintf(stderr, "    enc_type: 0x%02X, unk1: 0x%02X, unk2: 0x%02X "
-		        "unk3: 0x%02X, unk4: 0x%02X, load: %d, unk5: %d\n",
-		        enc_type, unknown1, unknown2, unknown3, unknown4, load, unknown5);
-		break;
-	}
-
-	case 0x29: /* client pong */
-	{
-		fprintf(stderr, "%s [UDP] (PONG_2, len %d)\n", adres (addr, 0), len);
->>>>>>> 1.5
-		print_bin_data (buf, len);
-<<<<<<< sniff.c
-	}
-=======
-		break;
-	}
-
-	default:
-	{
-		fprintf(stderr, "%s [UDP] (type 0x%02X, len %d)\n", adres (addr, 0), type, len);
-		print_bin_data (buf, len);
-		break;
-	}
-	}
->>>>>>> 1.5
-#endif
 }
 
 void syslog (int type, int errnum, struct ip *iph, void *data)
