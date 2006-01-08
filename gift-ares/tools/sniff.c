@@ -1,5 +1,5 @@
 /*
- * $Id: sniff.c,v 1.10 2006/01/05 16:34:16 mkern Exp $
+ * $Id: sniff.c,v 1.11 2006/01/08 03:12:56 mkern Exp $
  *
  * Based on printall.c from libnids/samples, which is
  * copyright (c) 1999 Rafal Wojtczuk <nergal@avet.com.pl>. All rights reserved.
@@ -664,7 +664,52 @@ void tcp_callback (struct tcp_stream *tcp, struct session **conn)
 
 void udp_callback(struct tuple4 *addr, char *buf, int len, void* iph)
 {
+	unsigned char op, cmd;
+	
+	if (!verify_port (addr->dest) && !verify_port (addr->source))
+		return;
 
+	if (!verify_ip (addr))
+		return;
+
+	/* ignore dns */
+	if (addr->dest == 53 || addr->source == 53)
+		return;
+
+	op = ((unsigned char*)buf)[0];
+	cmd = ((unsigned char*)buf)[1];
+
+	fprintf(stderr, "%s [UDP] (type 0x%02X, cmd 0x%02X, len %d)\n",
+	        adres (addr, 0), op, cmd, len-2);
+
+	switch (op)
+	{
+	case 0xE9: /* OP_DHT_HEADER */
+		/* uncompressed payload */
+		print_bin_data(buf+2, len-2);
+
+		break;
+	case 0xEA: /* OP_DHT_PACKEDPROT */
+	{
+		/* compress payload */
+		unsigned char uncompressed[123456];
+		unsigned long size=sizeof(uncompressed);
+		int q;
+		
+		if ((q=uncompress (uncompressed, &size, buf+2, len-2))!=Z_OK)
+		{
+			fprintf(stderr, "zlib decompression failed: %d", q);
+			break;
+		}
+
+		fprintf(stderr, "uncompressed len %d\n", size);
+		print_bin_data(uncompressed,size);
+		
+		break;
+	}
+	default:
+		return;
+	}
 }
 
 void syslog (int type, int errnum, struct ip *iph, void *data)
