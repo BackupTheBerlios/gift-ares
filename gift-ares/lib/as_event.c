@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.18 2004/09/26 19:49:37 mkern Exp $
+ * $Id: as_event.c,v 1.19 2006/01/20 14:46:13 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -173,7 +173,7 @@ static void libevent_cb (int fd, short event, void *arg)
 	as_bool ret;
 
 #if 0
-	AS_HEAVY_DBG_3 ("libevent_cb: fd: %d, event: 0x%02x, arg: %p", fd,
+	AS_HEAVY_DBG_3 ("libevent_cb: fd: %d, event: 0x%02x, ev: %p", fd,
 	                event, arg);
 #endif
 
@@ -320,6 +320,11 @@ input_id input_add (int fd, void *udata, InputState state,
 	 */
 	assert ((ev->d.input.state & INPUT_ERROR) == 0);
 
+#if 0
+	AS_HEAVY_DBG_3 ("input_add: fd: %d, event: 0x%02x, ev: %p", fd,
+	                trigger, ev);
+#endif
+
 	event_set (&ev->ev, ev->d.input.fd, trigger, libevent_cb, (void *)ev);
 
 	if (ev->d.input.validate)
@@ -352,6 +357,10 @@ void input_remove (input_id id)
 
 	if (id == INVALID_INPUT)
 		return;
+
+#if 0
+	AS_HEAVY_DBG_2 ("input_remove: fd: %d, ev: %p", ev->d.input.fd, ev);
+#endif
 
 	if (ev->in_callback)
 	{
@@ -403,6 +412,10 @@ void input_remove (input_id id)
 void input_remove_all (int fd)
 {
 	ASEvent *ev, *next_ev;
+
+#if 0
+	AS_HEAVY_DBG_1 ("input_remove_all: fd: %d", fd);
+#endif
 
 	if (!(ev = as_hashtable_lookup_int (input_table, (as_uint32) fd)))
 	{
