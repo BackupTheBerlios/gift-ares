@@ -1,5 +1,5 @@
 /*
- * $Id: as_meta.h,v 1.12 2005/10/04 23:04:38 hex Exp $
+ * $Id: as_meta.h,v 1.13 2006/01/20 19:10:51 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -34,7 +34,7 @@
  * Due to a bug in Ares files with truncated extensions of the above are also
  * categorized under the same realm given that the total extension length
  * inluding the leading dot is at least 3 chars. E.g. ".ex" will be
- * categorized as software an ".mp" will be categorized as audio sonce ".mp3"
+ * categorized as software an ".mp" will be categorized as audio since ".mp3"
  * is checked before ".mpeg".
  */
 
