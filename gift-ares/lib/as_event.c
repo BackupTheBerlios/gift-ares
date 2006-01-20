@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.19 2006/01/20 14:46:13 mkern Exp $
+ * $Id: as_event.c,v 1.20 2006/01/20 16:38:16 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -9,6 +9,12 @@
 
 #include "as_ares.h"
 #include "event.h"    /* libevent */
+
+/*****************************************************************************/
+
+/*
+#define LOG_LIBEVENT_OUTPUT
+*/
 
 /*****************************************************************************/
 
@@ -65,6 +71,26 @@ static ASHashTable *input_table = NULL;
 
 /*****************************************************************************/
 
+#ifdef LOG_LIBEVENT_OUTPUT
+
+static void libevent_log_cb (int severity, const char *msg)
+{
+	char *level = NULL;
+ 
+	switch (severity)
+	{
+	case _EVENT_LOG_DEBUG: level = "DBG"; break;
+	case _EVENT_LOG_MSG:   level = "MSG"; break;
+	case _EVENT_LOG_WARN:  level = "WARN"; break;
+	case _EVENT_LOG_ERR:   level = "ERR"; break;
+	default:               level = ""; break;
+	}
+
+	AS_DBG_2 ("LIBEVENT %s: %s", level, msg);
+}
+
+#endif
+
 /* init event system */
 as_bool as_event_init ()
 {
@@ -76,6 +102,13 @@ as_bool as_event_init ()
 	/* initialize libevent */
 	event_init ();
 
+	AS_DBG_2 ("Using libevent version %s with %s",
+	          event_get_version (), event_get_method ());
+
+#ifdef LOG_LIBEVENT_OUTPUT
+	event_set_log_callback (libevent_log_cb);
+#endif
+
 	return TRUE;
 }
 
@@ -86,6 +119,10 @@ void as_event_shutdown ()
 
 	as_hashtable_free (input_table, FALSE);
 	input_table = NULL;
+
+#ifdef LOG_LIBEVENT_OUTPUT
+	event_set_log_callback (NULL);
+#endif
 
 	return;
 }
@@ -236,30 +273,6 @@ static void libevent_cb (int fd, short event, void *arg)
 		}
 		else if (event & (EV_READ | EV_WRITE))
 		{
-			/* libgift removes the timer after the first succesfull input
-			 * event. libevent resets the timeout so we remove the input and
-			 * add it again without a timer.
-			 */
-			if (ev->d.input.validate)
-			{
-				ev->d.input.validate = FALSE;
-	
-				if (event_del (&ev->ev) != 0)
-					AS_ERR ("libevent_cb: event_del() failed!");
-				
-				if (event_add (&ev->ev, NULL) != 0)
-				{
-					AS_ERR ("libevent_cb: event_add() failed!");
-					/* remove from hash table */
-					as_hashtable_remove_int (input_table,
-					                         (as_uint32) ev->d.input.fd);
-					event_free (ev);
-
-					assert (0);
-					return; /* hmm, callback is not raised */
-				}
-			}
-
 			ev->in_callback = TRUE;
 			ev->in_callback_removed = FALSE;
 			
@@ -270,7 +283,31 @@ static void libevent_cb (int fd, short event, void *arg)
 	
 			/* remove input if requested by callback */
 			if (ev->in_callback_removed)
+			{
 				input_remove (ev);
+			}
+			else if (ev->d.input.validate)
+			{
+				/* libgift removes the timer after the first succesfull input
+				 * event. libevent resets the timeout so we remove the input and
+				 * add it again without a timer.
+				 */	
+				ev->d.input.validate = FALSE;
+	
+				if (event_del (&ev->ev) != 0)
+				{
+					AS_ERR ("libevent_cb: event_del() failed!");
+					abort (); /* FIXME: handle error properly */
+					return;
+				}
+				
+				if (event_add (&ev->ev, NULL) != 0)
+				{
+					AS_ERR ("libevent_cb: event_add() failed!");
+					abort (); /* FIXME: handle error properly */
+					return;
+				}
+			}
 		}
 		else
 		{
@@ -358,16 +395,16 @@ void input_remove (input_id id)
 	if (id == INVALID_INPUT)
 		return;
 
-#if 0
-	AS_HEAVY_DBG_2 ("input_remove: fd: %d, ev: %p", ev->d.input.fd, ev);
-#endif
-
 	if (ev->in_callback)
 	{
-		/* callback wrapper will remove the input when it's save */
+		/* callback wrapper will remove the input when it's safe */
 		ev->in_callback_removed = TRUE;
 		return;
 	}
+
+#if 0
+	AS_HEAVY_DBG_2 ("input_remove: fd: %d, ev: %p", ev->d.input.fd, ev);
+#endif
 
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("input_remove: event_del() failed!");
