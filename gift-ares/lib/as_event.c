@@ -1,5 +1,5 @@
 /*
- * $Id: as_event.c,v 1.20 2006/01/20 16:38:16 mkern Exp $
+ * $Id: as_event.c,v 1.21 2006/01/21 12:29:53 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -13,8 +13,20 @@
 /*****************************************************************************/
 
 /*
-#define LOG_LIBEVENT_OUTPUT
-*/
+ * This file was originally written under the assumption that libevent
+ * supports multiple events per fd which turned out to be not true. Since our
+ * ares lib has no need for multiple events per fd this is an internal problem
+ * and I have worked around it by removing the event from libevent before its
+ * event object is actually removed here. See input_remove for details.
+ *
+ * For the above reason a rewrite of this file is indicated. Do we also need
+ * thread safety?
+ */
+
+/*****************************************************************************/
+
+#undef LOG_LIBEVENT_OUTPUT /* also enable USE_DEBUG in libevent */
+#undef LOG_A_LOT
 
 /*****************************************************************************/
 
@@ -209,7 +221,7 @@ static void libevent_cb (int fd, short event, void *arg)
 	ASEvent *ev = (ASEvent *) arg;
 	as_bool ret;
 
-#if 0
+#ifdef LOG_A_LOT
 	AS_HEAVY_DBG_3 ("libevent_cb: fd: %d, event: 0x%02x, ev: %p", fd,
 	                event, arg);
 #endif
@@ -267,7 +279,7 @@ static void libevent_cb (int fd, short event, void *arg)
 
 			ev->in_callback = FALSE;
 
-			/* event is persistent so remove it now on matter whether callback
+			/* event is persistent so remove it now no matter whether callback
 			 * requested it or not. */
 			input_remove (ev);
 		}
@@ -357,7 +369,7 @@ input_id input_add (int fd, void *udata, InputState state,
 	 */
 	assert ((ev->d.input.state & INPUT_ERROR) == 0);
 
-#if 0
+#ifdef LOG_A_LOT
 	AS_HEAVY_DBG_3 ("input_add: fd: %d, event: 0x%02x, ev: %p", fd,
 	                trigger, ev);
 #endif
@@ -395,19 +407,24 @@ void input_remove (input_id id)
 	if (id == INVALID_INPUT)
 		return;
 
-	if (ev->in_callback)
-	{
-		/* callback wrapper will remove the input when it's safe */
-		ev->in_callback_removed = TRUE;
-		return;
-	}
-
-#if 0
+#ifdef LOG_A_LOT
 	AS_HEAVY_DBG_2 ("input_remove: fd: %d, ev: %p", ev->d.input.fd, ev);
 #endif
 
+	/* Remove event even if we are in a callback since libevent doesn't work
+	 * properly with more than one event per fd. The ares lib frequently
+	 * removes and readds events for the same fd in one callback. When we are
+	 * called again after the callback event_del() will be a noop.
+	 */
 	if (event_del (&ev->ev) != 0)
 		AS_ERR ("input_remove: event_del() failed!");
+
+	if (ev->in_callback)
+	{
+		/* callback wrapper will remove the input object when it's safe */
+		ev->in_callback_removed = TRUE;
+		return;
+	}
 
 	/* Remove from hash table. */
 	if (!(head_ev = as_hashtable_remove_int (input_table, (as_uint32) ev->d.input.fd)))
@@ -450,7 +467,7 @@ void input_remove_all (int fd)
 {
 	ASEvent *ev, *next_ev;
 
-#if 0
+#ifdef LOG_A_LOT
 	AS_HEAVY_DBG_1 ("input_remove_all: fd: %d", fd);
 #endif
 
