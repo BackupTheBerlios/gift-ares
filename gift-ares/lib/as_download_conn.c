@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.25 2005/12/02 16:24:54 mkern Exp $
+ * $Id: as_download_conn.c,v 1.26 2006/01/30 15:54:54 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -730,7 +730,9 @@ static void downconn_handle_reply (ASDownConn *conn, ASHttpHeader *reply)
 		/* Check that range is ok. */
 		p = as_http_header_get_field (reply, "Content-Range");
 
-		if (p  && sscanf (p, "bytes=%u-%u/%u", &start, &stop, &size) == 3)
+		/* Accept both Ares and HTTP style range header. */
+		if (p  && (sscanf (p, "bytes=%u-%u/%u", &start, &stop, &size) == 3 ||
+		           sscanf (p, "bytes %u-%u/%u", &start, &stop, &size) == 3))
 		{
 			if (start != conn->chunk_start)
 			{

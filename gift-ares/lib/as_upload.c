@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.29 2005/12/18 14:07:23 mkern Exp $
+ * $Id: as_upload.c,v 1.30 2006/01/30 15:54:55 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -649,7 +649,7 @@ static as_bool send_reply_success (ASUpload *up)
 	                              (up->start == 0 &&
 	                              up->stop == up->share->size) ? 200 : 206);
 
-#if 0
+#if 1
 	snprintf (buf, sizeof (buf), "bytes=%u-%u/%u", up->start, up->stop-1,
 	          up->share->size); /* Ares */
 #else
