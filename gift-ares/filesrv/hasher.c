@@ -1,5 +1,5 @@
 /*
- * $Id: hasher.c,v 1.1 2005/11/08 21:12:06 mkern Exp $
+ * $Id: hasher.c,v 1.2 2006/02/01 20:59:15 mkern Exp $
  *
  * Copyright (C) 2005 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2005 Tom Hargreaves <hex@freezone.co.uk>
@@ -21,7 +21,7 @@
 
 typedef struct
 {
-	char     path[PATH_MAX]; /* full path */
+	char    *path; /* full path */
 	size_t   size;
 	time_t   last_modify;
 	ASHash  *hash;
@@ -96,6 +96,7 @@ int main (int argc, char *argv[])
 		while (fgets (buf, sizeof (buf), fp))
 		{
 			char hash64[AS_HASH_BASE64_SIZE];
+			char path[PATH_MAX];
 			Share *share;
 
 			if (strlen (buf) >= sizeof (buf) - 1)
@@ -112,7 +113,7 @@ int main (int argc, char *argv[])
 
 			/* <hash> <size> <last_modify> <path> */
 			if (sscanf (buf, "%29s %u %lu %[^\r\n]", hash64, &share->size,
-				&share->last_modify, share->path) != 4)
+				&share->last_modify, path) != 4)
 			{
 				AS_ERR ("HASHER: sscanf failed for old share");
 				free (share);
@@ -125,6 +126,8 @@ int main (int argc, char *argv[])
 				free (share);
 				continue;
 			}
+
+			share->path = strdup (path);
 
 			old_shares = list_prepend (old_shares, share);
 			nfiles++;
@@ -206,7 +209,6 @@ int main (int argc, char *argv[])
 		AS_ERR_1 ("HASHER: Failed to open shares file '%s' for writing\n", shares_file);
 		exit (1);
 	}
-
 
 	for (ln = new_shares; ln; ln = ln->next)
 	{
@@ -339,7 +341,7 @@ static int path_traverse (List **new_shares, int total, char *path)
 				exit (1);
 			}
 
-			strcpy (share->path, newpath);
+			share->path = strdup (newpath);
 			share->size = st.st_size;
 			share->last_modify = st.st_mtime;
 			share->hash = NULL;
