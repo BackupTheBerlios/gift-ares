@@ -1,5 +1,5 @@
 /*
- * $Id: as_download_conn.c,v 1.26 2006/01/30 15:54:54 mkern Exp $
+ * $Id: as_download_conn.c,v 1.27 2006/02/04 00:33:48 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -109,15 +109,22 @@ static void downconn_reset (ASDownConn *conn)
 /* Update stats after a request is complete or cancelled */
 static void downconn_update_stats (ASDownConn *conn)
 {
+	time_t delta;
+
 	if (conn->request_time == 0)
 		return;
 
+	delta = time (NULL) - conn->request_time;
+
+	if (delta == 0)
+		delta = 1;
+
 	conn->hist_downloaded += conn->curr_downloaded;
-	conn->hist_time += time (NULL) - conn->request_time;
+	conn->hist_time += delta;
 
 	AS_HEAVY_DBG_3 ("Updated stats for %s. last speed: %2.2f kb/s, total speed: %2.2f kb/s",
 	                net_ip_str (conn->source->host),
-	                (float)conn->curr_downloaded / (time (NULL) - conn->request_time) / 1024,
+	                (float)conn->curr_downloaded / delta / 1024,
 	                (float)conn->hist_downloaded / conn->hist_time / 1024);
 
 	/* Reset values for last request so we do not add it multiple times */
