@@ -1,5 +1,5 @@
 /*
- * $Id: as_tokenize.c,v 1.5 2004/09/15 21:35:26 HEx Exp $
+ * $Id: as_tokenize.c,v 1.6 2006/02/11 15:31:01 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -11,7 +11,7 @@
 
 /*****************************************************************************/
 
-#define DELIM " -.,!\"0123456789:()[]?\r\n\t"
+#define DELIM " -.,!\":()[]?\r\n\t"
 
 #define MAX_TOKENS 128
 
@@ -124,7 +124,11 @@ int as_tokenize (ASPacket *packet, unsigned char *str, int type)
 int as_tokenize_search (ASPacket *packet, unsigned char *str)
 {
 	/* 0x14 maybe means "everything" - this would imply we can
-	 * restrict searches to just a single field too */
+	 * restrict searches to just a single field too 
+	 * 
+	 * Update: Indeed we could search for things like title, artist and even
+	 *         album and file size when using some 'advanced' query packet.
+	 */
 	return as_tokenize (packet, str, 0x14 | SEARCH_PACKET);
 }
 
