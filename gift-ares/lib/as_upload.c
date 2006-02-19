@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.30 2006/01/30 15:54:55 mkern Exp $
+ * $Id: as_upload.c,v 1.31 2006/02/19 23:07:22 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -198,6 +198,7 @@ as_bool as_upload_start (ASUpload *up)
 		{
 			as_uint16 len = as_packet_get_le16 (up->binary_request);
 			as_uint8 type = as_packet_get_8 (up->binary_request);
+			as_uint8 *oldptr;
 
 			if (as_packet_remaining (up->binary_request) < len)
 			{
@@ -206,6 +207,8 @@ as_bool as_upload_start (ASUpload *up)
 				send_reply_error (up, FALSE);
 				return FALSE;
 			}
+
+			oldptr = up->binary_request->read_ptr;
 
 			switch (type)
 			{
@@ -258,7 +261,11 @@ as_bool as_upload_start (ASUpload *up)
 				break;
 
 			case 0x0b: /* 64 bit range fields */
-				up->binary_request->read_ptr += len;
+				up->start = as_packet_get_le32 (up->binary_request);
+				as_packet_get_le32 (up->binary_request);
+				up->stop = as_packet_get_le32 (up->binary_request);
+				as_packet_get_le32 (up->binary_request);
+				up->stop++; /* make range exclusive end ??? */
 				break;
 
 			case 0x0c: /* if present we are supposed to just reply with a list
@@ -266,12 +273,18 @@ as_bool as_upload_start (ASUpload *up)
 				reply_with_phash = (as_packet_get_8 (up->binary_request) == 0x01);
 				break;
 
+			case 0x0d: /* more IPs and ports? */
+				break;
+ 
 			default:
 				/* skip unknown fields */
 				AS_DBG_3 ("Binary request from %s contains unknown field 0x%02x with length %d",
 				          net_ip_str (up->host), type, len);
-				up->binary_request->read_ptr += len;			
 			}
+
+			/* skip past this field, regardless of how much (if any)
+			   of it we actually read */
+			up->binary_request->read_ptr = oldptr + len;
 		}
 
 		if (enc_branch != 0x1)
@@ -378,6 +391,7 @@ as_bool as_upload_start (ASUpload *up)
 		return FALSE;
 	}
 
+#if 0
 	/* handle phash request by sending error since we do not support them */
 	if (reply_with_phash)
 	{
@@ -386,6 +400,7 @@ as_bool as_upload_start (ASUpload *up)
 		send_reply_error (up, TRUE);
 		return FALSE;
 	}
+#endif
 
 	/* handle size request by sending meta data */
 	if (reply_with_filesize)
