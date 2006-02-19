@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.16 2005/11/05 20:12:50 mkern Exp $
+ * $Id: as_share_man.c,v 1.17 2006/02/19 15:34:25 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -240,8 +240,9 @@ as_bool as_shareman_add_and_submit (ASShareMan *man, List *shares)
 	                               (ASSessionForeachFunc)submit_share_list,
 	                               shares);
 
-	AS_DBG_3 ("Submitted %d of %d shares to %d supernodes.", ok, total,
-	          sessions);
+	if (sessions)
+		AS_DBG_3 ("Submitted %d of %d shares to %d supernodes.", ok,
+			  total, sessions);
 		
 	return TRUE;
 }
