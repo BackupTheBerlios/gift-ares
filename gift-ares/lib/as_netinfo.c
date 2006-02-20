@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.12 2005/12/18 13:34:23 mkern Exp $
+ * $Id: as_netinfo.c,v 1.13 2006/02/20 01:25:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -46,7 +46,7 @@ ASNetInfo *as_netinfo_create ()
 
 	info->outside_ip = 0;
 	info->port       = 0;
-	info->firewalled = FALSE;
+	info->firewalled = TRUE;
 
 	info->nick       = NULL;
 	make_guid (info->guid);
@@ -155,18 +155,19 @@ as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
 as_bool as_netinfo_handle_fwstatus (ASNetInfo *info, ASSession *session,
                                     ASPacket *packet)
 {
-	as_uint8 firewalled;
+	as_uint8 status;
 	
 	if (as_packet_remaining (packet) < 1)
 		return FALSE;
 
-	firewalled = as_packet_get_8 (packet);
+	status = as_packet_get_8 (packet);
 
-	AS_DBG_2 ("Supernode %s reports firewalled status 0x%02x",
-	          net_ip_str (session->host), firewalled);
+	if (firewalled == 0x01)
+		info->firewalled = FALSE;
 
-	if (firewalled != 0x00)
-		info->firewalled = TRUE;
+	AS_DBG_3 ("Supernode %s reports firewalled status 0x%02x (we are %sfirewalled)",
+	          net_ip_str (session->host), status,
+	          info->firewalled ? "" : "not ");
 
 	return TRUE;
 }

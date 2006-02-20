@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.h,v 1.9 2005/12/02 18:17:20 mkern Exp $
+ * $Id: as_netinfo.h,v 1.10 2006/02/20 01:25:58 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -34,7 +34,8 @@ struct as_net_info_t
 	in_addr_t outside_ip;  /* our ip from the outside */
 	in_port_t port;        /* port we're listening on */
 
-	as_bool firewalled;    /* TRUE if we are firewalled (default is FALSE) */
+	as_bool firewalled;    /* TRUE if we are firewalled (default is TRUE until
+	                        * a message saying otherwise from supernode) */
 };
 
 /*****************************************************************************/
