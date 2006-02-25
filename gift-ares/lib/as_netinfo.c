@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.13 2006/02/20 01:25:58 mkern Exp $
+ * $Id: as_netinfo.c,v 1.14 2006/02/25 22:46:44 hex Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -162,7 +162,7 @@ as_bool as_netinfo_handle_fwstatus (ASNetInfo *info, ASSession *session,
 
 	status = as_packet_get_8 (packet);
 
-	if (firewalled == 0x01)
+	if (status == 0x01)
 		info->firewalled = FALSE;
 
 	AS_DBG_3 ("Supernode %s reports firewalled status 0x%02x (we are %sfirewalled)",
