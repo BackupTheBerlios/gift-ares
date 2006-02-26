@@ -128,6 +128,7 @@
 #define TIME_WITH_SYS_TIME 1
 
 /* Version number of package */
+#undef VERSION
 #define VERSION "0.9"
 
 typedef unsigned char u_char;
