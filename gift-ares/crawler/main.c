@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.4 2006/02/27 01:26:05 mkern Exp $
+ * $Id: main.c,v 1.5 2006/02/27 01:50:35 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -22,6 +22,7 @@
 
 List *org_nodes = NULL;
 List *new_nodes = NULL;
+int nnew_nodes = 0;
 int max_nodes = 2000;
 int max_parallel = 100;
 int parallel = 0;
@@ -53,6 +54,7 @@ static void add_node (in_addr_t host, in_port_t port)
 	node = as_node_create (host, port);
 	assert (node);
 	new_nodes = list_prepend (new_nodes, node);
+	nnew_nodes++;
 
 	AS_DBG_1 ("CRAWLER: Added supernode %s", net_ip_str (host));
 }
@@ -134,7 +136,7 @@ static void crawl_next()
 	int saved = 0;
 	FILE *fp;
 
-	while (org_nodes && parallel < max_parallel)
+	while (org_nodes && parallel < max_parallel && nnew_nodes < max_nodes)
 	{
 		node = (ASNode *) org_nodes->data;
 		assert (node);
@@ -160,7 +162,7 @@ static void crawl_next()
 	assert (parallel >= 0);
 	assert (parallel == list_length (sessions));
 
-	if (!org_nodes && parallel == 0)
+	if ((!org_nodes || nnew_nodes >= max_nodes) && parallel == 0)
 	{
 		if (!new_nodes)
 		{
@@ -186,12 +188,16 @@ static void crawl_next()
 
 			as_node_free (node);
 			new_nodes = list_remove_link (new_nodes, new_nodes);
+			nnew_nodes--;
+			assert (nnew_nodes >= 0);
 			saved++;
 		}
 
 		fclose (fp);	
-		AS_DBG_1 ("CRAWLER: Saved %d nodes", saved);
-		AS_DBG_2 ("CRAWLER: %d of %d source nodes were down", ndown, nloaded);
+		AS_DBG_2 ("CRAWLER: Saved %d nodes of %d collected",
+		          saved, nnew_nodes + saved);
+		AS_DBG_2 ("CRAWLER: %d of %d tried source nodes were down", ndown,
+		          nloaded - list_length (org_nodes));
 
 		as_event_quit ();
 		return;
