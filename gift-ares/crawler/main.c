@@ -1,5 +1,5 @@
 /*
- * $Id: main.c,v 1.3 2005/11/05 20:15:14 mkern Exp $
+ * $Id: main.c,v 1.4 2006/02/27 01:26:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -23,11 +23,12 @@
 List *org_nodes = NULL;
 List *new_nodes = NULL;
 int max_nodes = 2000;
-int max_parallel = 20;
+int max_parallel = 100;
 int parallel = 0;
 int ndown = 0;
 int nloaded = 0;
 const char *save_filename = NULL;
+as_bool no_new_nodes = FALSE;
 List *sessions = NULL;
 
 static void crawl_next();
@@ -79,11 +80,14 @@ static as_bool session_state_cb (ASSession *session, ASSessionState new_state)
 		add_node (session->host, session->port);
 
 		/* save nodes added to AS->nodeman during handshake */
-		for (link = AS->nodeman->nodes; link; link = link->next)
+		if (!no_new_nodes)
 		{
-			node = (ASNode *) link->data;
-			assert (node);
-			add_node (node->host, node->port);
+			for (link = AS->nodeman->nodes; link; link = link->next)
+			{
+				node = (ASNode *) link->data;
+				assert (node);
+				add_node (node->host, node->port);
+			}
 		}
 		
 		/* empty for next round */
@@ -201,18 +205,35 @@ int main (int argc, char *argv[])
 	ASLogger *logger;
 	FILE *fp;
 	char buf[1024];
+	const char *src_filename = NULL;
+	int i = 1;
 
-	if (argc != 3)
+	if (argc < 3 || argc > 5)
 	{
-		printf ("Usage: crawler <src file> <dest file>\n");
+		printf ("Usage: crawler [--verify] <src file> <dest file> [max_nodes]\n");
 		printf ("Crawls all nodes in src file and writes found nodes to dest file\n");
+		printf ("If --verify is specified only the nodes in src file are checked and nodes retrieved from the network are ignored\n");
+		printf ("If max_nodes are saved to dest file we stop. Default for max_nodes is 2000.\n");
 		exit (1);
 	}
 
-	/* load nodes */
-	if (!(fp = fopen (argv[1], "r")))
+	no_new_nodes = FALSE;
+	if (gift_strcasecmp (argv[i], "--verify") == 0)
 	{
-		printf ("Couldn't load nodes from file '%s'\n", argv[1]);
+		no_new_nodes = TRUE;
+		i++;
+	}
+	
+	src_filename = argv[i++];
+	save_filename = argv[i++];
+
+	if (i < argc)
+		max_nodes = atoi (argv[i++]);
+
+	/* load nodes */
+	if (!(fp = fopen (src_filename, "r")))
+	{
+		printf ("Couldn't load nodes from file '%s'\n", src_filename);
 		exit (1);
 	}
 
@@ -242,7 +263,6 @@ int main (int argc, char *argv[])
 	AS_DBG_1 ("CRAWLER: Loaded %d nodes", nloaded);
 
 	/* make sure save path works before we start crawling */
-	save_filename = argv[2];
 	if (!(fp = fopen (save_filename, "wb")))
 	{
 		printf ("Couldn't save nodes to file '%s'\n", save_filename);
@@ -269,6 +289,12 @@ int main (int argc, char *argv[])
 		printf ("FATAL: as_init() failed\n");
 		exit (1);
 	}
+
+	if (no_new_nodes)
+		AS_DBG ("CRAWLER: Only checking nodes already in source file");
+	else
+		AS_DBG ("CRAWLER: Checking nodes from source file and adding new ones from network");
+	AS_DBG_1 ("CRAWLER: Max number of nodes we are going to collect is %d", max_nodes);
 
 	/* start crawl */
 	crawl_next ();
