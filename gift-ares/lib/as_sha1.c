@@ -1,5 +1,5 @@
 /*
- * $Id: as_sha1.c,v 1.2 2004/09/02 19:39:52 mkern Exp $
+ * $Id: as_sha1.c,v 1.3 2006/07/09 13:06:25 mkern Exp $
  *
  * (PD) 2001 The Bitzi Corporation
  * Please see http://bitzi.com/publicdomain for more info.
@@ -34,19 +34,28 @@ void as_sha1_ares_init (SHA_INFO *);
 
 /*****************************************************************************/
 
-#if 1
-#define GET_BE32(p,ind) \
-	((p)[ind] << 24 | (p)[(ind)+1] << 16 | (p)[(ind)+2] << 8 | (p)[(ind)+3])
+#ifndef WIN32
+
+/* sigh */
+#ifdef WORDS_BIGENDIAN
+#  if SIZEOF_LONG == 4
+#    define SHA_BYTE_ORDER  4321
+#  elif SIZEOF_LONG == 8
+#    define SHA_BYTE_ORDER  87654321
+#  endif
 #else
-#define GET_BE32(p32,ind) \
-	ntohl((p32)[(ind)/4])
+#  if SIZEOF_LONG == 4
+#    define SHA_BYTE_ORDER  1234
+#  elif SIZEOF_LONG == 8
+#    define SHA_BYTE_ORDER  12345678
+#  endif
 #endif
 
-#define COPY_BE32x16(W,wind,p,ind)             \
-    (W)[(wind)]   = GET_BE32((p),(ind));       \
-    (W)[(wind)+1] = GET_BE32((p),(ind)+4);     \
-    (W)[(wind)+2] = GET_BE32((p),(ind)+8);     \
-    (W)[(wind)+3] = GET_BE32((p),(ind)+12);
+#else /* WIN32 */
+
+#define SHA_BYTE_ORDER 1234
+
+#endif /* !WIN32 */
 
 /* SHA f()-functions */
 
@@ -108,10 +117,59 @@ static void sha_transform(SHA_INFO *sha_info)
 
 	dp = sha_info->data;
 
-	COPY_BE32x16(W, 0,dp,0);
-	COPY_BE32x16(W, 4,dp,16);
-	COPY_BE32x16(W, 8,dp,32);
-	COPY_BE32x16(W,12,dp,48);
+/*
+the following makes sure that at least one code block below is
+traversed or an error is reported, without the necessity for nested
+preprocessor if/else/endif blocks, which are a great pain in the
+nether regions of the anatomy...
+*/
+#undef SWAP_DONE
+
+#if (SHA_BYTE_ORDER == 1234)
+#define SWAP_DONE
+	for (i = 0; i < 16; ++i) {
+		T = *((unsigned long *) dp);
+		dp += 4;
+		W[i] =	((T << 24) & 0xff000000) | ((T <<  8) & 0x00ff0000) |
+				((T >>	8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
+	}
+#endif /* SHA_BYTE_ORDER == 1234 */
+
+#if (SHA_BYTE_ORDER == 4321)
+#define SWAP_DONE
+	for (i = 0; i < 16; ++i) {
+		T = *((unsigned long *) dp);
+		dp += 4;
+		W[i] = T32(T);
+	}
+#endif /* SHA_BYTE_ORDER == 4321 */
+
+#if (SHA_BYTE_ORDER == 12345678)
+#define SWAP_DONE
+	for (i = 0; i < 16; i += 2) {
+		T = *((unsigned long *) dp);
+		dp += 8;
+		W[i] =	((T << 24) & 0xff000000) | ((T <<  8) & 0x00ff0000) |
+				((T >>	8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
+		T >>= 32;
+		W[i+1] = ((T << 24) & 0xff000000) | ((T <<	8) & 0x00ff0000) |
+				 ((T >>  8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
+	}
+#endif /* SHA_BYTE_ORDER == 12345678 */
+
+#if (SHA_BYTE_ORDER == 87654321)
+#define SWAP_DONE
+	for (i = 0; i < 16; i += 2) {
+		T = *((unsigned long *) dp);
+		dp += 8;
+		W[i] = T32(T >> 32);
+		W[i+1] = T32(T);
+	}
+#endif /* SHA_BYTE_ORDER == 87654321 */
+
+#ifndef SWAP_DONE
+#error Unknown byte order -- you need to add code here
+#endif /* SWAP_DONE */
 
 	for (i = 16; i < 80; ++i) {
 		W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];

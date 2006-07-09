@@ -1,4 +1,6 @@
- $Id: ChangeLog,v 1.9 2006/01/30 15:54:53 mkern Exp $
+ $Id: ChangeLog,v 1.10 2006/07/09 13:06:22 mkern Exp $
+
+	* Made SHA1 implementation work correctly on 64 bit machines.
 
 gift-ares 0.3.0:
 
