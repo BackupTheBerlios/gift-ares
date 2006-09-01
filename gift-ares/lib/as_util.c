@@ -1,5 +1,5 @@
 /*
- * $Id: as_util.c,v 1.3 2005/09/15 21:13:53 mkern Exp $
+ * $Id: as_util.c,v 1.4 2006/09/01 13:49:49 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -40,8 +40,14 @@ as_bool net_ip_routable (in_addr_t ip)
 /* Insert link after prev. Returns prev. */
 List *list_insert_link (List *prev, List *link)
 {
-	if (!prev || !link)
+	if (!link)
 		return prev;
+
+	link->prev = NULL;
+	link->next = NULL;
+
+	if (!prev)
+		return link;
 
 	link->prev = prev;
 	link->next = prev->next;
