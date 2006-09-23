@@ -1,5 +1,5 @@
 /*
- * $Id: as_upload.c,v 1.31 2006/02/19 23:07:22 hex Exp $
+ * $Id: as_upload.c,v 1.32 2006/09/23 17:53:20 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -356,7 +356,7 @@ as_bool as_upload_start (ASUpload *up)
 			          net_ip_str (up->host));
 
 			up->start = 0;
-			up->stop = up->share->size;
+			up->stop = 0;
 		}
 
 		/* Get hash from request header. */
@@ -410,6 +410,10 @@ as_bool as_upload_start (ASUpload *up)
 		send_reply_metadata (up);
 		return FALSE;
 	}
+
+	/* send entire file if no range was specified */
+	if (up->stop == 0)
+		up->stop = up->share->size;
 
 	/* sanity check requested range */
 	if (up->stop <= up->start ||
