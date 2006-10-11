@@ -1,5 +1,5 @@
 /*
- * $Id: as_netinfo.c,v 1.15 2006/10/10 15:50:17 mkern Exp $
+ * $Id: as_netinfo.c,v 1.16 2006/10/11 18:54:01 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -134,6 +134,7 @@ as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
                               ASPacket *packet)
 {
 	in_addr_t ip;
+	as_uint16 sn_build;
 	
 	if ((ip = as_packet_get_ip (packet)) == 0)
 		return FALSE;
@@ -149,12 +150,13 @@ as_bool as_netinfo_handle_ip (ASNetInfo *info, ASSession *session,
 	info->outside_ip = ip;
 
 	/* further data in packet: */
-#if 0
 	as_packet_get_8 (packet); /* 0x00 */
 	as_packet_get_le16 (packet); /* NatPort (our port as seen by supernode?) */
 	as_packet_get_le16 (packet); /* ResultId (used for UDP searching?) */
-	as_packet_get_le16 (packet); /* Supernode build number */
-#endif
+	sn_build = as_packet_get_le16 (packet); /* Supernode build number */
+
+	AS_HEAVY_DBG_2 ("Supernode %s has build number %u",
+	                net_ip_str (session->host), sn_build);
 
 	return TRUE;
 }
