@@ -1,5 +1,5 @@
 /*
- * $Id: as_share.c,v 1.24 2005/01/08 17:25:41 mkern Exp $
+ * $Id: as_share.c,v 1.25 2006/10/11 19:05:29 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -260,6 +260,13 @@ ASPacket *as_share_packet (ASShare *share)
 		}
 	}
 
+	if (as_packet_size (tokens) > 400)
+	{
+		AS_WARN_1 ("Share token size exceeds 400 bytes (%d). "
+		           "Supernodes will ignore this share!",
+		           as_packet_size (tokens));
+	}
+
 	as_packet_put_le16 (p, (as_uint16) tokens->used);
 	as_packet_append (p, tokens);
 	as_packet_free (tokens);
@@ -277,6 +284,13 @@ ASPacket *as_share_packet (ASShare *share)
 
 	/* Add random position block. See as_meta.c. */
 	add_meta_tags2 (p, share);
+
+	if (as_packet_size (p) > 1024)
+	{
+		AS_WARN_1 ("Share packet size exceeds 1024 bytes (%d). "
+		           "Supernodes will ignore this share!",
+		           as_packet_size (tokens));
+	}
 
 	return p;
 }
