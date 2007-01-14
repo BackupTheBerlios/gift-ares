@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.19 2007/01/14 14:35:45 mkern Exp $
+ * $Id: as_share_man.c,v 1.20 2007/01/14 16:44:33 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -135,9 +135,10 @@ typedef struct
 } Conglobulator;
 
 /* The maximum glob size after which we compress and send; note that
- * this is only vaguely related to maximum packet size.
+ * this is only vaguely related to maximum packet size. Ares limits this
+ * to 800, do the same here.
  */
-#define GLOB_MAX 4096
+#define GLOB_MAX 800
 
 static as_bool conglobulator_flush (Conglobulator *glob)
 {
