@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.52 2007/01/14 14:29:31 mkern Exp $
+ * $Id: as_session.c,v 1.53 2007/01/14 16:47:05 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -192,6 +192,9 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		return FALSE;
 	}
 
+	AS_HEAVY_DBG_3 ("Sending packet 0x%02X of size %d to %s",
+	                type, as_packet_size (body), net_ip_str (session->host));
+
 	/* send it off */
 	if (!as_packet_send (body, session->c))
 	{
@@ -283,16 +286,18 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 	ASPacket *packet;
 	ASPacketType packet_type;
 	as_uint16 packet_len;
+	int sock_err;
 
-	if (input == INVALID_INPUT || net_sock_error (fd))
+	assert (input != INVALID_INPUT);
+	assert (session->input == input);
+
+	if ((sock_err = net_sock_error (fd)) != 0)
 	{
-		AS_WARN_2 ("Bad fd for connection with %s:%d. Closing session.",
-		           net_ip_str (session->host), session->port);
+		AS_DBG_3 ("Connection to %s:%d closed remotely. Socket error: %d.",
+		          net_ip_str (session->host), session->port, sock_err);
 		session_error (session);
 		return;
 	}
-
-	assert (session->input == input);
 
 	if (!as_packet_recv (session->packet, session->c))	
 	{
@@ -588,6 +593,20 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 	as_packet_dump (packet);
 #endif
 
+#if 1
+	/* Only connect to newest nodes without encryption. There still seem to be
+	 * a lot of nodes which return PACKET_ACK2 but still require encryption we
+	 * do not support.
+	 */
+	if (type != PACKET_ACK_NOCRYPT)
+	{
+		AS_DBG_2 ("Supernode %s returned legacy ACK 0x%02X, disconnecting",
+		          net_ip_str (session->host), type);
+		session_error (session);
+		return FALSE;
+	}
+#endif
+
 	/* This is the child count of the supernode. */
 	children = as_packet_get_le16 (packet);
 
@@ -609,18 +628,6 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 		 */
 		as_nodeman_update_reported (AS->nodeman, host, port);
 	}
-
-#if 0
-	/* Don't connect to older nodes for testing (but still use them to
-	 * get new IPs).
-	 */
-	if (type == PACKET_ACK)
-	{
-		session_error (session);
-		free (supernode_guid);
-		return FALSE;
-	}
-#endif
 
 #if 0	
 	if (children > 350)
@@ -656,7 +663,6 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 	AS_DBG_5 ("Handshake with %s:%d complete. ACK: 0x%02X, seeds: 0x%04X and 0x%02X",
 		      net_ip_str (session->host), session->port, (int)type,
 			  (int)seed_16, (int)seed_8);
-
 
 	/* remove handshake timeout */
 	timer_remove_zero (&session->handshake_timer);
