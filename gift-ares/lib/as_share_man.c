@@ -1,5 +1,5 @@
 /*
- * $Id: as_share_man.c,v 1.18 2006/10/11 18:54:01 mkern Exp $
+ * $Id: as_share_man.c,v 1.19 2007/01/14 14:35:45 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -157,10 +157,10 @@ static as_bool conglobulator_flush (Conglobulator *glob)
 
 static as_bool conglobulator_assimilate (Conglobulator *glob, ASPacket *p)
 {
-	if (as_packet_size (p) > 700)
+	if (as_packet_size (p) >= 700)
 	{
-		AS_WARN_1 ("Share packet is larger than 700 bytes (%d). "
-		           "Supernodes will this and subsequent packets in compressed envelope!",
+		AS_WARN_1 ("Share packet is larger than 699 bytes (%d). "
+		           "Supernodes will drop this and subsequent packets in compressed envelope!",
 		           as_packet_size (p));
 	}
 
