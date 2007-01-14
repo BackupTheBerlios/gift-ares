@@ -1,5 +1,5 @@
 /*
- * $Id: as_sha1.c,v 1.3 2006/07/09 13:06:25 mkern Exp $
+ * $Id: as_sha1.c,v 1.4 2007/01/14 13:24:03 mkern Exp $
  *
  * (PD) 2001 The Bitzi Corporation
  * Please see http://bitzi.com/publicdomain for more info.
@@ -256,10 +256,59 @@ static void sha_ares_transform(SHA_INFO *sha_info)
 
 	dp = sha_info->data;
 
-	COPY_BE32x16(W, 0,dp,0);
-	COPY_BE32x16(W, 4,dp,16);
-	COPY_BE32x16(W, 8,dp,32);
-	COPY_BE32x16(W,12,dp,48);
+/*
+the following makes sure that at least one code block below is
+traversed or an error is reported, without the necessity for nested
+preprocessor if/else/endif blocks, which are a great pain in the
+nether regions of the anatomy...
+*/
+#undef SWAP_DONE
+
+#if (SHA_BYTE_ORDER == 1234)
+#define SWAP_DONE
+	for (i = 0; i < 16; ++i) {
+		T = *((unsigned long *) dp);
+		dp += 4;
+		W[i] =	((T << 24) & 0xff000000) | ((T <<  8) & 0x00ff0000) |
+				((T >>	8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
+	}
+#endif /* SHA_BYTE_ORDER == 1234 */
+
+#if (SHA_BYTE_ORDER == 4321)
+#define SWAP_DONE
+	for (i = 0; i < 16; ++i) {
+		T = *((unsigned long *) dp);
+		dp += 4;
+		W[i] = T32(T);
+	}
+#endif /* SHA_BYTE_ORDER == 4321 */
+
+#if (SHA_BYTE_ORDER == 12345678)
+#define SWAP_DONE
+	for (i = 0; i < 16; i += 2) {
+		T = *((unsigned long *) dp);
+		dp += 8;
+		W[i] =	((T << 24) & 0xff000000) | ((T <<  8) & 0x00ff0000) |
+				((T >>	8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
+		T >>= 32;
+		W[i+1] = ((T << 24) & 0xff000000) | ((T <<	8) & 0x00ff0000) |
+				 ((T >>  8) & 0x0000ff00) | ((T >> 24) & 0x000000ff);
+	}
+#endif /* SHA_BYTE_ORDER == 12345678 */
+
+#if (SHA_BYTE_ORDER == 87654321)
+#define SWAP_DONE
+	for (i = 0; i < 16; i += 2) {
+		T = *((unsigned long *) dp);
+		dp += 8;
+		W[i] = T32(T >> 32);
+		W[i+1] = T32(T);
+	}
+#endif /* SHA_BYTE_ORDER == 87654321 */
+
+#ifndef SWAP_DONE
+#error Unknown byte order -- you need to add code here
+#endif /* SWAP_DONE */
 
 	for (i = 16; i < 80; ++i) {
 		W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];

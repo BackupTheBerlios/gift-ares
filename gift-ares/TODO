@@ -5,8 +5,6 @@ lib
 
 Essential stuff:
 
-- Special Ares SHA1 still doesn't work on 64 bit machines, I think
-
 - Send proper 0x0a field in download request so we get a good position in the queue
 
 - Handle binary push replies
