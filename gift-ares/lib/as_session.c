@@ -1,5 +1,5 @@
 /*
- * $Id: as_session.c,v 1.51 2006/01/05 16:37:38 mkern Exp $
+ * $Id: as_session.c,v 1.52 2007/01/14 14:29:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -199,8 +199,6 @@ as_bool as_session_send (ASSession *session, ASPacketType type,
 		return FALSE;
 	}
 
-	timer_reset (session->ping_timer);
-
 	return TRUE;
 }
 
@@ -286,18 +284,20 @@ static void session_get_packet (int fd, input_id input, ASSession *session)
 	ASPacketType packet_type;
 	as_uint16 packet_len;
 
-	if (net_sock_error (fd))
+	if (input == INVALID_INPUT || net_sock_error (fd))
 	{
-		AS_HEAVY_DBG_2 ("Connection with %s:%d closed remotely",
-		                net_ip_str (session->host), session->port);
+		AS_WARN_2 ("Bad fd for connection with %s:%d. Closing session.",
+		           net_ip_str (session->host), session->port);
 		session_error (session);
 		return;
 	}
 
+	assert (session->input == input);
+
 	if (!as_packet_recv (session->packet, session->c))	
 	{
-		AS_WARN_2 ("Recv failed from %s:%d", net_ip_str (session->host),
-		           session->port);
+		AS_DBG_2 ("Connection to %s:%d closed remotely",
+		          net_ip_str (session->host), session->port);
 		session_error (session);
 		return;
 	}
@@ -455,10 +455,10 @@ static as_bool session_send_handshake (ASSession *session, ASPacketType type,
 	if (AS->upman)
 	{
 		/* FIXME: These values are not accurate if queuing is done by giFT */
-		as_packet_put_le16 (packet, 0); /* 'my_speed' */
+		as_packet_put_le16 (packet, 0); /* 'my_speed' bytes/sec divided by 100 */
 		as_packet_put_8 (packet, (as_uint8)AS->upman->nuploads);
 		as_packet_put_8 (packet, (as_uint8)AS_CONF_INT (AS_UPLOAD_MAX_ACTIVE));
-		as_packet_put_8 (packet, (as_uint8)0); /* 'proxy_count' */
+		as_packet_put_8 (packet, (as_uint8)0); /* 0x00 hardcoded */
 		as_packet_put_8 (packet, (as_uint8)AS->upman->nqueued);
 	}
 	else
@@ -664,8 +664,11 @@ static as_bool session_handshake (ASSession *session, ASPacketType type,
 	if (!session_set_state (session, SESSION_CONNECTED, TRUE))
 		return FALSE; /* session was freed */
 
-	session->ping_timer = timer_add (AS_SESSION_IDLE_TIMEOUT,
+	/* setup ping timer and send one ping right now */
+	session->ping_timer = timer_add (AS_SESSION_PING_INTERVAL,
 	                                 (TimerCallback)session_ping, session);
+
+	session_ping (session);
 
 	return TRUE;
 }
@@ -711,7 +714,7 @@ static as_bool session_ping (ASSession *session)
 /* we sent a ping and got no response: disconnect */
 static as_bool session_ping_timeout (ASSession *session)
 {
-	AS_ERR_2 ("Ping timeout for %s:%d",
+	AS_ERR_2 ("Ping timeout for %s:%d, closing session.",
 	          net_ip_str (session->host), session->port);
 
 	session_error (session); /* callback may free us */

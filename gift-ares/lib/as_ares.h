@@ -1,5 +1,5 @@
 /*
- * $Id: as_ares.h,v 1.69 2005/11/26 13:34:05 mkern Exp $
+ * $Id: as_ares.h,v 1.70 2007/01/14 14:29:31 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -226,11 +226,12 @@ extern Protocol *gift_proto;
 /* Timeout for supernode handshake after connecting */
 #define AS_SESSION_HANDSHAKE_TIMEOUT (30 * SECONDS)
 
-/* Maximum period of inactivity for established supernode connections */
-#define AS_SESSION_IDLE_TIMEOUT (8 * MINUTES)
+/* Time between stats requests (pings) sent to supernode. Ares seems to
+ * disconnects us if we don't sent a ping every 5 minutes. */
+#define AS_SESSION_PING_INTERVAL (3 * MINUTES)
 
 /* Timeout for ping replies */
-#define AS_SESSION_PING_TIMEOUT (1 * MINUTES)
+#define AS_SESSION_PING_TIMEOUT (2 * MINUTES)
 
 /* Number of simultaneous connection attempts when connecting to supernodes */
 #define AS_SESSION_PARALLEL_ATTEMPTS (10)
