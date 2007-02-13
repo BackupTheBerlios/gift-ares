@@ -1,5 +1,5 @@
 /*
- * $Id: as_hashtable.c,v 1.9 2004/12/04 11:54:15 mkern Exp $
+ * $Id: as_hashtable.c,v 1.10 2007/02/13 00:25:39 mkern Exp $
  *
  * Copyright (C) 2004 Markus Kern <mkern@users.berlios.de>
  * Copyright (C) 2004 Tom Hargreaves <hex@freezone.co.uk>
@@ -588,85 +588,35 @@ void *as_hashtable_lookup_int (ASHashTable *table, as_uint32 key)
 void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
                            void *udata)
 {
-	ASHashTableEntry *e = NULL;
-    ASHashTableEntry *parent = NULL;
-    ASHashTableEntry *next;
-	ASHashTableEntry *remember_e = NULL, *remember_parent = NULL;
-	unsigned int index = table->tablelength;
-	unsigned int i, j,tablelength;
-	as_bool remove;
+	ASHashTableEntry **e;
+	unsigned int i;
 
     if (table->entrycount == 0)
 		return;
 
-	/* Needs a cleanup, but should work now. */
-
-    for (i = 0; i < table->tablelength; i++)
-    {
-        if (table->table[i])
-        {
-            e = table->table[i];
-            index = i;
-            break;
-        }
-    }
-
-	for (;;)
+	for (i = 0; i < table->tablelength; i++)
 	{
-		remove = func (e, udata);
+		e = &table->table[i];
 
-		if (remove)
+		while (*e)
 		{
-			if (!parent)
-				table->table[index] = e->next;
-			else
-				parent->next = e->next;
-
-			/* itr->e is now outside the hashtable */
-			remember_e = e;
-			table->entrycount--;
-			if (table->copy_keys)
-				free (remember_e->key);
-	
-		    /* Advance the iterator, correcting the parent */
-			remember_parent = parent;
-		}
-
-		/* move on to next entry */
-		next = e->next;
-		if (next)
-		{
-	        parent = e;
-			e = next;
-
-			if (remove)
+			if (func (*e, udata))
 			{
-				if (parent == remember_e)
-					parent = remember_parent;
-				free (remember_e);
+				/* Remove entry */
+				ASHashTableEntry *old = *e;
+
+				*e = (*e)->next;
+	
+				/* Free entry */
+				table->entrycount--;
+				if (table->copy_keys)
+					free (old->key);		
+				free (old);
 			}
-			continue;
-		}
-
-		tablelength = table->tablelength;
-		parent = NULL;
-
-		if (tablelength <= (j = ++(index)))
-			return;
-
-		while (!(next = table->table[j]))
-		{
-	        if (++j >= tablelength)
-				return;
-		}
-		index = j;
-		e = next;
-
-		if (remove)
-		{
-			if (parent == remember_e)
-				parent = remember_parent;
-			free (remember_e);
+			else
+			{
+				e = &((*e)->next);
+			}
 		}
 	}
 }
@@ -677,52 +627,24 @@ void as_hashtable_foreach (ASHashTable *table, ASHashTableForeachFunc func,
 void *as_hashtable_find (ASHashTable *table, ASHashTableForeachFunc func,
                          void *udata)
 {
-	ASHashTableEntry *e = NULL;
-    ASHashTableEntry *parent = NULL;
-    ASHashTableEntry *next;
-    unsigned int index = table->tablelength;
-	unsigned int i, j,tablelength;
+	ASHashTableEntry *e;
+	unsigned int i;
 
     if (table->entrycount == 0)
 		return NULL;
 
-    for (i = 0; i < table->tablelength; i++)
-    {
-        if (table->table[i])
-        {
-            e = table->table[i];
-            index = i;
-            break;
-        }
-    }
-
-	for (;;)
+	for (i = 0; i < table->tablelength; i++)
 	{
-		if (func (e, udata))
-			return e->val;
-
-		/* move on to next entry */
-		next = e->next;
-		if (next)
+		while ((e = table->table[i]))
 		{
-	        parent = e;
-			e = next;
-			continue;
-		}
-		tablelength = table->tablelength;
-		parent = NULL;
+			if (func (e, udata))
+				return e->val;
 
-		if (tablelength <= (j = ++(index)))
-			return NULL;
-
-		while (!(next = table->table[j]))
-		{
-	        if (++j >= tablelength)
-				return NULL;
+			e = e->next;
 		}
-		index = j;
-		e = next;
 	}
+
+	return NULL;
 }
 
 /*****************************************************************************/
